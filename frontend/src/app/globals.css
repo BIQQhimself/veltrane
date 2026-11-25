@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --grid: rgba(255, 255, 255, 0.035);
+}
+
+* {
+  border-color: theme("colors.line.DEFAULT");
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #05070d;
+  color: theme("colors.paper.DEFAULT");
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(200, 169, 106, 0.28);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1c2534;
+  border-radius: 999px;
+  border: 2px solid #05070d;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #26334a;
+}
+
+:focus-visible {
+  outline: 2px solid theme("colors.champagne.500");
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-line bg-ink-850 shadow-panel;
+  }
+  .panel-header {
+    @apply flex items-center justify-between gap-3 border-b border-line-soft px-5 py-4;
+  }
+  .panel-body {
+    @apply px-5 py-4;
+  }
+  .label {
+    @apply text-2xs uppercase tracking-label text-paper-faint;
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .hairline {
+    @apply border-t border-line-soft;
+  }
+  .link-underline {
+    @apply underline decoration-champagne-600/50 decoration-1 underline-offset-4 transition hover:decoration-champagne-400;
+  }
+  .grid-bg {
+    background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  }
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+    background: #101826;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

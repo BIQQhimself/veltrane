@@ -1,0 +1,57 @@
+# Local development stack. Not for production: secrets are placeholders and the
+# billing provider is the mock. See DEPLOYMENT.md for the real checklist.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: veltrane
+      # Local development only. Set POSTGRES_PASSWORD in .env (see .env.example).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: veltrane
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U veltrane -d veltrane"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      VELTRANE_ENV: development
+      VELTRANE_SECRET_KEY: dev-only-secret-key-change-me-0000000000000000
+      VELTRANE_MASTER_ENCRYPTION_KEY: ""
+      VELTRANE_DATABASE_URL: postgresql+psycopg://veltrane:${POSTGRES_PASSWORD:?}@db:5432/veltrane
+      VELTRANE_REDIS_URL: redis://redis:6379/0
+      VELTRANE_CORS_ORIGINS: http://localhost:3000
+      VELTRANE_MARKET_DATA_SOURCE: demo
+      VELTRANE_BILLING_PROVIDER: mock
+      VELTRANE_LIVE_TRADING_ENABLED: "false"
+      VELTRANE_COOKIE_SECURE: "false"
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head && python -m scripts.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+
+volumes:
+  pgdata:
