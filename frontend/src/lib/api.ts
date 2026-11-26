@@ -61,7 +61,14 @@ export const tokenStore = {
 // Render's free web services sleep after idle traffic. The first request after a sleep is
 // answered by the platform edge with 502/503/504 while the instance boots, and a request
 // that never reaches the app cannot have had an effect, so retrying those is safe.
+// A JSON body means the app answered (for example `503 billing_disabled`), so the retry
+// stops there and the caller gets the real error immediately.
 const WAKE_STATUSES = new Set([502, 503, 504]);
+
+function isPlatformStub(response: Response): boolean {
+  const contentType = response.headers.get("content-type") ?? "";
+  return WAKE_STATUSES.has(response.status) && !contentType.includes("application/json");
+}
 const WAKE_DELAYS_MS = [2500, 7000] as const;
 
 function sleep(ms: number, signal?: AbortSignal | null): Promise<void> {
@@ -84,7 +91,7 @@ async function fetchWithWake(url: string, init: RequestInit, retry: boolean): Pr
   for (let attempt = 0; attempt <= WAKE_DELAYS_MS.length; attempt += 1) {
     try {
       const response = await fetch(url, init);
-      const retryable = retry && WAKE_STATUSES.has(response.status);
+      const retryable = retry && isPlatformStub(response);
       if (!retryable || attempt === WAKE_DELAYS_MS.length) return response;
     } catch (error) {
       if ((error as Error).name === "AbortError") throw error;
