@@ -252,7 +252,7 @@ export default function MarketingPage() {
               </span>
               <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-paper sm:text-5xl lg:text-6xl">
                 Trade with an
-                <span className="block bg-gradient-to-r from-electric-300 via-electric-400 to-emerald-300 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-platinum via-gold-300 to-gold-500 bg-clip-text text-transparent">
                   instrument, not a guess.
                 </span>
               </h1>

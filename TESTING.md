@@ -97,6 +97,50 @@ cd frontend
 npm run test        # vitest run
 ```
 
+## Responsive overflow check
+
+Wide data tables are the usual cause of a phone layout sliding sideways. Before a UI release, audit
+every workspace route at 390, 768 and 1440 CSS pixels. An ad-hoc Playwright run does it without
+adding a dependency to this repository:
+
+```bash
+python3 -m venv /tmp/pwenv && /tmp/pwenv/bin/pip install playwright
+```
+
+```python
+import asyncio
+from playwright.async_api import async_playwright
+
+BASE = "http://localhost:3000/"
+ROUTES = ["app", "app/terminal", "app/markets", "app/strategies", "app/copilot", "app/accounts",
+          "app/portfolio", "app/analytics", "app/notifications", "app/billing", "app/settings",
+          "app/onboarding"]
+
+
+async def main():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(args=["--no-sandbox"])
+        for width in (390, 768, 1440):
+            context = await browser.new_context(viewport={"width": width, "height": 900})
+            page = await context.new_page()
+            # sign in here if the routes redirect to /login
+            for route in ["", *ROUTES]:
+                await page.goto(BASE + route, wait_until="load")
+                overflow = await page.evaluate(
+                    "() => document.documentElement.scrollWidth"
+                    " - document.documentElement.clientWidth"
+                )
+                print(width, route or "/", "OVERFLOW" if overflow > 2 else "ok", overflow)
+            await context.close()
+        await browser.close()
+
+
+asyncio.run(main())
+```
+
+Anything reporting more than two pixels is a bug: fix the container (`min-w-0` on the panel, an
+explicit `grid-cols-1`, collapsing secondary table columns) rather than hiding the scrollbar.
+
 ## Test hygiene rules for contributors
 
 - Never call a real exchange. Use the demo feed or a fake provider.
