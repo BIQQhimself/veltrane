@@ -449,7 +449,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-lg",
-                    tab.accent && !active ? "bg-electric-500 text-white shadow-glow" : "",
+                    tab.accent && !active ? "cta-gold" : "",
                     active && !tab.accent ? "bg-electric-500/15" : "",
                   )}
                 >

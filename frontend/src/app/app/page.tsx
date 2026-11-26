@@ -169,7 +169,7 @@ export default function OverviewPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/app/terminal"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-electric-500 px-3.5 py-2 text-xs font-medium text-white shadow-glow transition hover:bg-electric-400"
+            className="cta-gold inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition"
           >
             <Zap className="h-3.5 w-3.5" aria-hidden />
             Open terminal

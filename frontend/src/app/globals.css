@@ -54,6 +54,19 @@ body {
   border-radius: 6px;
 }
 
+@layer components {
+  /* Primary call to action: the same champagne-gold treatment as <Button variant="primary">,
+     shared by links that cannot use the button element. */
+  .cta-gold {
+    background-image: linear-gradient(to bottom, theme("colors.gold.400"), theme("colors.gold.500"));
+    color: theme("colors.ink.950");
+    box-shadow: 0 10px 30px -14px rgba(200, 169, 106, 0.7);
+  }
+  .cta-gold:hover {
+    background-image: linear-gradient(to bottom, theme("colors.gold.300"), theme("colors.gold.400"));
+  }
+}
+
 @layer base {
   h1,
   h2,
@@ -70,7 +83,9 @@ body {
 
 @layer components {
   .panel {
-    @apply rounded-xl border border-line bg-obsidian-850/90 shadow-panel backdrop-blur-[2px];
+    /* min-w-0 lets a panel shrink inside a grid track so wide tables scroll inside
+       their own overflow container instead of widening the page. */
+    @apply min-w-0 rounded-xl border border-line bg-obsidian-850/90 shadow-panel backdrop-blur-[2px];
   }
   .panel-header {
     @apply flex items-center justify-between gap-3 border-b border-line-soft px-5 py-4;

@@ -46,7 +46,7 @@ export default function MarketsPage() {
 
       {summary.error ? <ErrorNote message={summary.error} onRetry={summary.refetch} /> : null}
 
-      <div className="grid items-start gap-4 xl:grid-cols-[1.35fr_1fr]">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.35fr_1fr]">
         <Panel>
           <PanelHeader title="Instruments" subtitle="Refreshed every 30 seconds" />
           {summary.loading ? (
@@ -60,24 +60,24 @@ export default function MarketsPage() {
               <THead>
                 <TR>
                   <TH>Symbol</TH>
-                  <TH>Class</TH>
+                  <TH className="hidden sm:table-cell">Class</TH>
                   <TH align="right">Price</TH>
-                  <TH>Source</TH>
-                  <TH>Session</TH>
+                  <TH className="hidden md:table-cell">Source</TH>
+                  <TH className="hidden md:table-cell">Session</TH>
                 </TR>
               </THead>
               <TBody>
                 {markets.map((market) => (
                   <TR key={market.symbol} onClick={() => setSelected(market.symbol)} selected={active === market.symbol}>
                     <TD mono>{market.symbol}</TD>
-                    <TD>{market.asset_class ?? "—"}</TD>
+                    <TD className="hidden sm:table-cell">{market.asset_class ?? "—"}</TD>
                     <TD align="right" mono>
                       {typeof market.price === "number" ? money(market.price, "USD", market.price > 100 ? 2 : 5) : "—"}
                     </TD>
-                    <TD>
+                    <TD className="hidden md:table-cell">
                       <Badge tone={market.is_demo ? "info" : "gain"}>{market.is_demo ? "demo" : market.source ?? "live"}</Badge>
                     </TD>
-                    <TD>{market.market_open ? "open" : "closed"}</TD>
+                    <TD className="hidden md:table-cell">{market.market_open ? "open" : "closed"}</TD>
                   </TR>
                 ))}
               </TBody>

@@ -197,7 +197,7 @@ export default function MarketingPage() {
             </Link>
             <Link
               href="/register"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-electric-500 px-3.5 py-2 text-xs font-medium text-white shadow-glow transition hover:bg-electric-400"
+              className="cta-gold inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition"
             >
               Open an account
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -230,7 +230,7 @@ export default function MarketingPage() {
                 <Link href="/login" className="rounded-lg border border-line-strong px-3 py-2.5 text-center text-sm">
                   Sign in
                 </Link>
-                <Link href="/register" className="rounded-lg bg-electric-500 px-3 py-2.5 text-center text-sm font-medium text-white">
+                <Link href="/register" className="cta-gold rounded-lg px-3 py-2.5 text-center text-sm font-medium">
                   Open account
                 </Link>
               </div>
@@ -264,7 +264,7 @@ export default function MarketingPage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/register"
-                  className="inline-flex items-center gap-2 rounded-lg bg-electric-500 px-5 py-3 text-sm font-medium text-white shadow-glow transition hover:bg-electric-400"
+                  className="cta-gold inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-medium transition"
                 >
                   Open a paper account
                   <ArrowRight className="h-4 w-4" aria-hidden />
@@ -591,7 +591,7 @@ export default function MarketingPage() {
                   )}
                 >
                   {plan.highlight ? (
-                    <span className="absolute -top-2.5 left-6 rounded-full bg-electric-500 px-2 py-0.5 text-3xs font-medium uppercase tracking-label text-white">
+                    <span className="absolute -top-2.5 left-6 rounded-full bg-gold-400 px-2 py-0.5 text-3xs font-medium uppercase tracking-label text-ink-950">
                       Most chosen
                     </span>
                   ) : null}
@@ -614,7 +614,7 @@ export default function MarketingPage() {
                     className={cn(
                       "mt-6 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-xs font-medium transition",
                       plan.highlight
-                        ? "bg-electric-500 text-white hover:bg-electric-400"
+                        ? "cta-gold"
                         : "border border-line-strong text-paper hover:border-electric-600/60",
                     )}
                   >
@@ -647,7 +647,7 @@ export default function MarketingPage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/register"
-                className="inline-flex items-center gap-2 rounded-lg bg-electric-500 px-5 py-3 text-sm font-medium text-white shadow-glow transition hover:bg-electric-400"
+                className="cta-gold inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-medium transition"
               >
                 Create your account
                 <ArrowRight className="h-4 w-4" aria-hidden />

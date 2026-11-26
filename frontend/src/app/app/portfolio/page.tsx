@@ -82,7 +82,7 @@ export default function PortfolioPage() {
         )}
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.3fr]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.3fr]">
         <Panel>
           <PanelHeader title="Allocation" subtitle="Balances and open position value" />
           <PanelBody>
@@ -172,7 +172,7 @@ export default function PortfolioPage() {
         </Panel>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <Panel>
           <PanelHeader title="Balances" subtitle="As reported by each venue" />
           {overview.loading ? (
