@@ -190,8 +190,35 @@ def test_free_user_cannot_start_live_authorization(client, trader):
     assert response.json()["detail"]["code"] == "entitlement_required"
 
 
-def test_live_authorization_requires_checklist_and_cooloff(client, pro_trader, db):
+def test_live_authorization_refused_while_platform_flag_is_off(client, pro_trader, db):
+    """An authorisation collected while live trading is off would become effective on a flag flip."""
     from app.db.models import TradingPermission
+    from app.services.live_authorization import CHECKLIST_ITEMS
+
+    connection = client.post(
+        f"{BASE}/connections",
+        json={"provider": "binance", "label": "Trade key", "environment": "live", "api_key": "k", "api_secret": "s"},
+        headers=pro_trader["headers"],
+    )
+    assert connection.status_code == 201, connection.text
+    mark_connection_connected(db, connection.json()["id"])
+
+    response = client.post(
+        f"{BASE}/trading/live-authorization/start",
+        json={"acknowledged": True, "checklist": {k: True for k in CHECKLIST_ITEMS}, "jurisdiction": "GB"},
+        headers=pro_trader["headers"],
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"]["code"] == "live_trading_disabled"
+    assert client.get(f"{BASE}/trading/state", headers=pro_trader["headers"]).json()["live"]["live_enabled"] is False
+    assert db.query(TradingPermission).filter(TradingPermission.org_id == pro_trader["org_id"]).count() == 0
+
+
+def test_live_authorization_requires_checklist_and_cooloff(client, pro_trader, db, monkeypatch):
+    from app.core.config import settings
+    from app.db.models import TradingPermission
+
+    monkeypatch.setattr(settings, "live_trading_enabled", True)
 
     incomplete = client.post(
         f"{BASE}/trading/live-authorization/start",
@@ -240,18 +267,22 @@ def test_live_authorization_requires_checklist_and_cooloff(client, pro_trader, d
     )
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["live_enabled"] is True
-    assert confirmed.json()["platform_live_enabled"] is False
+    assert confirmed.json()["platform_live_enabled"] is True
 
     state = client.get(f"{BASE}/trading/state", headers=pro_trader["headers"]).json()
     assert state["live"]["live_enabled"] is True
-    assert state["platform_live_enabled"] is False
+    assert state["platform_live_enabled"] is True
 
 
-def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db):
+def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db, monkeypatch):
     from datetime import datetime, timedelta
 
+    from app.core.config import settings
     from app.db.models import TradingPermission
     from app.services.live_authorization import CHECKLIST_ITEMS
+
+    # The account can authorise while the operator allows it ...
+    monkeypatch.setattr(settings, "live_trading_enabled", True)
 
     connection = client.post(
         f"{BASE}/connections",
@@ -274,6 +305,9 @@ def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db):
         json={"confirmation_token": token},
         headers=pro_trader["headers"],
     )
+
+    # ... and the operator switching the flag off takes effect on the very next order.
+    monkeypatch.setattr(settings, "live_trading_enabled", False)
 
     result = place_order(
         client,

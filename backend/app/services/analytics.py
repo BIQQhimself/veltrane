@@ -128,7 +128,20 @@ def overview(db: Session, *, days: int = 30) -> dict:
         .scalar()
         or 0
     )
-    live_orders = db.query(func.count(Trade.id)).filter(Trade.mode == "live", Trade.created_at >= since).scalar() or 0
+    # Venue-demo contracts run through the live execution path but are not real money. Counting
+    # them as live trades would misreport real-money activity on the operator dashboard.
+    live_orders = (
+        db.query(func.count(Trade.id))
+        .filter(Trade.mode == "live", Trade.is_demo.is_(False), Trade.created_at >= since)
+        .scalar()
+        or 0
+    )
+    venue_demo_trades = (
+        db.query(func.count(Trade.id))
+        .filter(Trade.mode == "live", Trade.is_demo.is_(True), Trade.created_at >= since)
+        .scalar()
+        or 0
+    )
 
     return {
         "window_days": days,
@@ -156,6 +169,7 @@ def overview(db: Session, *, days: int = 30) -> dict:
         "open_support_tickets": int(open_tickets),
         "demo_executions": int(demo_executions),
         "live_trades": int(live_orders),
+        "venue_demo_trades": int(venue_demo_trades),
         "cost_model": costs,
         "note": "Cost figures use operator-provided inputs. Unset inputs are 0.00 and must not be read as zero cost.",
     }

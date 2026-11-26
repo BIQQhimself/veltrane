@@ -251,3 +251,36 @@ def test_cost_model_round_trip(client, admin):
 
     overview = client.get(f"{BASE}/admin/overview", headers=admin["headers"]).json()
     assert overview["cost_model"]["infra_monthly_usd"] == 120.0
+
+
+def test_venue_demo_trades_are_not_reported_as_live_trades(client, trader, admin, db):
+    """A venue-demo contract runs through the live path but is not real-money activity."""
+    from datetime import UTC, datetime
+
+    from app.db.models import Trade
+
+    def trade(mode: str, is_demo: bool) -> Trade:
+        return Trade(
+            org_id=trader["org_id"],
+            mode=mode,
+            instrument_symbol="R_100",
+            side="buy",
+            quantity=10.0,
+            entry_price=1000.0,
+            exit_price=1010.0,
+            notional=10.0,
+            fees=0.0,
+            funding=0.0,
+            gross_pnl=1.0,
+            net_pnl=1.0,
+            is_demo=is_demo,
+            opened_at=datetime.now(UTC),
+            closed_at=datetime.now(UTC),
+        )
+
+    db.add_all([trade("live", True), trade("live", True), trade("live", False)])
+    db.commit()
+
+    body = client.get(f"{BASE}/admin/overview", headers=admin["headers"]).json()
+    assert body["live_trades"] == 1
+    assert body["venue_demo_trades"] == 2

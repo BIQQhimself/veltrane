@@ -61,6 +61,8 @@ class MockState:
     proposals: dict[str, dict] = field(default_factory=dict)
     socket_messages: list[dict] = field(default_factory=list)
     drop_after_buys: int | None = None
+    # Roughly the spot each symbol trades at, so a quote for EUR/USD is not reported in
+    # hundreds and a volatility index is not reported in single digits.
     price: float = 1234.5
     # Tests that need a specific pattern (an EMA cross, a stale series) supply one here. Ordering
     # is newest-first, exactly as the venue sends it, so the adapter's sort is exercised too.
@@ -80,14 +82,33 @@ class MockState:
             row["balance"] = 10000.0 if row["account_type"] == "demo" else 250.0
 
 
-def _mock_price(state: MockState, epoch: int) -> float:
+SYMBOL_PRICES: dict[str, float] = {
+    "R_10": 6301.42,
+    "R_25": 2704.18,
+    "R_50": 302.86,
+    "R_75": 90412.33,
+    "R_100": 1234.5,
+    "frxEURUSD": 1.0892,
+    "frxGBPUSD": 1.2654,
+    "frxUSDJPY": 152.97,
+    "frxXAUUSD": 3242.65,
+    "frxXAGUSD": 30.11,
+    "cryBTCUSD": 63891.5,
+    "cryETHUSD": 3242.65,
+}
+
+
+def _mock_price(state: MockState, epoch: int, symbol: str | None = None) -> float:
+    base = SYMBOL_PRICES.get(symbol or "", state.price)
     phase = epoch / 90.0
-    return round(state.price + 9.0 * math.sin(phase / 6.0) + 4.0 * math.cos(phase / 1.7), 2)
+    # Movement is a fraction of the spot, so a 0.7% wave looks the same on an index and on a pair.
+    digits = 5 if base < 10 else (4 if base < 100 else 2)
+    return round(base * (1 + 0.007 * math.sin(phase / 6.0) + 0.003 * math.cos(phase / 1.7)), digits)
 
 
-def _mock_candle(state: MockState, epoch: int, granularity: int) -> dict:
-    close = _mock_price(state, epoch)
-    open_ = _mock_price(state, epoch - granularity)
+def _mock_candle(state: MockState, epoch: int, granularity: int, symbol: str | None = None) -> dict:
+    close = _mock_price(state, epoch, symbol)
+    open_ = _mock_price(state, epoch - granularity, symbol)
     return {
         "epoch": epoch,
         "open": open_,
@@ -236,7 +257,7 @@ def _public_reply(state: MockState, message: dict) -> dict:
             # blind (no EMA crossover can exist). This is a deterministic epoch-derived wave, so
             # the same instant always yields the same candles and tests stay reproducible.
             candles = [
-                _mock_candle(state, now - granularity * (i + 1), granularity)
+                _mock_candle(state, now - granularity * (i + 1), granularity, message.get("ticks_history"))
                 for i in range(int(message.get("count") or 1))
             ]
             return {**base, "msg_type": "candles", "candles": candles, "pip_size": 2.0}
@@ -244,7 +265,7 @@ def _public_reply(state: MockState, message: dict) -> dict:
             **base,
             "msg_type": "history",
             "history": {
-                "prices": [_mock_price(state, int(time.time()))],
+                "prices": [_mock_price(state, int(time.time()), message.get("ticks_history"))],
                 "times": [int(time.time())],
             },
             "pip_size": 2.0,
@@ -274,7 +295,7 @@ def _public_reply(state: MockState, message: dict) -> dict:
                 "id": proposal_id,
                 "ask_price": amount,
                 "payout": round(amount * 1.95, 2),
-                "spot": _mock_price(state, int(time.time())),
+                "spot": _mock_price(state, int(time.time()), message["underlying_symbol"]),
                 "spot_time": int(time.time()),
                 "date_start": int(time.time()),
                 "date_expiry": int(time.time()) + 300,
@@ -316,8 +337,8 @@ def _trading_reply(state: MockState, message: dict, kind: str) -> tuple[dict | N
             "contract_type": proposal["contract_type"],
             "underlying_symbol": proposal["underlying_symbol"],
             "currency": proposal["currency"],
-            "entry_spot": _mock_price(state, int(time.time())),
-            "current_spot": _mock_price(state, int(time.time())),
+            "entry_spot": _mock_price(state, int(time.time()), proposal["underlying_symbol"]),
+            "current_spot": _mock_price(state, int(time.time()), proposal["underlying_symbol"]),
             "is_sold": False,
             "purchase_time": int(time.time()),
             "expiry_time": int(time.time()) + 300,

@@ -99,6 +99,13 @@ def start_authorization(
         raise bad_request(
             "checklist_incomplete", "Every safety checklist item must be confirmed.", {"missing": missing}
         )
+    # An authorisation recorded while the operator has live trading switched off would sit in
+    # storage and become effective the moment the flag flipped. Refuse it instead of collecting it.
+    if not settings.live_trading_enabled:
+        raise forbidden(
+            "live_trading_disabled",
+            "Live trading is switched off on this deployment. An operator must enable it before authorisation can begin.",
+        )
 
     connection: Connection | None = None
     if connection_id:
@@ -171,6 +178,11 @@ def start_authorization(
 
 
 def confirm_authorization(db: Session, *, user: User, token: str, ip: str | None = None) -> TradingPermission:
+    if not settings.live_trading_enabled:
+        raise forbidden(
+            "live_trading_disabled",
+            "Live trading was switched off on this deployment; authorisation cannot be completed.",
+        )
     perm = current_permission(db, user.org_id)
     if perm is None or perm.status != "pending_confirmation":
         raise bad_request("no_pending_authorization", "Start the authorisation flow first.")
