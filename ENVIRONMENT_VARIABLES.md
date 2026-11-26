@@ -68,6 +68,20 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 | `VELTRANE_ADMIN_EMAIL` | `admin@veltrane.local` | Promoted to owner by `scripts/seed.py` |
 | `VELTRANE_ADMIN_PASSWORD` | empty | If set, seed creates the account. Change it at first sign-in |
 
+## Frontend
+
+Set these in `frontend/.env.local` (gitignored) for local runs, or in the hosting provider's
+environment for a deployment.
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | empty | Absolute API origin. Leave **empty** to call the API on the page's own origin and let Next rewrite `/api/*` |
+| `VELTRANE_API_PROXY` | empty | Server-side rewrite target for `/api/:path*`, e.g. `http://127.0.0.1:12001`. Only read at build/start time |
+
+Same-origin is the recommended setup: the browser then never crosses origins, so there is no CORS
+preflight and no second hostname to keep alive. `NEXT_PUBLIC_API_URL` is baked into the client
+bundle at build time, so changing it requires a rebuild.
+
 ## Provider credentials
 
 Exchange keys are **not** environment variables. They are entered per subscriber and encrypted at

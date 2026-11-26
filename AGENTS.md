@@ -97,3 +97,19 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   Use a routable domain — `.local`, `.test`, `.example` and `.invalid` are rejected by the login
   validator, so an account seeded on those domains can never sign in. `REVIEW_ACCESS.md` is the
   reviewer-facing brief; keep it in step with the script's SPECS list.
+
+## Runtime topology in this sandbox (learned the hard way)
+
+- **The API must listen on `0.0.0.0:12001`.** Port 12001 is the only port the platform's reverse
+  proxy forwards to `work-2-<id>.prod-runtime.all-hands.dev`. A uvicorn bound to `127.0.0.1:8000`
+  looks healthy inside the container but the public host answers `502 Bad Gateway`.
+- **Run exactly one API process.** The paper scheduler is an in-process thread, so two uvicorn
+  workers would tick the same sessions twice and double the simulated trades.
+- **Frontend (port 12000 → `work-1-...`) uses the same-origin proxy.** `frontend/.env.local` keeps
+  `NEXT_PUBLIC_API_URL=` empty and sets `VELTRANE_API_PROXY=http://127.0.0.1:12001`, so browser
+  calls go to `/api/*` on the page's own host. Reviewers then only need one URL, and
+  `https://work-1-.../api/v1/health` returns JSON.
+- **Restarting the dev server:** stop `next-server` first, then `rm -rf .next`, then `npx next dev`.
+  Deleting `.next` under a live server leaves it serving `500` on every route with
+  `ENOENT ... routes-manifest.json`.
+- After `npm run build`, the dev server must be restarted the same way; the two share `.next`.
