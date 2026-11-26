@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { RiskBudgetRows } from "@/components/app/risk-budget";
+import { contractReturn, contractStake } from "@/lib/contracts";
 import { budgetLabel, budgetTone, type RiskBudget } from "@/lib/risk-budget";
 import { TradeDetailDialog } from "@/components/app/trade-detail";
 import { cn } from "@/lib/cn";
@@ -100,7 +101,8 @@ export default function OverviewPage() {
   const equity = portfolio.data?.equity;
   const stats = performance.data?.stats;
   const counts = performance.data?.trade_counts ?? { paper: 0, demo: 0, live: 0 };
-  const curve = (performance.data?.curve ?? []).map((point) => point.cumulative);
+  const dailyCurve = (performance.data?.curve ?? []).map((point) => point.cumulative);
+  const curve = dailyCurve;
   const openContracts = (binary.data?.contracts ?? []).filter((c) => c.status === "open");
   const killEngaged = Boolean((state.data?.kill_switches as Record<string, { engaged?: boolean }> | undefined)?.org?.engaged);
   const riskLabel = budgetLabel(riskBudget.data, killEngaged);
@@ -142,7 +144,7 @@ export default function OverviewPage() {
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Badge tone="info">{plan}</Badge>
             <Badge tone={killEngaged ? "loss" : "gain"}>
-              {killEngaged ? "Trading halted" : "Trading armed"}
+              {killEngaged ? "Kill switch engaged" : "Kill switch released"}
             </Badge>
             <Badge tone={platform?.live_trading_enabled ? "warn" : "neutral"}>
               {platform?.live_trading_enabled ? "Live gate open" : "Live disabled"}
@@ -222,7 +224,7 @@ export default function OverviewPage() {
           <div className="px-3 pb-2 pt-4">
             {performance.loading && !performance.data ? (
               <div className="shimmer h-[190px] rounded-lg" />
-            ) : curve.length > 1 ? (
+            ) : curve.length >= 3 ? (
               <AreaChart
                 values={curve}
                 height={230}
@@ -230,6 +232,19 @@ export default function OverviewPage() {
                 ariaLabel="Cumulative realised P&L by day"
                 formatValue={signedMoney}
               />
+            ) : curve.length > 0 ? (
+              // One or two days cannot show a trend; a line across them reads as a collapse.
+              <div className="flex h-[190px] flex-col items-center justify-center text-center">
+                <p className="text-xs text-paper-muted">
+                  {curve.length === 1 ? "One trading day so far" : "Two trading days so far"}
+                </p>
+                <p className={`num mt-2 text-2xl ${(curve.at(-1) ?? 0) >= 0 ? "text-gain" : "text-loss"}`}>
+                  {signedMoney(curve.at(-1) ?? 0)}
+                </p>
+                <p className="mt-1 max-w-xs text-3xs text-paper-faint">
+                  Cumulative realised P&amp;L after costs. The curve is drawn once there are three trading days.
+                </p>
+              </div>
             ) : (
               <div className="flex h-[190px] flex-col items-center justify-center text-center">
                 <TrendingUp className="h-5 w-5 text-paper-faint" aria-hidden />
@@ -474,7 +489,9 @@ export default function OverviewPage() {
         <div className="flex items-center justify-between border-b border-line-soft px-4 py-3">
           <div>
             <h2 className="text-sm font-medium text-paper">Recent trades</h2>
-            <p className="mt-0.5 text-3xs text-paper-faint">Every trade opens into its full risk and cost record</p>
+            <p className="mt-0.5 text-3xs text-paper-faint">
+              Every trade opens into its full risk and cost record. Fixed-odds contracts show stake → return.
+            </p>
           </div>
           <Link href="/app/portfolio" className="text-3xs text-electric-300 hover:text-electric-200">
             Full history →
@@ -514,7 +531,15 @@ export default function OverviewPage() {
                     </td>
                     <td className="px-4 py-2.5 text-paper-muted">{trade.side}</td>
                     <td className="num px-4 py-2.5 text-right text-paper-muted">
-                      {price(trade.entry_price)} → {price(trade.exit_price)}
+                      {contractStake(trade) !== null ? (
+                        <>
+                          {money(contractStake(trade))} stake → {money(contractReturn(trade)?.value ?? trade.exit_price)}
+                        </>
+                      ) : (
+                        <>
+                          {price(trade.entry_price)} → {price(trade.exit_price)}
+                        </>
+                      )}
                     </td>
                     <td className={cn("num px-4 py-2.5 text-right", trade.net_pnl >= 0 ? "text-gain" : "text-loss")}>
                       {signedMoney(trade.net_pnl)}

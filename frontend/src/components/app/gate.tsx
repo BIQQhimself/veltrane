@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { AppShell } from "@/components/app/shell";
@@ -14,10 +15,6 @@ function Gate({ children, admin }: { children: React.ReactNode; admin?: boolean 
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
-  useEffect(() => {
-    if (!loading && user && admin && !user.is_staff) router.replace("/app");
-  }, [loading, user, admin, router]);
-
   if (loading || !user) {
     return (
       <div className="mx-auto max-w-6xl space-y-4 px-6 py-16">
@@ -30,6 +27,22 @@ function Gate({ children, admin }: { children: React.ReactNode; admin?: boolean 
         </div>
         {error ? <p className="text-xs text-loss">{error}</p> : null}
       </div>
+    );
+  }
+
+  if (admin && !user.is_staff) {
+    return (
+      <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 text-center">
+        <p className="text-2xs uppercase tracking-label text-paper-faint">Owner access only</p>
+        <h1 className="mt-2 font-display text-2xl font-semibold text-paper">This account is not staff</h1>
+        <p className="mt-3 text-xs leading-relaxed text-paper-muted">
+          The command centre is limited to VELTRANE staff accounts. The API enforces the same rule on its own, so a
+          direct request from this account is refused whether or not the page renders.
+        </p>
+        <Link href="/app" className="mt-5 text-xs text-electric-300 hover:text-electric-200">
+          Back to the workspace →
+        </Link>
+      </main>
     );
   }
 

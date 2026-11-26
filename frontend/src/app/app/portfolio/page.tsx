@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/hooks";
 import { bps, dateTime, money, percent, signedMoney } from "@/lib/format";
+import { contractReturn, contractStake } from "@/lib/contracts";
 import { Donut } from "@/components/charts";
 import { Badge, DemoBadge, StatusBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorNote, KeyValue, Skeleton, Stat } from "@/components/ui/data";
@@ -329,7 +330,7 @@ export default function PortfolioPage() {
       <Panel>
         <PanelHeader
           title="Trade history"
-          subtitle="Every row opens the immutable record"
+          subtitle="Every row opens the immutable record. A fixed-odds contract shows its stake and its return."
           action={<span className="text-2xs text-paper-faint">{trades.data?.trades.length ?? 0} records</span>}
         />
         {trades.loading ? (
@@ -343,8 +344,8 @@ export default function PortfolioPage() {
                 <TH>Instrument</TH>
                 <TH>Side</TH>
                 <TH align="right">Qty</TH>
-                <TH align="right">Entry</TH>
-                <TH align="right">Exit</TH>
+                <TH align="right">Entry / stake</TH>
+                <TH align="right">Exit / return</TH>
                 <TH align="right">Fees</TH>
                 <TH align="right">Slippage</TH>
                 <TH align="right">Net P&amp;L</TH>
@@ -361,10 +362,12 @@ export default function PortfolioPage() {
                     {trade.quantity}
                   </TD>
                   <TD align="right" mono>
-                    {money(trade.entry_price)}
+                    {contractStake(trade) !== null ? money(contractStake(trade)) : money(trade.entry_price)}
                   </TD>
                   <TD align="right" mono>
-                    {money(trade.exit_price)}
+                    {contractStake(trade) !== null
+                      ? money(contractReturn(trade)?.value ?? trade.exit_price)
+                      : money(trade.exit_price)}
                   </TD>
                   <TD align="right" mono>
                     {money(trade.fees, "USD", 2)}

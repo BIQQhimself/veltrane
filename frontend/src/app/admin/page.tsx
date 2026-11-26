@@ -95,7 +95,9 @@ export default function AdminOverviewPage() {
               />
             ) : (
               <p className="py-10 text-center text-xs text-paper-faint">
-                No payments in this window. Figures are not interpolated.
+                {data?.payments_collected
+                  ? `$${data.payments_collected.toFixed(2)} collected in this window, but no daily breakdown was recorded. MRR is computed from subscription records.`
+                  : "No payments in this window. Figures are not interpolated."}
               </p>
             )}
             <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-4 sm:grid-cols-4">
@@ -154,7 +156,8 @@ export default function AdminOverviewPage() {
                 { label: "New subscriptions", value: `${data?.new_subscriptions ?? 0}`, mono: true },
                 { label: "Cancellations", value: `${data?.cancellations ?? 0}`, mono: true },
                 { label: "Demo executions", value: `${data?.demo_executions ?? 0}`, mono: true },
-                { label: "Live trades", value: `${data?.live_trades ?? 0}`, mono: true },
+                { label: "Live trades (real funds)", value: `${data?.live_trades ?? 0}`, mono: true },
+                { label: "Venue-demo trades", value: `${data?.venue_demo_trades ?? 0}`, mono: true },
                 { label: "Open tickets", value: `${data?.open_support_tickets ?? 0}`, mono: true },
                 { label: "Active users", value: `${data?.active_users ?? 0}`, mono: true },
               ]}

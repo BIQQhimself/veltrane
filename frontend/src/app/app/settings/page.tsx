@@ -300,7 +300,11 @@ export default function SettingsPage() {
                   { label: "Organisation", value: organization?.name ?? "—" },
                   { label: "Email verified", value: user?.email_verified ? "Yes" : "No" },
                   { label: "Two-factor", value: user?.mfa_enabled ? <Badge tone="gain">enabled</Badge> : <Badge tone="warn">off</Badge> },
-                  { label: "Role", value: titleCase(user?.staff_role ?? "owner") },
+                  { label: "Organisation role", value: "Owner" },
+                  {
+                    label: "Staff role",
+                    value: user?.is_staff && user.staff_role ? titleCase(user.staff_role) : "None — subscriber account",
+                  },
                   { label: "Onboarding", value: `${user?.onboarding_step ?? 0} / 10` },
                 ]}
               />
@@ -586,7 +590,12 @@ export default function SettingsPage() {
                     <Button
                       onClick={startLiveAuthorization}
                       loading={busy}
-                      disabled={!live.data.entitlement || Object.keys(live.data.checklist_items).some((key) => !checklist[key]) || !acknowledged}
+                      disabled={
+                        !live.data.platform_live_enabled ||
+                        !live.data.entitlement ||
+                        Object.keys(live.data.checklist_items).some((key) => !checklist[key]) ||
+                        !acknowledged
+                      }
                     >
                       Start authorisation
                     </Button>
@@ -594,6 +603,12 @@ export default function SettingsPage() {
                       Revoke
                     </Button>
                   </div>
+                  {!live.data.platform_live_enabled ? (
+                    <p className="text-2xs text-warn">
+                      Live trading is switched off on this deployment. The operator must enable it before authorisation
+                      can begin; the request is refused while the gate is closed.
+                    </p>
+                  ) : null}
                   {!live.data.entitlement ? (
                     <p className="text-2xs text-warn">
                       Your plan is not eligible for live trading. Pro and Elite include the capability; authorisation is

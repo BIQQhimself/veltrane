@@ -1216,7 +1216,7 @@ export default function TerminalPage() {
                   <th className="px-4 py-2 font-normal">Contract</th>
                   <th className="px-4 py-2 font-normal">Direction</th>
                   <th className="px-4 py-2 text-right font-normal">Stake</th>
-                  <th className="px-4 py-2 text-right font-normal">Entry → exit</th>
+                  <th className="px-4 py-2 text-right font-normal">Spot → return</th>
                   <th className="px-4 py-2 text-right font-normal">Net</th>
                   <th className="px-4 py-2 text-right font-normal">Result</th>
                   <th className="px-4 py-2 text-right font-normal">Record</th>

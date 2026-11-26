@@ -3,6 +3,7 @@
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { bps, dateTime, money, signedMoney } from "@/lib/format";
+import { contractReturn, contractStake } from "@/lib/contracts";
 import { Badge, DemoBadge, StatusBadge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { KeyValue, Skeleton } from "@/components/ui/data";
@@ -30,6 +31,8 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
   const decision = data?.risk_decision ?? data?.order?.risk_decision ?? null;
   const snapshot = data?.risk_snapshot ?? null;
   const costNote = typeof snapshot?.cost_note === "string" ? snapshot.cost_note : null;
+  const stake = data ? contractStake({ risk_snapshot: snapshot }) : null;
+  const contractPayoff = data ? contractReturn({ risk_snapshot: snapshot }) : null;
 
   return (
     <Dialog open onClose={onClose} title="Trade record" description="Immutable record of the closed trade, including costs and risk checks." wide>
@@ -78,9 +81,17 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
             <div className="grid gap-5 sm:grid-cols-2">
               <KeyValue
                 items={[
-                  { label: "Quantity", value: data.quantity, mono: true },
-                  { label: "Entry price", value: money(data.entry_price), mono: true },
-                  { label: "Exit price", value: money(data.exit_price), mono: true },
+                  stake !== null
+                    ? { label: "Stake", value: money(stake), mono: true }
+                    : { label: "Quantity", value: data.quantity, mono: true },
+                  { label: "Spot at entry", value: money(data.entry_price), mono: true },
+                  stake !== null
+                    ? {
+                        label: contractPayoff?.settled ? "Sold for" : "Payout if won",
+                        value: contractPayoff ? money(contractPayoff.value) : "—",
+                        mono: true,
+                      }
+                    : { label: "Exit price", value: money(data.exit_price), mono: true },
                   { label: "Notional", value: money(data.notional), mono: true },
                   { label: "Gross P&L", value: signedMoney(data.gross_pnl), mono: true },
                   { label: "Net P&L", value: signedMoney(data.net_pnl), mono: true },

@@ -97,6 +97,8 @@ export type Trade = {
   intervention_note: string | null;
   opened_at: string | null;
   closed_at: string | null;
+  /** Contract terms and cost notes recorded when the trade was placed; returned by the list endpoint too. */
+  risk_snapshot?: Record<string, unknown> | null;
 };
 
 export type Position = {
@@ -374,6 +376,7 @@ export type AdminOverview = {
   open_support_tickets: number;
   demo_executions: number;
   live_trades: number;
+  venue_demo_trades: number;
   cost_model: Record<string, number>;
   note: string;
 };
