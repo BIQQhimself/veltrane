@@ -22,6 +22,24 @@ regenerated on every seed run (`backend/scripts/seed_testers.py`).
 | `analyst@veltrane.dev` | `Veltrane!Test2026` | Elite | `analyst` | Read-mostly staff view of the command centre |
 | `demo@veltrane.ai` | `Veltrane!Demo2026` | Pro | — | A seeded account with a running paper session, 42 settled contracts, an open position and cost attribution |
 
+### Reviewer accounts (seeded for this review)
+
+`backend/scripts/seed_reviewers.py` creates two accounts with their own password, and
+`backend/scripts/seed_reviewer_demo.py` gives the subscriber a ready-to-inspect derivative
+history. Both scripts reuse the public API, so every seeded record went through the same
+validation, risk engine and audit path a user hits.
+
+| Email | Password | Plan | Staff role | What it holds |
+| --- | --- | --- | --- | --- |
+| `reviewer@veltrane.dev` | `Veltrane!Review2026` | Elite | — | A Deriv (sandbox) connection, 3 settled contracts with full cost records, and a running BTC/USDT 1h paper session at 25,000 simulated equity |
+| `reviewer.admin@veltrane.dev` | `Veltrane!Review2026` | Elite | `owner` | The same subscriber surface plus the command centre |
+
+```bash
+cd backend
+.venv/bin/python -m scripts.seed_reviewers
+.venv/bin/python -m scripts.seed_reviewer_demo   # needs the API running and the Deriv sandbox on :12003
+```
+
 The staff **owner** is a separate account, created by `backend/scripts/seed.py` from
 `VELTRANE_ADMIN_EMAIL` and `VELTRANE_ADMIN_PASSWORD` in `.env`. Ask the operator for those
 values; they are not in this file and not in git. Re-running the seed resets that password from
@@ -97,6 +115,27 @@ Read this before drawing conclusions from any number on screen.
 11. **Try to reach `/admin` as `free@veltrane.dev`.** You get a 404, not a 403: staff
     surfaces are not advertised to non-staff.
 
+## Reviewer journey (about eight minutes)
+
+1. **Sign in as `reviewer@veltrane.dev`.** The overview opens on the simulated $25,000 paper
+   session with three settled contracts. The header states `Kill switch released`,
+   `Live disabled` and `Simulated`: three different facts, none of them pretending to be the others.
+2. **Click any row in Recent trades.** The record shows the stake, the sold-for amount, the
+   venue's margin note, every risk check that ran, and whether a human intervened.
+3. **Terminal → place a 5-minute contract.** The risk engine answers before the venue does, and the
+   contract appears under *Open*. Close it early and watch the realised result post to the record.
+4. **Connected accounts.** One Deriv sandbox connection: encrypted at rest, trade-only, never
+   returned. Provider statuses are literal: `implemented unverified` means exactly that.
+5. **Settings → Live authorisation.** The checklist is complete-able but the platform gate is
+   closed, so *Start authorisation* refuses with `403 live_trading_disabled`. A paid plan alone
+   never unlocks real-money execution.
+6. **Kill all trading** (sidebar). Engage, watch new entries get refused, release.
+7. **Open `/admin` as `reviewer@veltrane.dev`.** The page says the account is not staff rather
+   than bouncing silently. The API refuses the same calls with `404` independently of the UI.
+8. **Sign in as `reviewer.admin@veltrane.dev`** and open `/admin`. MRR, conversion, revenue by
+   tier, unit economics, provider readiness, risk policy and the audit log. Live trade counts
+   exclude venue-demo contracts; those are reported separately.
+
 ## Verified on this instance
 
 Checked against the running API on 2026-11-26, not inferred from the code. Each line is what the
@@ -121,6 +160,9 @@ server answered.
 | Staff owner | full admin surface: overview, revenue, kill switches, connections, audit log |
 | Credentials in admin payloads | none: no key, hint or hash in `/admin/users` |
 | Login brute force | `429` after a burst, as designed |
+| Live authorisation start with the platform flag off | `403 live_trading_disabled`, even with a complete checklist and a recorded acknowledgement |
+| Admin activity counters with three venue-demo contracts and no real trades | `live_trades: 0`, `venue_demo_trades: 3` — demo contracts are never counted as real-money activity |
+| Non-staff account opens `/admin` | explanatory refusal page; every staff API endpoint answers `404` to the same token |
 
 ## Limits of this build
 
