@@ -42,6 +42,13 @@ def public_config(db: Session = Depends(get_db)):
         "demo_market_data_enabled": settings.demo_market_data_enabled,
         "market_data_source": settings.market_data_source,
         "billing_provider": settings.billing_provider,
+        # Booleans only: whether each integration is configured, never the credential itself.
+        "email": {
+            "provider": "resend" if settings.email_provider == "resend" and settings.resend_api_key else "outbox",
+            "delivery_configured": bool(settings.email_provider == "resend" and settings.resend_api_key),
+            "from_address": settings.email_from,
+        },
+        "deriv_oauth_configured": bool(settings.deriv_oauth_client_id),
         "paper_costs": {
             "taker_fee_bps": settings.paper_taker_fee_bps,
             "spread_bps": settings.paper_spread_bps,

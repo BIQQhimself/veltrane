@@ -82,11 +82,47 @@ services:
         value: "off"
       - key: VELTRANE_SCHEDULER_ENABLED
         value: "true"
+      # Verification is enforced at login (app/services/auth.py), so this only works once
+      # email delivery does. With VELTRANE_EMAIL_PROVIDER=outbox every new signup is locked
+      # out at "Verify your email address before signing in" and no mail can reach them.
+      # Wire Resend (see DEPLOYMENT_RENDER.md Step 4b) or set this to "false" until you do.
       - key: VELTRANE_REQUIRE_EMAIL_VERIFICATION
         value: "true"
       # Optional: Upstash free Redis for cross-instance rate limiting and caching.
       # The API degrades gracefully when this is empty.
       - key: VELTRANE_REDIS_URL
+        sync: false
+
+      # ---- Email (Resend) -------------------------------------------------------
+      # "outbox" records messages and sends nothing. That is the correct setting until a
+      # domain is verified at Resend and the API key below is filled in; nothing in the
+      # product claims delivery it did not get.
+      - key: VELTRANE_EMAIL_PROVIDER
+        value: outbox
+      - key: VELTRANE_RESEND_API_KEY
+        sync: false
+      # Svix signing secret (whsec_...) for the Resend webhook at
+      # https://api.corvex.fun/api/v1/webhooks/resend. Empty means the endpoint refuses
+      # every request with 401 instead of trusting an unsigned payload.
+      - key: VELTRANE_RESEND_WEBHOOK_SECRET
+        sync: false
+      # Must be a sender on the domain verified at Resend (SPF + DKIM required).
+      - key: VELTRANE_EMAIL_FROM
+        value: VELTRANE <notifications@corvex.fun>
+      - key: VELTRANE_EMAIL_REPLY_TO
+        value: support@corvex.fun
+
+      # ---- Deriv ----------------------------------------------------------------
+      # Public client id of the VELTRANE app registered at developers.deriv.com. Empty
+      # disables the OAuth button and leaves the manual Personal Access Token path.
+      - key: VELTRANE_DERIV_OAUTH_CLIENT_ID
+        sync: false
+      # Leave empty to derive https://api.corvex.fun/api/v1/deriv/oauth/callback from
+      # VELTRANE_API_BASE_URL. If set, it must match Deriv's registered redirect exactly.
+      - key: VELTRANE_DERIV_OAUTH_REDIRECT_URI
+        sync: false
+      # App ID for API-token (PAT) connections. OAuth tokens carry their own app.
+      - key: VELTRANE_DERIV_APP_ID
         sync: false
 
   - type: web

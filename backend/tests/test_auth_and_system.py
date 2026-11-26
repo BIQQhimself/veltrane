@@ -14,6 +14,12 @@ def test_health_and_public_config(client):
     assert config.status_code == 200
     body = config.json()
     assert body["live_trading_enabled"] is False
+    # Integration readiness is reported as booleans so a deployment can be checked
+    # without a session and without exposing a credential.
+    assert body["email"]["delivery_configured"] in (True, False)
+    assert body["deriv_oauth_configured"] in (True, False)
+    assert "resend_api_key" not in str(body)
+    assert "client_secret" not in str(body)
     assert "not custody" in body["disclaimer"] or "does not custody" in body["disclaimer"]
 
     ready = client.get(f"{BASE}/ready")

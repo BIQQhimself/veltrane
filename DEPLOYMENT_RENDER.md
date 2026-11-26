@@ -39,11 +39,20 @@ Marketing copy, pricing and brand assets live in the frontend; no secrets are ba
 
 1. Render dashboard → **New** → **Blueprint**.
 2. Select the `BIQQhimself/veltrane` repository and branch `main`.
-3. Render reads `render.yaml` and shows three resources plus one prompt:
-   - `VELTRANE_MASTER_ENCRYPTION_KEY` — paste the base64 key you generated.
+3. Render reads `render.yaml` and shows three resources plus prompts for every `sync: false`
+   value. Only the first is required to boot:
+   - `VELTRANE_MASTER_ENCRYPTION_KEY` — **required**, paste the base64 key you generated.
    - `VELTRANE_REDIS_URL` (optional) — leave empty, or paste an Upstash free-tier Redis URL
      (`rediss://default:...@...upstash.io:6379`). Without it the API still runs; rate limiting
      falls back to per-process counters and market data is cached per process.
+   - `VELTRANE_RESEND_API_KEY`, `VELTRANE_RESEND_WEBHOOK_SECRET` (optional) — leave empty to run
+     in outbox mode; see *Connecting the integrations* below.
+   - `VELTRANE_DERIV_OAUTH_CLIENT_ID`, `VELTRANE_DERIV_OAUTH_REDIRECT_URI`,
+     `VELTRANE_DERIV_APP_ID` (optional) — leave empty to offer the manual Personal Access Token
+     path only; see *Connecting the integrations* below.
+
+   Leaving the optional ones empty is a valid deployment: the API starts, email is recorded but not
+   sent, and the Deriv OAuth button is replaced by the manual token form.
 4. **Apply**. The API build installs `backend/requirements.txt`; the start command runs
    `alembic upgrade head` and then uvicorn.
 
@@ -95,6 +104,34 @@ HTTPS certificates are issued automatically by Render once DNS resolves to the s
 domain shows **Verified**. No certificate work is needed on your side; HSTS is already sent by the
 Static Site headers.
 
+Verify DNS and TLS from the outside before touching the application:
+
+```bash
+dig +short corvex.fun            # the static site target
+dig +short www.corvex.fun        # CNAME to veltrane-web.onrender.com
+dig +short api.corvex.fun        # CNAME to veltrane-api.onrender.com
+
+# Certificate: correct hostname, issuer and expiry for both names
+echo | openssl s_client -servername api.corvex.fun -connect api.corvex.fun:443 2>/dev/null \
+  | openssl x509 -noout -subject -issuer -dates
+echo | openssl s_client -servername corvex.fun -connect corvex.fun:443 2>/dev/null \
+  | openssl x509 -noout -subject -issuer -dates
+
+# TLS redirect and HSTS on the site, then the API over HTTPS
+curl -sSI http://corvex.fun/ | head -3
+curl -sSI https://corvex.fun/ | grep -i strict-transport
+curl -sS https://api.corvex.fun/api/v1/health
+```
+
+If a certificate is not issued, the cause is almost always DNS: a record still pointing at a
+registrar parking page, a proxied Cloudflare record in front of Render, or an apex `CNAME` that the
+provider did not flatten. Fix DNS and Render retries issuance on its own.
+
+Mail sending needs its own records on the same apex (SPF, DKIM, optionally DMARC). Those are
+listed in *Step 4b → Email (Resend)*. They do not affect the website records above, with one
+caveat: **an apex `CNAME` conflicts with `MX`.** If you ever add inbound mail for `corvex.fun`, use
+an `A`/alias record for the apex rather than a `CNAME`.
+
 ## Step 4 — Production networking, cookies and CORS
 
 These values are already set by the blueprint. They matter because the web app and the API are on
@@ -117,6 +154,89 @@ If you later move the site to a different registrable domain from the API (for e
 `veltrane.app` + `api.veltrane.fun`), switch `VELTRANE_COOKIE_SAMESITE` to `none` and keep
 `VELTRANE_COOKIE_SECURE=true`, then update `VELTRANE_CORS_ORIGINS` and rebuild the static site so
 `NEXT_PUBLIC_API_URL` matches.
+
+## Step 4b — Connecting the integrations
+
+Both integrations are off until you supply credentials, and both fail closed: no key means no
+delivery, and the API says so in `/api/v1/config` rather than pretending.
+
+### Email (Resend)
+
+Nothing in this repository has been verified against a live Resend account. Follow the steps, then
+prove delivery with a real message before telling anyone verification works.
+
+1. Create a free Resend account and add `corvex.fun` as a sending domain.
+2. Resend shows the DNS records for that domain. Add them at your DNS provider, at the **apex**:
+   - `TXT` for SPF (`v=spf1 include:...` — merge with any existing SPF record, do not add a second).
+   - `TXT` (or `CNAME`, depending on what Resend shows) for DKIM, usually
+     `resend._domainkey.corvex.fun`.
+   - Optional but recommended: `TXT` at `_dmarc.corvex.fun` with `v=DMARC1; p=none; rua=mailto:...`
+     to start collecting reports without rejecting mail.
+3. Wait for Resend to show the domain as **Verified**. Until it does, sends fail with a provider
+   error and the message stays `failed` in the outbox — it is never reported as delivered.
+4. Render dashboard → `veltrane-api` → Environment:
+   - `VELTRANE_EMAIL_PROVIDER` = `resend`
+   - `VELTRANE_RESEND_API_KEY` = the API key from Resend (starts `re_`)
+   - `VELTRANE_EMAIL_FROM` = a sender on the verified domain (already set in the blueprint)
+5. In Resend → Webhooks, add `https://api.corvex.fun/api/v1/webhooks/resend`, subscribe to
+   `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, then copy the signing
+   secret (`whsec_…`) into `VELTRANE_RESEND_WEBHOOK_SECRET` and redeploy. Without that secret the
+   endpoint answers `401 webhook_not_configured` on purpose.
+6. Prove it: register a test account and check the outbox row reaches `sent` with a
+   `provider_message_id`, then confirm the Resend dashboard shows a `delivered` event. If the row
+   stays `queued`, read `provider_status` — it carries the provider's own message.
+
+Notes that matter:
+
+- Resend's free tier is limited (currently ~100 messages/day, ~3,000/month) and is a hard cap, not
+  a soft one. `VELTRANE_EMAIL_BATCH_SIZE` (25) and the daily digest exist to keep volume low.
+- A bounce or complaint marks the address suppressed and stops all later mail to it. That is
+  deliberate; clearing it is a manual database action, not a UI toggle.
+- If you would rather not send mail yet, keep `VELTRANE_EMAIL_PROVIDER=outbox` and set
+  `VELTRANE_REQUIRE_EMAIL_VERIFICATION=false` to accept unverified signups. Do not describe that
+  configuration as "email verification works".
+- **The two settings interact, and the blueprint ships the strict pair.** Verification is enforced
+  at login, so `VELTRANE_REQUIRE_EMAIL_VERIFICATION=true` with `VELTRANE_EMAIL_PROVIDER=outbox`
+  locks out every new signup: the mail is only written to `email_outbox` and login answers
+  `403 email_unverified`. Staff cannot verify an address from the admin console — it is shown, not
+  editable. Pick one before opening registration to the public: wire Resend (preferred), or flip
+  `VELTRANE_REQUIRE_EMAIL_VERIFICATION` to `false` and accept unverified accounts.
+
+### Deriv OAuth 2.0
+
+Nothing in this repository has completed a real Deriv authorisation round trip; the flow is tested
+against a protocol-faithful mock only.
+
+1. Register an application at `developers.deriv.com` (a Deriv account is required).
+2. Set the redirect URI to **exactly**
+   `https://api.corvex.fun/api/v1/deriv/oauth/callback` — scheme, host, path, no trailing slash.
+   A mismatch is rejected by Deriv with `invalid_request` before VELTRANE sees anything.
+3. Request scopes `trade` and `account_manage`. Do **not** request `payment`: it unlocks
+   withdrawals, and VELTRANE's adapter has no withdrawal code path. The API filters `payment` out
+   even if it is configured, and reports the filtered list on `GET /api/v1/deriv/oauth/status`.
+4. Copy the public client id into `VELTRANE_DERIV_OAUTH_CLIENT_ID` on `veltrane-api` and redeploy.
+   There is no client secret: the flow uses PKCE, so there is nothing to leak.
+5. Optional: copy the same application id into `VELTRANE_DERIV_APP_ID`. That is only needed for
+   the manual Personal Access Token path, which sends it as `Deriv-App-ID`. OAuth tokens carry
+   their own application.
+6. Prove it: sign in, **Connected accounts → Connect Deriv**, complete the consent screen, and
+   confirm you land back on `corvex.fun/app/accounts?deriv=connected` with a connection row whose
+   status is `connected`. Then check `GET /api/v1/deriv/oauth/status` reports `expired: false`.
+
+Behaviour worth knowing before you test it:
+
+- **One connection per Deriv account.** A single authorisation exposes both the demo and the real
+  account; the accounts panel switches between them on the same connection row. A second
+  authorisation refreshes that row rather than creating a duplicate.
+- **Switching to the real account does not enable live trading.** The connection stays in a
+  paper/read-only environment until the live-trading authorisation flow is completed separately,
+  and the platform switch is also off in this blueprint. This is intentional: a real-money
+  account being visible is not permission to trade it.
+- **Deriv issues no refresh token.** When the access token expires the panel shows "reconnect
+  needed" and `token_state` reports `expired: true`. There is no background renewal; do not add one
+  without a real token-expiry test.
+- The access token is stored envelope-encrypted like every other credential. `oauth/status` returns
+  expiry metadata and never the token.
 
 ## Step 5 — Post-deploy smoke test
 
@@ -144,8 +264,9 @@ curl -sS https://api.corvex.fun/api/v1/config | grep -E "live_trading_enabled|bi
 
 Then in the UI:
 
-1. Register an account. In production with no email provider wired, the verification email is only
-   written to `email_outbox`; see the blocker below.
+1. Register an account. Check `GET /api/v1/config` first: `email.delivery_configured` tells you
+   whether mail is really being sent. When it is `false`, the verification email is written to
+   `email_outbox` and not delivered, and the UI must not claim otherwise.
 2. Sign in, confirm the Overview and Markets pages label data correctly (`ccxt` public market data,
    demo/paper badges where they apply).
 3. Open **Admin → Risk** as an owner and confirm **Live trading master switch** shows
@@ -156,11 +277,15 @@ Then in the UI:
 
 ## Known blockers on this tier (read before announcing a launch)
 
-- **Email delivery.** No SMTP/API provider is wired, so verification and reset emails are queued,
-  not sent. Either wire a provider into `backend/app/services/email.py:deliver_queued` (Resend,
-  Postmark and SES all have free or near-free tiers) or run with
-  `VELTRANE_REQUIRE_EMAIL_VERIFICATION=false` and accept unverified signups. Do not claim email
-  verification works until delivery is real.
+- **Email delivery is configured, not verified.** Resend delivery, retries, bounce suppression and
+  signed webhooks are implemented and unit-tested, but no message has been sent through a live
+  Resend account from this repository. Set the three variables in *Step 4b*, deliver one real
+  message, and confirm the `email.delivered` webhook before claiming verification works. With
+  `VELTRANE_EMAIL_PROVIDER=outbox` nothing is sent at all.
+- **Deriv OAuth is registered, not verified.** The PKCE flow is tested against a mock. A real
+  application, a real consent screen and a real token exchange have not been exercised. Until they
+  are, the Deriv connection is `implemented_unverified` and live execution stays behind the
+  platform switch.
 - **Free Postgres expires.** Render deletes free databases 30 days after creation. Migrate to a
   paid instance, or point `VELTRANE_DATABASE_URL` at a free-tier managed Postgres (Neon,
   Supabase) that supports persistent storage, before the window closes.
@@ -199,4 +324,5 @@ Then in the UI:
 
 Free. No paid add-ons are required by this blueprint, and nothing in the repository calls a paid
 API at runtime. Going to production would need, at minimum, a paid database with backups, an email
-provider, a Redis instance for shared rate limiting, and a payment processor.
+provider (Resend's free tier is a starting point), a Redis instance for shared rate limiting, and a
+payment processor.
