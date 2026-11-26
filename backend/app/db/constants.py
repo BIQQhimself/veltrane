@@ -126,6 +126,7 @@ class AuditAction:
     PAYMENT_FAILED = "payment.failed"
     REFUND_ISSUED = "refund.issued"
     CONNECTION_CREATED = "connection.created"
+    CONNECTION_RECONNECTED = "connection.reconnected"
     CONNECTION_REVOKED = "connection.revoked"
     CONNECTION_SYNCED = "connection.synced"
     CREDENTIAL_ROTATED = "credential.rotated"

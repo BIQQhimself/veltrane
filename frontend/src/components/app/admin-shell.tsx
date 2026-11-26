@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Building2, CreditCard, FileText, Flag, LifeBuoy, Users } from "lucide-react";
+import { ArrowLeft, Building2, CreditCard, FileText, Flag, LifeBuoy, Mail, Share2, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { Wordmark } from "@/components/brand";
@@ -13,6 +13,8 @@ const NAV = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/plans", label: "Plans & entitlements", icon: CreditCard },
   { href: "/admin/risk", label: "Risk & flags", icon: Flag },
+  { href: "/admin/referrals", label: "Referrals", icon: Share2 },
+  { href: "/admin/email", label: "Email centre", icon: Mail },
   { href: "/admin/audit", label: "Audit log", icon: FileText },
   { href: "/admin/support", label: "Support", icon: LifeBuoy },
 ];

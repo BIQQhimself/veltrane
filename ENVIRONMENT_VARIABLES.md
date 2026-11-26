@@ -62,9 +62,26 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 | `VELTRANE_DERIV_OAUTH_REDIRECT_URI` | *(empty)* | Must match the redirect registered with Deriv |
 | `VELTRANE_DERIV_OAUTH_AUTH_URL` | `https://auth.deriv.com/oauth2/auth` | Authorization endpoint |
 | `VELTRANE_DERIV_OAUTH_TOKEN_URL` | `https://auth.deriv.com/oauth2/token` | Token endpoint |
+| `VELTRANE_DERIV_OAUTH_SCOPES` | `trade account_manage` | Space-separated scopes. `payment` is never requested: it enables withdrawals |
+| `VELTRANE_DERIV_OAUTH_STATE_TTL_SECONDS` | `600` | Lifetime of a pending authorisation state row. A stale callback is rejected |
+| `VELTRANE_DERIV_REFERRAL_URL` | `https://t.deriv.link/?t=XXSKPY9YLQB2` | Public referral link. Must be HTTPS and carry a tracking parameter (`t`, `affiliate_token`, `sidi` or `ca`) or the API rejects it |
 | `VELTRANE_DERIV_SESSION_MAX_FAILURES` | `5` | Consecutive socket/auth failures before a connection is marked errored and needs a manual reconnect |
 | `VELTRANE_DERIV_AUTOTRADE_RUNNER_ENABLED` | `true` | Runs the autotrade signal generator in the scheduler. It proposes only; the risk engine still decides |
 | `VELTRANE_DERIV_AUTOTRADE_INTERVAL_SECONDS` | `120` | How often the autotrade runner evaluates each enabled config |
+
+## Email delivery
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `VELTRANE_EMAIL_PROVIDER` | `outbox` | `outbox` records messages and sends nothing. `resend` delivers through Resend. Anything else fails validation at startup |
+| `VELTRANE_RESEND_API_KEY` | *(empty)* | Required when the provider is `resend`; startup validation rejects the combination without it |
+| `VELTRANE_RESEND_WEBHOOK_SECRET` | *(empty)* | Svix signing secret (`whsec_…`). Without it the webhook answers `401 webhook_not_configured` rather than trusting unsigned payloads |
+| `VELTRANE_EMAIL_FROM` | `VELTRANE <notifications@corvex.fun>` | Must be a verified sender on the provider |
+| `VELTRANE_EMAIL_REPLY_TO` | `support@corvex.fun` | |
+| `VELTRANE_EMAIL_MAX_ATTEMPTS` | `4` | Attempts before a message is marked failed |
+| `VELTRANE_EMAIL_RETRY_BASE_SECONDS` | `300` | Exponential backoff base for retryable failures |
+| `VELTRANE_EMAIL_DIGEST_HOUR_UTC` | `8` | Hour after which the daily digest is due |
+| `VELTRANE_EMAIL_BATCH_SIZE` | `25` | Messages per delivery pass |
 
 ## Billing
 

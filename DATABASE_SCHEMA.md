@@ -21,7 +21,10 @@ Conventions:
 | `users` | Subscriber or staff account | `email` unique, `password_hash`, `status`, `email_verified_at`, `mfa_enabled`, `mfa_secret_enc`, `mfa_recovery_hashes`, `is_staff`, `staff_role`, `token_version`, `failed_login_attempts`, `locked_until`, `last_login_at`, `onboarding_step`, `risk_profile`, `preferences`, `terms_accepted_at`, `terms_version`, `deleted_at` |
 | `refresh_sessions` | Rotating refresh tokens | `jti` unique, `token_hash`, `expires_at`, `revoked_at`, `replaced_by`, `ip`, `user_agent` |
 | `one_time_tokens` | Email verification and password reset | `purpose`, `token_hash`, `expires_at`, `used_at` |
-| `email_outbox` | Queued mail | `to_email`, `subject`, `body`, `category`, `status`, `provider_message_id`, `error`, `sent_at` |
+| `email_outbox` | Every outbound message and its delivery state | `to_email`, `user_id`, `subject`, `body`, `html`, `template`, `category`, `status`, `attempts`, `next_attempt_at`, `provider`, `provider_status`, `provider_message_id`, `error`, `events`, `sent_at`, `delivered_at`, `unsubscribe_token` |
+| `notification_preferences` | Per-user mail preferences | `user_id` unique, `email_enabled`, `digest_enabled`, `promotional`, `categories` (JSONB), `unsubscribe_token` unique, `last_digest_at` |
+| `email_campaigns` | Operator-sent announcements | `name`, `subject`, `template`, `body`, `audience`, `tier`, `test_email`, `status`, `scheduled_at`, `recipients`, `sent`, `failed`, `created_by` |
+| `referral_events` | Referral funnel, one row per event | `kind` (click, registration, oauth_start, connection, conversion), `status`, `visitor_id`, `user_id`, `connection_id`, `amount`, `currency`, `meta` |
 | `staff_invites` | Pending staff invitations | `email`, `role`, `invited_by`, `accepted_at` |
 
 `token_version` increments on logout-all and on password change. A token carrying an older version
@@ -52,11 +55,17 @@ is rejected, which is how a global sign-out works without a per-request session 
 | --- | --- | --- |
 | `connections` | A linked exchange or broker account | `kind`, `provider`, `label`, `environment`, `status`, `permissions`, `capabilities`, `is_sandbox`, `last_sync_at`, `last_error`, `last_error_at`, `revoked_at`, `created_by` |
 | `connection_credentials` | Envelope-encrypted secrets | `envelope` (JSONB: wrapped DEK, nonce, ciphertext), `kek_version`, `key_hint`, `fingerprint`, `rotated_at` |
+| `deriv_oauth_states` | Single-use OAuth 2.0 state | `state_hash` unique, `user_id`, `org_id`, `purpose` (connect/reconnect), `connection_id`, `code_verifier`, `visitor_id`, `expires_at`, `consumed_at` |
 | `balances` | Balance snapshot | `connection_id`, `asset`, `free`, `locked`, `total`, `usd_value`, `as_of` |
 | `ledger_transactions` | Deposits, withdrawals and transfers as reported by the venue | `type`, `asset`, `amount`, `fee`, `reference_type`, `reference_id`, `external_id`, `occurred_at`, `meta` |
 
 `connection_credentials` is the only table holding secret material, and it holds ciphertext plus a
 masked hint and a SHA-256 fingerprint. No serializer reads `envelope`.
+
+`deriv_oauth_states` stores the SHA-256 of the state value, never the value itself, so a leaked
+database dump cannot be used to complete someone else's authorisation. The PKCE verifier is held
+only for the minutes between the redirect and the callback and is cleared when the row is
+consumed.
 
 ## Instruments and trading
 

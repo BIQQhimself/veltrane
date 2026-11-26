@@ -22,7 +22,7 @@ from app.core.security import create_token, decode_token, new_csrf_token
 from app.db.models import User
 from app.db.session import get_db
 from app.services import auth as auth_service
-from app.services import entitlements, platform_switch
+from app.services import entitlements, platform_switch, referrals
 from app.services.live_authorization import live_state
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
@@ -86,6 +86,8 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
         ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
+    if payload.referral_visitor_id:
+        referrals.attribute_registration(db, user=user, visitor_id=payload.referral_visitor_id)
     db.commit()
     body = {
         "status": "registered",

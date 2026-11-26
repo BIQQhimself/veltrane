@@ -99,6 +99,18 @@ not write them to disk, do not put them in `docker-compose.yml` for production. 
 encryption key by adding a new `kek_version`, re-encrypting credential rows in a background job,
 then retiring the old key.
 
+Integrations that need a registered application before they work in production:
+
+- **Deriv OAuth** — register a Deriv application, set the redirect URI to
+  `https://<api-host>/api/v1/deriv/oauth/callback`, then set `VELTRANE_DERIV_OAUTH_CLIENT_ID` and
+  `VELTRANE_DERIV_OAUTH_REDIRECT_URI`. Until both are set the accounts page offers the manual
+  Personal Access Token path instead and says so.
+- **Email** — verify the sending domain at Resend, set `VELTRANE_EMAIL_PROVIDER=resend`,
+  `VELTRANE_RESEND_API_KEY`, `VELTRANE_EMAIL_FROM`, and point the Resend webhook at
+  `https://<api-host>/api/v1/webhooks/resend` with `VELTRANE_RESEND_WEBHOOK_SECRET` set to its
+  signing secret. Leave the provider at `outbox` and nothing is sent — which is the correct
+  setting for a preview deployment.
+
 ## Logging and monitoring
 
 - Structured JSON logs to stdout; the platform collects them.

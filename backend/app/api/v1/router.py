@@ -7,10 +7,12 @@ from app.api.v1 import (
     connections,
     copilot,
     deriv,
+    email,
     health,
     markets,
     notifications,
     portfolio,
+    referrals,
     strategies,
     trading,
 )
@@ -30,4 +32,6 @@ api_router.include_router(copilot.router)
 api_router.include_router(portfolio.router)
 api_router.include_router(analytics.router)
 api_router.include_router(notifications.router)
+api_router.include_router(email.router)
+api_router.include_router(referrals.router)
 api_router.include_router(admin.router)

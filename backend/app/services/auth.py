@@ -22,7 +22,8 @@ from app.core.security import (
 from app.db.constants import AuditAction, NotificationCategory, Severity, UserStatus
 from app.db.models import OneTimeToken, Organization, RefreshSession, User
 from app.services import audit, billing, notifications
-from app.services.email import queue_email
+from app.services import email as email_service
+from app.services.email_templates import password_reset, verification
 from sqlalchemy.orm import Session
 
 MAX_FAILED_LOGINS = 5
@@ -74,17 +75,13 @@ def register(
 
     billing.ensure_free_subscription(db, org.id)
     token, plaintext = _issue_one_time_token(db, user, purpose="verify_email", hours=48)
-    queue_email(
+    message = email_service.queue_rendered(
         db,
         to_email=email,
-        subject="Verify your VELTRANE account",
-        body=(
-            f"Welcome to VELTRANE.\n\nVerify your email within 48 hours:\n"
-            f"{settings.web_base_url}/verify-email?token={plaintext}\n\n"
-            "This platform never custodies funds and never requests withdrawal permission on exchange keys."
-        ),
-        category="security",
+        rendered=verification(user.full_name, f"{settings.web_base_url.rstrip('/')}/verify?token={plaintext}"),
     )
+    db.flush()
+    email_service.send_now(db, message)
     audit.record(
         db,
         action=AuditAction.USER_REGISTERED,
@@ -137,13 +134,13 @@ def resend_verification(db: Session, *, email: str) -> str | None:
     if user is None or user.email_verified_at is not None:
         return None
     _, plaintext = _issue_one_time_token(db, user, purpose="verify_email", hours=48)
-    queue_email(
+    message = email_service.queue_rendered(
         db,
         to_email=user.email,
-        subject="Verify your VELTRANE account",
-        body=f"Verify your email within 48 hours:\n{settings.web_base_url}/verify-email?token={plaintext}",
-        category="security",
+        rendered=verification(user.full_name, f"{settings.web_base_url.rstrip('/')}/verify?token={plaintext}"),
     )
+    db.flush()
+    email_service.send_now(db, message)
     return plaintext if not settings.is_production else None
 
 
@@ -389,13 +386,13 @@ def request_password_reset(db: Session, *, email: str) -> str | None:
     if user is None:
         return None
     _, plaintext = _issue_one_time_token(db, user, purpose="reset_password", hours=1)
-    queue_email(
+    message = email_service.queue_rendered(
         db,
         to_email=user.email,
-        subject="Reset your VELTRANE password",
-        body=f"Reset your password within one hour:\n{settings.web_base_url}/reset-password?token={plaintext}",
-        category="security",
+        rendered=password_reset(user.full_name, f"{settings.web_base_url.rstrip('/')}/reset-password?token={plaintext}"),
     )
+    db.flush()
+    email_service.send_now(db, message)
     return plaintext if not settings.is_production else None
 
 

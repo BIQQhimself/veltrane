@@ -73,6 +73,20 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     billing_webhook_tolerance_seconds: int = 300
 
+    # ---- Email (Resend) ------------------------------------------------------------
+    # "outbox" records messages without sending them: the honest default until a Resend
+    # key and a verified domain exist. "resend" delivers through api.resend.com.
+    email_provider: Literal["outbox", "resend"] = "outbox"
+    resend_api_key: str = ""
+    resend_webhook_secret: str = ""
+    email_from: str = "VELTRANE <notifications@corvex.fun>"
+    email_reply_to: str = "support@corvex.fun"
+    email_max_attempts: int = 4
+    email_retry_base_seconds: int = 300
+    # One daily activity digest per user instead of one email per trade.
+    email_digest_hour_utc: int = 8
+    email_batch_size: int = 25
+
     market_data_source: Literal["ccxt", "demo"] = "ccxt"
     market_data_cache_seconds: int = 20
 
@@ -87,6 +101,15 @@ class Settings(BaseSettings):
     deriv_oauth_redirect_uri: str = ""
     deriv_oauth_auth_url: str = "https://auth.deriv.com/oauth2/auth"
     deriv_oauth_token_url: str = "https://auth.deriv.com/oauth2/token"
+    # Only scopes Deriv documents for third-party apps: trade, account_manage,
+    # application_read, payment. VELTRANE never requests payment (withdrawals) and does
+    # not need application_read, so the default asks for what execution needs and no more.
+    deriv_oauth_scopes: str = "trade account_manage"
+    deriv_oauth_state_ttl_seconds: int = 600
+    # Referral programme. The link is opened in a new tab for people without a Deriv
+    # account; the tracking token is reused as the documented ``t`` signup parameter.
+    deriv_referral_url: str = "https://t.deriv.link/?t=XXSKPY9YLQB2"
+    deriv_referral_token: str = "XXSKPY9YLQB2"
     deriv_session_max_failures: int = 5
     deriv_autotrade_runner_enabled: bool = True
     deriv_autotrade_interval_seconds: int = 120
@@ -103,6 +126,21 @@ class Settings(BaseSettings):
     @classmethod
     def _strip(cls, v: str) -> str:
         return v.strip()
+
+    @property
+    def deriv_oauth_redirect(self) -> str:
+        """Redirect URI registered with Deriv. Defaults to this API's callback route."""
+        if self.deriv_oauth_redirect_uri:
+            return self.deriv_oauth_redirect_uri
+        return f"{self.api_base_url.rstrip('/')}/api/v1/deriv/oauth/callback"
+
+    @property
+    def deriv_oauth_configured(self) -> bool:
+        return bool(self.deriv_oauth_client_id)
+
+    @property
+    def deriv_oauth_scope_list(self) -> list[str]:
+        return [scope for scope in self.deriv_oauth_scopes.split() if scope]
 
     @property
     def trusted_proxy_ips(self) -> set[str]:
@@ -167,6 +205,14 @@ class Settings(BaseSettings):
                 return "postgresql+psycopg://" + v[len(prefix):]
         return v
 
+    @field_validator("deriv_referral_url")
+    @classmethod
+    def _https_referral(cls, v: str) -> str:
+        value = v.strip()
+        if value and not value.startswith("https://"):
+            raise ValueError("The Deriv referral link must be an https URL.")
+        return value
+
     @field_validator("cookie_samesite")
     @classmethod
     def _check_samesite(cls, v: str) -> str:
@@ -193,6 +239,8 @@ class Settings(BaseSettings):
                     "Stripe billing in production requires VELTRANE_STRIPE_SECRET_KEY and "
                     "VELTRANE_STRIPE_WEBHOOK_SECRET"
                 )
+            if self.email_provider == "resend" and not self.resend_api_key:
+                raise RuntimeError("VELTRANE_EMAIL_PROVIDER=resend requires VELTRANE_RESEND_API_KEY")
         return self
 
 

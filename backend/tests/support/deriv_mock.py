@@ -67,8 +67,15 @@ class MockState:
     # Tests that need a specific pattern (an EMA cross, a stale series) supply one here. Ordering
     # is newest-first, exactly as the venue sends it, so the adapter's sort is exercised too.
     candle_override: list[dict] | None = None
+    # OAuth: the token endpoint returns this token for a well-formed PKCE exchange.
+    oauth_token: str = "ory_at_mock_access_token_0123456789"
+    oauth_expires_in: int = 2592000
+    oauth_reject: bool = False
+    oauth_requests: list[dict] = field(default_factory=list)
 
     def reset(self) -> None:
+        self.oauth_reject = False
+        self.oauth_requests.clear()
         self.reject_token = False
         self.require_app_id = True
         self.otp_failures = 0
@@ -132,9 +139,11 @@ def _authorise(request: Request, state: MockState) -> JSONResponse | None:
     if not header.lower().startswith("bearer "):
         return _error(401, "Invalid authorization header")
     token = header[7:].strip()
-    if state.reject_token or token != state.token:
+    oauth = token == state.oauth_token
+    if state.reject_token or (not oauth and token != state.token):
         return _error(401, "Invalid token format")
-    if state.require_app_id and request.headers.get("deriv-app-id") != state.app_id:
+    # OAuth tokens carry the client id at authorisation time; only PATs need the app header.
+    if not oauth and state.require_app_id and request.headers.get("deriv-app-id") != state.app_id:
         return _error(401, "Deriv-App-ID header is required for PAT tokens")
     return None
 
@@ -152,6 +161,32 @@ def create_app(state: MockState) -> FastAPI:
         if failure:
             return failure
         return {"data": [dict(row) for row in state.accounts], "meta": {"endpoint": "/accounts"}}
+
+    @app.post("/oauth2/token")
+    async def oauth_token(request: Request):
+        """Authorization-code + PKCE exchange, shape per developers.deriv.com/docs/intro/oauth."""
+        form = await request.form()
+        payload = {key: str(value) for key, value in form.items()}
+        state.oauth_requests.append(payload)
+        if state.oauth_reject:
+            return JSONResponse(
+                {"error": "invalid_grant", "error_description": "code expired"}, status_code=400
+            )
+        verifier = payload.get("code_verifier", "")
+        if payload.get("grant_type") != "authorization_code":
+            return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
+        if not payload.get("code", "").startswith("mock_code_"):
+            return JSONResponse({"error": "invalid_grant"}, status_code=400)
+        if not (43 <= len(verifier) <= 128):
+            return JSONResponse({"error": "invalid_grant", "error_description": "bad verifier"}, status_code=400)
+        if not payload.get("redirect_uri"):
+            return JSONResponse({"error": "invalid_request"}, status_code=400)
+        return {
+            "access_token": state.oauth_token,
+            "token_type": "Bearer",
+            "expires_in": state.oauth_expires_in,
+            "scope": payload.get("scope") or "trade account_manage",
+        }
 
     @app.get("/account/v1/nickname")
     def nickname(request: Request):

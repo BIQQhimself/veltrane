@@ -33,6 +33,9 @@ _state: dict[str, object] = {
     "deriv_last_run_at": None,
     "deriv_last_summary": None,
     "deriv_last_error": None,
+    "email_last_run_at": None,
+    "email_last_summary": None,
+    "email_last_error": None,
 }
 
 # Sessions already reported as failing, so a broken row does not log every minute.
@@ -130,10 +133,35 @@ class SessionScheduler:
         elapsed = 0
         while not self._stop.wait(self.interval_seconds):
             self.run_once()
+            self.run_email_once()
             elapsed += self.interval_seconds
             if elapsed >= deriv_interval:
                 elapsed = 0
                 self.run_deriv_once()
+
+    def run_email_once(self) -> dict:
+        """Flush the email outbox, then send any due digest or campaign.
+
+        Runs on the paper-session cadence. Delivery is skipped entirely in outbox mode, so
+        a deployment without a Resend key never claims to have sent anything.
+        """
+        from app.services import email as email_service
+
+        db = SessionLocal()
+        try:
+            flush = email_service.deliver_queued(db)
+            digests = email_service.send_digests(db)
+            campaigns = email_service.send_due_campaigns(db)
+            summary = {"flush": flush, "digests": digests, "campaigns": campaigns}
+            _state.update(email_last_run_at=_utcnow().isoformat(), email_last_summary=summary, email_last_error=None)
+            return summary
+        except Exception as exc:  # noqa: BLE001 - the loop must survive a bad pass
+            db.rollback()
+            _state["email_last_error"] = type(exc).__name__
+            log.exception("email_tick_failed")
+            return {"error": type(exc).__name__}
+        finally:
+            db.close()
 
     def run_deriv_once(self) -> dict:
         if not settings.deriv_autotrade_runner_enabled:

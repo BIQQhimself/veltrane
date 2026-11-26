@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import logging
 
-from app.db.constants import NotificationCategory, Severity
+from app.db.constants import Severity
 from app.db.models import Notification, User
-from app.services.email import queue_email
+from app.services import email as email_service
 from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
-EMAIL_CATEGORIES = {
-    NotificationCategory.SECURITY,
-    NotificationCategory.BILLING,
-    NotificationCategory.RISK,
-}
+# The set of categories that may produce an email lives in the email service, so the two
+# modules cannot drift apart.
+EMAIL_CATEGORIES = email_service.IMMEDIATE_CATEGORIES
 
 EMAIL_TEMPLATES = {
     "trade.opened": "A position was opened",
@@ -60,18 +58,15 @@ def notify(
     db.flush()
 
     if email or category in EMAIL_CATEGORIES:
-        recipients = []
         if user_id:
-            user = db.get(User, user_id)
-            if user:
-                recipients = [user.email]
+            users = [db.get(User, user_id)]
         else:
-            recipients = [
-                email_addr
-                for (email_addr,) in db.query(User.email).filter(User.org_id == org_id, User.status == "active").all()
-            ]
-        for address in recipients:
-            queue_email(db, to_email=address, subject=title, body=body, category=category)
+            users = db.query(User).filter(User.org_id == org_id, User.status == "active").all()
+        for user in users:
+            if user is None:
+                continue
+            # Per-user preferences decide; trading categories stay in-app and the digest.
+            email_service.queue_for_notification(db, note=note, user=user)
     return note
 
 

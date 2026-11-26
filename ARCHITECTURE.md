@@ -88,7 +88,10 @@ The risk engine has **no import** from `app.trading` or `app.strategies`; it con
 | `app/trading/engine.py` | Order intent lifecycle, duplicate prevention, correlation ids |
 | `app/strategies/*` | Strategy interface, versioned library, backtest + walk-forward |
 | `app/services/performance_fees.py` | HWM accounting on realised P&L only; disabled by default |
-| `app/services/notifications.py` | In-app + email outbox; only confirms executions after commit |
+| `app/services/notifications.py` | In-app + email routing; only confirms executions after commit |
+| `app/services/email.py` | Durable outbox, Resend delivery with idempotency, retries, bounce suppression, Svix-verified webhooks, daily digest, campaigns |
+| `app/services/referrals.py` | Referral link validation, one click per visitor, registration attribution, verified-commission register |
+| `app/services/deriv_oauth.py` | Deriv OAuth 2.0 authorization-code + PKCE, single-use state, one connection per account |
 | `app/services/audit.py` | Append-only audit trail |
 
 ## 5. Multi-tenancy

@@ -22,16 +22,33 @@ class Notification(Base, IdTimestampMixin):
 
 
 class EmailOutbox(Base, IdTimestampMixin):
+    """One outbound message and its delivery lifecycle.
+
+    ``status`` moves queued -> sending -> sent, or -> failed once retries are exhausted.
+    Provider webhooks may later set bounced/complained. ``body`` stays the plain-text
+    version so existing callers and the review inbox keep working.
+    """
+
     __tablename__ = "email_outbox"
 
     to_email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(240), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
-    category: Mapped[str] = mapped_column(String(32), default="system", nullable=False)
-    status: Mapped[str] = mapped_column(String(16), default="queued", nullable=False)
+    html: Mapped[str | None] = mapped_column(Text)
+    template: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    category: Mapped[str] = mapped_column(String(32), default="system", nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), default="queued", nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(16), default="outbox", nullable=False)
+    provider_status: Mapped[str] = mapped_column(String(32), default="", nullable=False)
     provider_message_id: Mapped[str | None] = mapped_column(String(160))
+    reply_to: Mapped[str] = mapped_column(String(320), default="", nullable=False)
+    unsubscribe_token: Mapped[str | None] = mapped_column(String(48))
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    events: Mapped[list] = mapped_column(JSONType, default=list, nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class SupportTicket(Base, IdTimestampMixin):

@@ -20,6 +20,12 @@ from app.db.models.connections import (
     ProviderAuthEvent,
 )
 from app.db.models.identity import OneTimeToken, Organization, RefreshSession, StaffInvite, User
+from app.db.models.integrations import (
+    DerivOAuthState,
+    EmailCampaign,
+    NotificationPreference,
+    ReferralEvent,
+)
 from app.db.models.ops import (
     AiUsage,
     AuditLog,
@@ -61,6 +67,10 @@ __all__ = [
     "ConnectionCredential",
     "ProviderAuthEvent",
     "Counter",
+    "DerivOAuthState",
+    "EmailCampaign",
+    "NotificationPreference",
+    "ReferralEvent",
     "EmailOutbox",
     "EntitlementOverride",
     "Fee",

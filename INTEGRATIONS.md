@@ -70,6 +70,37 @@ scaffold. `provider_catalog()` therefore publishes `requires_api_secret: false` 
 hardcoding key/secret inputs. Tokens are requested with read and trade scopes only; withdrawal
 scope is never requested and the adapter has no withdrawal code path.
 
+**OAuth 2.0 authorisation.** The preferred path is the authorization-code flow with PKCE, so
+VELTRANE never handles a Deriv password and the user can revoke access from Deriv's own
+dashboard. `app/services/deriv_oauth.py` builds the authorisation URL, stores a single-use
+state row (`deriv_oauth_states`, hashed, with a TTL), and exchanges the code server-side. The
+requested scopes are `trade account_manage`; `payment` is never requested because it permits
+withdrawals, and `application_read` is unnecessary. Deriv issues **no refresh token**, so an
+expired access token surfaces as "reconnect needed" on the connection rather than silently
+failing syncs.
+
+Two product rules are enforced in code, not just in the UI:
+
+- **One connection follows one Deriv account.** A Deriv authorisation can expose both a demo
+  and a real account. VELTRANE stores both in the connection's metadata, but only one is active
+  at a time; switching account type reuses the same connection row, so a user cannot end up with
+  duplicate profiles, duplicate risk budgets or duplicate positions.
+- **Connecting is not authorising trading.** An OAuth token grants API access. Live execution
+  still requires the platform switch, the live-trading authorisation, a trading-permission
+  connection and a passing risk decision.
+
+A Personal Access Token remains available as a manual fallback for users whose Deriv account
+predates the application registration, and for self-hosted deployments without an OAuth app.
+
+**Referral programme.** People who reach VELTRANE without a Deriv account can open the
+configured partner link from the accounts page. The link is validated as HTTPS and must carry a
+Deriv tracking parameter (`t`, `affiliate_token`, `sidi` or `ca`); anything else is rejected, so
+a mistyped link cannot silently lose attribution. Clicks are recorded once per opaque visitor id
+(`referral_events`, kind `click`) and a registration is attributed when the browser presents the
+same id (`kind=registration`). Commission is **never inferred**: only an operator-recorded,
+verified figure from the Deriv partner statement is counted, and the funnel labels estimated
+values as unverified. See `SUBSCRIPTIONS.md` for how this sits alongside performance fees.
+
 **Trading sockets.** Anything that touches an account needs an OTP-authenticated socket. The
 session manager (`app/services/deriv_sessions.py`) requests an OTP per account, opens
 `wss://.../ws/{demo|real}?otp=...`, and re-authenticates on expiry. Sessions are per connection,
@@ -132,11 +163,35 @@ Crypto payment processors and bank transfer rails are not implemented. The abstr
 (`app/services/billing.py`) takes a provider name and dispatches, so adding one means writing a
 verification function and a normaliser, not changing the subscription model.
 
-## Email
+## Email — outbox and Resend
 
-`app/services/email.py` writes messages to an outbox table and, when SMTP settings are present,
-sends them. No SMTP provider is configured in this repository, so verification and notification
-emails are visible only through the outbox (`POST /admin/maintenance/deliver-emails` flushes it).
+`app/services/email.py` is the single write path for outbound mail. Every message is first stored
+in `email_outbox` with a rendered subject, HTML and plain text, then delivered by the scheduler
+loop or by `POST /admin/maintenance/deliver-emails`.
+
+| Provider | Behaviour | Status |
+| --- | --- | --- |
+| `outbox` (default) | Records the message and sends nothing. The record keeps `provider_status=outbox_only` and no `sent_at` | verified by tests |
+| `resend` | `POST https://api.resend.com/emails` with the outbox row id as `Idempotency-Key` | implemented, not verified against a live Resend account |
+
+Rules the implementation holds to:
+
+- **Nothing is marked sent unless the provider accepted it.** `sent_at` and
+  `provider_message_id` are written only after a 2xx response. A 429 or 5xx leaves the row
+  `queued` with exponential backoff; a 4xx other than 429 marks it `failed` and stops retrying.
+- **A bounced address is suppressed.** Once a row reaches `bounced` or `complained`, later mail to
+  that address is stored as `suppressed` rather than sent.
+- **Webhooks are verified, not trusted.** `POST /api/v1/webhooks/resend` checks the Svix HMAC
+  over `svix-id.svix-timestamp.body`, rejects timestamps older than five minutes, and refuses
+  everything with `401 webhook_not_configured` when no secret is set. Delivery, bounce and
+  complaint events are appended to the row's event history.
+- **Preferences are honoured at queue time.** `notification_preferences` decides whether a
+  category produces an email at all; security and billing cannot be switched off. Individual
+  trade notifications never generate an email — they stay in the app, and the daily digest is
+  the only trading mail.
+
+Status: `implemented_unverified` for Resend until a message is delivered to a real inbox and its
+`email.delivered` webhook is observed.
 
 ## Verification checklist before any provider is marked verified
 

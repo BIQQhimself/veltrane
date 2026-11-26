@@ -30,6 +30,20 @@ type LiveState = {
 
 type StartResponse = { status: string; confirmation_token: string; cooloff_seconds: number; warning: string };
 
+type EmailPreferences = {
+  preferences: {
+    email_enabled: boolean;
+    digest_enabled: boolean;
+    promotional: boolean;
+    categories: Record<string, boolean>;
+    last_digest_at: string | null;
+  };
+  provider: string;
+  delivery_configured: boolean;
+  categories: string[];
+  note: string;
+};
+
 const MARKETS = ["crypto", "forex", "indices"];
 
 export default function SettingsPage() {
@@ -249,6 +263,7 @@ export default function SettingsPage() {
           { id: "profile", label: "Profile" },
           { id: "security", label: "Security" },
           { id: "risk", label: "Risk preferences" },
+          { id: "notifications", label: "Notifications" },
           { id: "live", label: "Live authorisation" },
         ]}
         active={tab}
@@ -513,6 +528,8 @@ export default function SettingsPage() {
         </Panel>
       ) : null}
 
+      {tab === "notifications" ? <NotificationPreferences /> : null}
+
       {tab === "live" ? (
         <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <Panel>
@@ -641,6 +658,131 @@ export default function SettingsPage() {
           </Panel>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function NotificationPreferences() {
+  const toast = useToast();
+  const prefs = useApi<EmailPreferences>((signal) => api("/email/preferences", { signal }));
+  const [saving, setSaving] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState<EmailPreferences["preferences"] | null>(null);
+
+  React.useEffect(() => {
+    if (prefs.data) setDraft(prefs.data.preferences);
+  }, [prefs.data]);
+
+  async function save(next: Partial<EmailPreferences["preferences"]>, key: string) {
+    if (!draft) return;
+    const merged = { ...draft, ...next };
+    setDraft(merged);
+    setSaving(key);
+    try {
+      const result = await api<{ preferences: EmailPreferences["preferences"] }>("/email/preferences", {
+        method: "PUT",
+        body: {
+          email_enabled: merged.email_enabled,
+          digest_enabled: merged.digest_enabled,
+          promotional: merged.promotional,
+          categories: merged.categories,
+        },
+      });
+      setDraft(result.preferences);
+      toast.success("Notification settings saved");
+      prefs.refetch();
+    } catch (error) {
+      toast.error("Could not save settings", errorMessage(error));
+      setDraft(prefs.data?.preferences ?? null);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const toggles: { key: "email_enabled" | "digest_enabled" | "promotional"; title: string; body: string }[] = [
+    {
+      key: "email_enabled",
+      title: "Account emails",
+      body: "Security, billing, risk and connection notices. These report actions on your account.",
+    },
+    {
+      key: "digest_enabled",
+      title: "Daily trading digest",
+      body: "One summary a day of fills, rejections and realised P&L after costs. No email per trade.",
+    },
+    {
+      key: "promotional",
+      title: "Product news",
+      body: "New strategies and plan changes. Turning this off never suppresses security or billing notices.",
+    },
+  ];
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Panel>
+        <PanelHeader
+          title="Email delivery"
+          subtitle={prefs.data?.delivery_configured ? "Provider: Resend" : "Provider: local outbox (nothing is sent)"}
+          action={<Badge tone={prefs.data?.delivery_configured ? "gain" : "neutral"}>{prefs.data?.provider ?? "—"}</Badge>}
+        />
+        <PanelBody className="space-y-4">
+          {prefs.loading || !draft ? (
+            <Skeleton className="h-32 w-full" />
+          ) : (
+            <>
+              {toggles.map((toggle) => (
+                <label key={toggle.key} className="flex items-start justify-between gap-3">
+                  <span>
+                    <span className="block text-xs text-paper">{toggle.title}</span>
+                    <span className="mt-0.5 block text-2xs leading-relaxed text-paper-faint">{toggle.body}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-label={toggle.title}
+                    checked={Boolean(draft[toggle.key])}
+                    disabled={saving !== null}
+                    onChange={(event) => save({ [toggle.key]: event.target.checked } as Partial<EmailPreferences["preferences"]>, toggle.key)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-champagne-500"
+                  />
+                </label>
+              ))}
+              <p className="text-2xs leading-relaxed text-paper-faint">{prefs.data?.note}</p>
+              {prefs.data?.preferences.last_digest_at ? (
+                <p className="text-2xs text-paper-faint">Last digest {dateTime(prefs.data.preferences.last_digest_at)}</p>
+              ) : null}
+            </>
+          )}
+        </PanelBody>
+      </Panel>
+
+      <Panel>
+        <PanelHeader title="Categories" subtitle="Switch off anything you do not want. Security notices stay on." />
+        <PanelBody className="space-y-2">
+          {prefs.loading || !draft ? (
+            <Skeleton className="h-32 w-full" />
+          ) : (
+            (prefs.data?.categories ?? []).map((category) => {
+              const locked = category === "security" || category === "billing";
+              const enabled = draft.categories[category] ?? true;
+              return (
+                <label key={category} className="flex items-center justify-between gap-3 border-b border-line-soft/60 py-1.5 last:border-0">
+                  <span className="text-xs text-paper-muted">{titleCase(category)}</span>
+                  <input
+                    type="checkbox"
+                    aria-label={`${titleCase(category)} emails`}
+                    checked={locked ? true : enabled}
+                    disabled={locked || saving !== null}
+                    onChange={(event) =>
+                      save({ categories: { ...draft.categories, [category]: event.target.checked } }, category)
+                    }
+                    className="h-4 w-4 accent-champagne-500"
+                  />
+                </label>
+              );
+            })
+          )}
+        </PanelBody>
+      </Panel>
     </div>
   );
 }

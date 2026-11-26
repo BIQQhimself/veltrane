@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, MailCheck } from "lucide-react";
 import { errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { visitorId } from "@/lib/referral";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
 
@@ -50,6 +51,8 @@ export function RegisterForm() {
         country,
         accept_terms: accept,
         terms_version: "terms-2026-01",
+        // Attributes the signup to the referral visit, if this browser arrived through one.
+        referral_visitor_id: visitorId(),
       });
       setDone(result);
     } catch (err) {

@@ -14,6 +14,8 @@ class RegisterRequest(BaseModel):
     country: str | None = Field(default=None, max_length=2)
     terms_version: str = Field(default="terms-2026-01", max_length=24)
     accept_terms: bool = True
+    # Opaque id from the referral link the visitor arrived through. Optional.
+    referral_visitor_id: str = Field(default="", max_length=64)
 
     @field_validator("accept_terms")
     @classmethod

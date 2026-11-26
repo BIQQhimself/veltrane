@@ -58,6 +58,7 @@ export type RegisterInput = {
   country: string;
   accept_terms: boolean;
   terms_version?: string;
+  referral_visitor_id?: string;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);

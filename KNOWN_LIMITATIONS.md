@@ -112,10 +112,12 @@ competent reviewer would find, so it is cheaper to state it here.
     topology (static site + web service + Postgres) and `DEPLOYMENT_RENDER.md` documents the
     custom-domain and HTTPS steps for `corvex.fun`. Nothing in this repository has been deployed to
     Render and no domain has been connected.
-37. **No email provider is wired.** `backend/app/services/email.py:deliver_queued` only counts
-    queued messages. Verification, reset and notification mail are persisted, never sent, so a
-    public signup cannot complete email verification until a provider is added. Every unread email
-    stays in `email_outbox`.
+37. **Email delivery is implemented but unverified.** `backend/app/services/email.py` supports a
+    local outbox (default: records and sends nothing) and Resend. No Resend account has been
+    configured here, so no message has been delivered to a real inbox and no `email.delivered`
+    webhook has been observed. Until that happens, verification and reset mail in a real
+    deployment depends on the operator setting `VELTRANE_EMAIL_PROVIDER=resend` and a verified
+    sender. The outbox never marks anything sent that the provider did not accept.
 38. **Free Render Postgres expires 30 days after creation** and has no managed backups. It is
     suitable for a preview, not for data you would miss.
 39. **No Redis on the free tier by default.** Rate limiting and market-data caching become
@@ -127,6 +129,22 @@ competent reviewer would find, so it is cheaper to state it here.
 41. **The live-trading master switch is a staff control, not a launch action.** An Owner/Admin can
     disable live trading at any time, but cannot enable it unless the operator has also set
     `VELTRANE_LIVE_TRADING_ENABLED=true`, and no verified live adapter exists.
+
+42. **Deriv OAuth has not been exercised against Deriv.** The authorisation-code + PKCE flow,
+    state handling, account switch and encrypted credential creation are covered by tests against
+    the local protocol mock, but no real Deriv application has completed the round trip. Deriv
+    issues no refresh token, so an expired token requires the user to reconnect; there is no
+    background renewal.
+43. **One Deriv connection follows one account by design.** A user holding both a demo and a live
+    Deriv account switches between them on a single connection. This is a deliberate product
+    rule, not an oversight, but it means a user cannot run demo and live strategies on the same
+    Deriv authorisation at the same time.
+44. **Referral commission is manual.** VELTRANE measures what it can observe (clicks,
+    registrations, OAuth starts, connections) and labels everything else unverified. There is no
+    Deriv partner API integration; an operator copies the verified figure from the partner
+    statement. Treat reported commission as an accounting record, not a live feed.
+45. **Performance-fee terms remain disabled** pending legal review (see `SUBSCRIPTIONS.md`), and
+    referral commission is not netted against performance fees anywhere.
 
 ## What this build is good for
 

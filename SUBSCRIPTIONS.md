@@ -104,6 +104,19 @@ Rules:
 The module is not revenue-ready. It exists so the accounting is correct when the legal work
 completes, and so it cannot be switched on by accident.
 
+## Referral revenue
+
+Referral commission from the Deriv partner programme is tracked separately from subscriptions and
+performance fees. The platform records only what it can observe: a click (once per opaque visitor
+per 12 hours), a registration attributed to that visitor, an OAuth start, and a connection. It
+never guesses commission. An operator copies the verified figure from the Deriv partner statement
+into the command centre, and that record — amount, currency, note, actor and timestamp — is the
+only thing counted as commission. The funnel shows verified and unverified counts side by side so
+nobody mistakes an estimate for revenue.
+
+Referral commission is not netted against performance fees, is not paid out by VELTRANE, and does
+not change a subscriber's entitlements.
+
 ## Business analytics
 
 `/admin/revenue` and `/admin/costs` compute, from stored rows:

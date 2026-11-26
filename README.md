@@ -16,16 +16,18 @@ never enables real-money trading by default.
 | Tenancy | Every row is organisation-scoped; cross-tenant reads and writes return 404 |
 | Subscriptions | Free / Basic $19 / Pro $49 / Elite $149, prices editable in the admin console, server-side entitlements |
 | Billing | Provider abstraction with a signed mock provider and Stripe adapter, idempotent webhooks, past-due grace, cancellation, refunds, invoices, payments |
-| Connections | Provider registry (Binance, Bybit, OKX, Deriv, simulation venue), envelope-encrypted credentials, read-only sync, safe error handling |
+| Connections | Provider registry (Binance, Bybit, OKX, Deriv, simulation venue), Deriv OAuth 2.0 with PKCE plus a Personal Access Token fallback, envelope-encrypted credentials, read-only sync, safe error handling, one connection per Deriv account with demo/live switching |
 | Market data | Public CCXT tickers/candles with a deterministic demo feed fallback. Every payload carries `is_demo` |
 | Strategies | Versioned strategies with entry/exit rules, risk parameters, limitations, walk-forward backtests net of fees, approval workflow |
 | Paper trading | Simulated execution with taker fees, spread, slippage, realised P&L after costs, immutable trade records |
 | Risk engine | Independent deterministic engine, 20+ checks, rejections audited, kill switches at global/org/provider/user scope |
 | Live trading | Code paths exist and are gated: entitlement, verified trade-only connection, risk acknowledgement, 8-item checklist, MFA or written waiver, 60-second cooling-off token, platform flag. Off by default |
-| Admin | Owner/analyst/support RBAC, revenue and cost analytics, plan and entitlement management, risk policy versioning, kill switches, flags, audit log, support inbox, fraud signals |
+| Admin | Owner/analyst/support RBAC, revenue and cost analytics, plan and entitlement management, risk policy versioning, kill switches, flags, audit log, support inbox, fraud signals, referral funnel and commission register, email centre with campaigns |
+| Notifications | In-app feed, transactional email through a durable outbox (Resend or local outbox), per-user preferences and one-click unsubscribe, a single daily trading digest instead of per-trade mail |
+| Growth | Deriv referral link with server-side click and registration attribution; commission counts only when an operator records a verified figure |
 | Performance fees | Elite-only, high-water-mark accounting, realised P&L only, consent records, jurisdiction gate, disabled until legal review is recorded |
 | Web app | Next.js 15 App Router + TypeScript + Tailwind. Twelve workspace screens (overview, terminal, markets, strategies, copilot, accounts, portfolio, analytics, notifications, billing, settings, onboarding), an admin console, and an installable PWA shell |
-| Tests | 169 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
+| Tests | 287 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
 
 ## Reviewing this build
 
@@ -36,9 +38,10 @@ simulated, and walks a ten-minute tour.
 ## What does **not** exist yet
 
 Native iOS and Android apps (the web app is installable as a PWA instead), verified live exchange
-connectivity, a payment provider in live mode, a durable job worker (paper sessions do advance
-unattended today, but from an in-process thread), performance/load testing, an independent security
-review, and the legal work for performance fees. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and
+connectivity, a payment provider in live mode, a verified email provider in production, a Deriv
+partner API feed for commission, a durable job worker (paper sessions do advance unattended today,
+but from an in-process thread), performance/load testing, an independent security review, and the
+legal work for performance fees. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and
 [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).
 
 ## Repository layout

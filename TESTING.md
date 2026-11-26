@@ -45,6 +45,9 @@ code as Stripe.
 | `test_paper_session.py` | Paper session provisioning, per-session isolation, stop, and balance accounting |
 | `test_market_data.py` | The demo feed's shape and continuity, instrument specs, market open/closed behaviour |
 | `test_migrations.py` | `alembic upgrade head` produces the same schema the ORM declares |
+| `test_deriv_oauth.py` | OAuth 2.0 connect and reconnect against the mock gateway: PKCE challenge, single-use state, expired and unknown state rejected, one encrypted connection created (never a duplicate), credentials encrypted at rest, account listing and switching, scope list that never includes `payment`, and cross-tenant callback refusal |
+| `test_email.py` | Outbox semantics: nothing marked sent unless the provider accepts it, idempotency key, 429 backoff versus permanent failure, bounce suppression, Svix signature verification (unsigned, tampered, stale, unconfigured), digest once per day and only with activity, preferences honoured, campaign audience filtering, and that trade notifications never send mail |
+| `test_referrals.py` | Referral link redirect and one-click-per-visitor dedupe, disabled link falling back to signup, opaque visitor id sanitisation, registration attribution, public config minimalism, admin-only access (404 for subscribers), link validation (HTTPS and tracking parameter) and verified-conversion accounting |
 | `test_platform_live_switch.py` | Two-key live trading gate: staff key defaults, both keys required for `effective`, member gets `404`, typed confirmation enforced, enabling refused while the deployment flag is off, audit record written, trusted-proxy matching (exact, CIDR, `*`) and `X-Forwarded-For` ignored from an untrusted peer |
 
 ## Safety invariants asserted by tests

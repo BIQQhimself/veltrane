@@ -100,9 +100,12 @@ def generate_master_key_b64() -> str:
     return base64.b64encode(secrets.token_bytes(32)).decode()
 
 
-def mask_secret(value: str | None, keep: int = 4) -> str:
+def mask_secret(value: str | None, keep: int = 4, max_length: int = 32) -> str:
+    """A short, non-reversible hint. Capped so it always fits ``key_hint`` (32 chars)."""
     if not value:
         return ""
     if len(value) <= keep:
-        return "•" * len(value)
-    return "•" * max(4, len(value) - keep) + value[-keep:]
+        return "•" * min(len(value), max_length)
+    tail = value[-keep:]
+    bullets = min(max(4, len(value) - keep), max_length - keep)
+    return "•" * bullets + tail

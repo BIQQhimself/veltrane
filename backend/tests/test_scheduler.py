@@ -111,4 +111,7 @@ def test_scheduler_state_is_reportable(client, db, pro_trader):
         "deriv_last_run_at",
         "deriv_last_summary",
         "deriv_last_error",
+        "email_last_run_at",
+        "email_last_summary",
+        "email_last_error",
     } == set(state)

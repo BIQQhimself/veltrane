@@ -166,3 +166,27 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
 - Local sandbox note: this environment has no Docker. Postgres/Redis come from apt
   (`sudo pg_ctlcluster 17 main start`, `redis-server --daemonize yes`) and the `veltrane` role
   password must match `.env` (`VELTRANE_DATABASE_URL`). The test suite also needs `veltrane_test`.
+
+## Email, referrals and Deriv OAuth
+
+- One category list decides mail routing: `email_service.IMMEDIATE_CATEGORIES`. `notifications.EMAIL_CATEGORIES`
+  aliases it, so a new category is added once. Trade and order categories never mail individually —
+  they belong to the daily digest.
+- `email_allowed()` returns `True` for `MANDATORY_CATEGORIES` (`security`, `billing`) before it reads
+  preferences. Don't "simplify" that away: security notices must survive a user switching everything off.
+- Mail rows only get `sent_at` after the provider returns 2xx. A test that asserts delivery must set
+  `VELTRANE_EMAIL_PROVIDER=resend` and stub the HTTP call, or assert the outbox state instead.
+- Referral links must be HTTPS **and** carry a tracking parameter (`t`, `affiliate_token`, `sidi`,
+  `ca`); `referrals.update_link` raises otherwise, and the admin route maps that to `400`.
+- Commission is never computed from clicks. `referrals.record_conversion` is the only path, and it
+  is staff-only by design (`404` for subscribers, not `403`).
+- Deriv OAuth stores only the SHA-256 of the state value plus a short-lived PKCE verifier
+  (`deriv_oauth_states`). Deriv issues no refresh token: an expired token is a "reconnect" state,
+  not something to retry in a background job.
+- A Deriv authorisation maps to exactly one `connections` row; switching between demo and live
+  reuses it. Creating a second connection for the same Deriv account is a bug, and
+  `test_deriv_oauth.py` asserts against it.
+- Admin email campaigns are stored in `email_campaigns` and fanned out by
+  `email_service.send_due_campaigns`; the scheduler calls it, so a campaign marked `scheduled`
+  sends even if the operator closes the browser. Promotional campaigns respect
+  `promotional_allowed()`; transactional mail does not.

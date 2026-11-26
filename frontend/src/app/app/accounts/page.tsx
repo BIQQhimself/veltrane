@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/data";
 import { Field, Input, Select } from "@/components/ui/input";
+import { DerivOAuthPanel } from "@/components/app/deriv-oauth-panel";
 import { Panel, PanelBody, PanelHeader, SectionHeading } from "@/components/ui/panel";
 import { useToast } from "@/components/ui/toast";
 import type { Connection } from "@/lib/types";
@@ -145,6 +146,8 @@ export default function AccountsPage() {
       />
 
       {connections.error ? <ErrorNote message={connections.error} onRetry={connections.refetch} /> : null}
+
+      <DerivOAuthPanel onConnected={() => connections.refetch()} />
 
       <Panel>
         <PanelHeader

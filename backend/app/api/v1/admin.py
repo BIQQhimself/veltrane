@@ -25,6 +25,7 @@ from app.db.models import (
     AiUsage,
     AuditLog,
     Connection,
+    EmailCampaign,
     EntitlementOverride,
     FeatureFlag,
     FeeConsent,
@@ -53,11 +54,15 @@ from app.services import (
     kill_switch,
     performance_fees,
     platform_switch,
+    referrals,
     strategy_service,
 )
+from app.services import email as email_service
 from app.services.email import deliver_queued
+from app.services.email_templates import CAMPAIGN_TEMPLATES
 from app.services.scheduler import scheduler_state
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -800,9 +805,211 @@ def fraud_signals(staff: User = Depends(require_analyst), db: Session = Depends(
 
 @router.post("/maintenance/deliver-emails")
 def deliver_emails(staff: User = Depends(require_admin), db: Session = Depends(get_db)):
-    pending = deliver_queued(db)
+    """Flush the outbox now. Reports exactly what the provider accepted."""
+    summary = deliver_queued(db, limit=200)
     return {
-        "queued": pending,
-        "delivered": 0,
-        "note": "No SMTP/API provider is configured in this build. Messages remain queued; nothing is marked sent.",
+        **summary,
+        "note": (
+            "Messages are only marked sent after Resend returned an id."
+            if summary.get("provider") == "resend"
+            else "Provider is the local outbox: nothing was transmitted and nothing is marked sent."
+        ),
     }
+
+
+# --------------------------------------------------------------------------- referrals
+class ReferralLinkUpdate(BaseModel):
+    url: str = Field(default="", max_length=400)
+    campaign: str = Field(default="veltrane", max_length=40)
+    enabled: bool = True
+
+
+class VerifiedConversion(BaseModel):
+    user_id: str = Field(min_length=8, max_length=64)
+    amount: float = Field(gt=-1_000_000, le=1_000_000)
+    currency: str = Field(default="USD", max_length=8)
+    note: str = Field(default="", max_length=200)
+
+
+@router.get("/referrals")
+def referral_overview(
+    days: int = Query(default=90, ge=1, le=365),
+    staff: User = Depends(require_analyst),
+    db: Session = Depends(get_db),
+):
+    return {
+        "link": referrals.link_config(db),
+        "funnel": referrals.funnel(db, days=days),
+        "plan_mix": referrals.plan_mix(db),
+        "recent_events": referrals.recent_events(db, limit=60),
+        "templates": {"tracking_params": ["t", "affiliate_token", "sidi", "ca"]},
+    }
+
+
+@router.put("/referrals/link")
+def update_referral_link(
+    payload: ReferralLinkUpdate,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        referrals.save_link_config(
+            db,
+            url=payload.url,
+            campaign=payload.campaign,
+            enabled=payload.enabled,
+            actor_id=staff.id,
+        )
+    except ValueError as exc:
+        raise bad_request("invalid_referral_link", str(exc)) from exc
+    audit.record(
+        db,
+        action="referrals.link_updated",
+        org_id=staff.org_id,
+        actor_user_id=staff.id,
+        actor_email=staff.email,
+        meta={"campaign": payload.campaign, "enabled": payload.enabled},
+    )
+    db.commit()
+    return {"link": referrals.link_config(db)}
+
+
+@router.post("/referrals/conversions", status_code=201)
+def record_verified_conversion(
+    payload: VerifiedConversion,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, payload.user_id)
+    if user is None:
+        raise not_found("user_not_found", "User not found.")
+    event = referrals.record_conversion(
+        db, user_id=user.id, amount=payload.amount, currency=payload.currency, note=payload.note
+    )
+    audit.record(
+        db,
+        action="referrals.conversion_recorded",
+        org_id=staff.org_id,
+        actor_user_id=staff.id,
+        actor_email=staff.email,
+        target_type="referral_event",
+        target_id=event.id,
+        meta={"amount": payload.amount, "currency": payload.currency},
+    )
+    db.commit()
+    return {"status": "recorded", "event_id": event.id, "verified": True}
+
+
+# --------------------------------------------------------------------------- email centre
+class CampaignCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    subject: str = Field(min_length=2, max_length=240)
+    template: str = Field(default="announcement", max_length=64)
+    body: str = Field(default="", max_length=20_000)
+    audience: str = Field(default="all", pattern="^(all|tier|test)$")
+    tier: str | None = Field(default=None, max_length=24)
+    test_email: str | None = Field(default=None, max_length=320)
+    scheduled_at: datetime | None = None
+    send_now: bool = False
+
+
+@router.get("/email")
+def email_centre(
+    days: int = Query(default=30, ge=1, le=365),
+    staff: User = Depends(require_analyst),
+    db: Session = Depends(get_db),
+):
+    campaigns = db.query(EmailCampaign).order_by(EmailCampaign.created_at.desc()).limit(50).all()
+    return {
+        "stats": email_service.stats(db, days=days),
+        "campaigns": [email_service.campaign_dict(campaign) for campaign in campaigns],
+        "templates": CAMPAIGN_TEMPLATES,
+        "from_address": settings.email_from,
+        "reply_to": settings.email_reply_to,
+    }
+
+
+@router.post("/email/campaigns", status_code=201)
+def create_campaign(
+    payload: CampaignCreate,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    if payload.template not in CAMPAIGN_TEMPLATES:
+        raise bad_request("unknown_template", "Pick one of the available campaign templates.")
+    if payload.audience == "tier" and not payload.tier:
+        raise bad_request("tier_required", "Choose the plan this campaign targets.")
+    if payload.audience == "test" and not payload.test_email:
+        raise bad_request("test_email_required", "Enter the address that should receive the test.")
+    scheduled_at = payload.scheduled_at
+    if payload.send_now:
+        scheduled_at = datetime.now(UTC)
+    campaign = EmailCampaign(
+        name=payload.name,
+        subject=payload.subject,
+        template=payload.template,
+        body=payload.body,
+        audience=payload.audience,
+        tier=payload.tier,
+        test_email=payload.test_email,
+        status="scheduled" if scheduled_at else "draft",
+        scheduled_at=scheduled_at,
+        created_by=staff.id,
+        meta={"created_by_email": staff.email},
+    )
+    db.add(campaign)
+    db.flush()
+    audit.record(
+        db,
+        action="email.campaign_created",
+        org_id=staff.org_id,
+        actor_user_id=staff.id,
+        actor_email=staff.email,
+        target_type="email_campaign",
+        target_id=campaign.id,
+        meta={"audience": payload.audience, "template": payload.template, "send_now": payload.send_now},
+    )
+    db.commit()
+    return {"campaign": email_service.campaign_dict(campaign)}
+
+
+@router.post("/email/campaigns/{campaign_id}/send")
+def send_campaign(
+    campaign_id: str,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    campaign = get_or_404(db, EmailCampaign, campaign_id)
+    if campaign.status not in {"draft", "scheduled"}:
+        raise bad_request("campaign_not_sendable", f"Campaign is already {campaign.status}.")
+    campaign.status = "scheduled"
+    campaign.scheduled_at = datetime.now(UTC)
+    db.flush()
+    summary = email_service.send_due_campaigns(db, now=datetime.now(UTC))
+    audit.record(
+        db,
+        action="email.campaign_sent",
+        org_id=staff.org_id,
+        actor_user_id=staff.id,
+        actor_email=staff.email,
+        target_type="email_campaign",
+        target_id=campaign.id,
+        meta={"queued": campaign.sent},
+    )
+    db.commit()
+    return {"status": "queued", "campaign": email_service.campaign_dict(campaign), "summary": summary}
+
+
+@router.delete("/email/campaigns/{campaign_id}")
+def cancel_campaign(
+    campaign_id: str,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    campaign = get_or_404(db, EmailCampaign, campaign_id)
+    if campaign.status == "sent":
+        raise bad_request("campaign_already_sent", "A sent campaign cannot be cancelled.")
+    campaign.status = "cancelled"
+    campaign.scheduled_at = None
+    db.commit()
+    return {"campaign": email_service.campaign_dict(campaign)}

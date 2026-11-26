@@ -8,17 +8,20 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 from app.api.deps import get_current_user
+from app.core import rate_limit as limit
 from app.core.config import settings
 from app.core.errors import bad_request, forbidden, not_found
 from app.db.constants import AuditAction
 from app.db.models import Connection, User
 from app.db.session import get_db
-from app.services import audit, deriv_sessions, execution_gate
+from app.services import audit, deriv_oauth, deriv_sessions, execution_gate, referrals
 from app.services.connections import get_connection, load_credentials
 from app.trading import deriv_execution
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -246,95 +249,198 @@ def trade_detail(order_id: str, user: User = Depends(get_current_user), db: Sess
     return deriv_execution.trade_detail(db, org_id=user.org_id, order_id=order_id)
 
 
-# ------------------------------------------------------------------ OAuth (configured apps only)
+# ------------------------------------------------------------------ OAuth 2.0 (Deriv)
+class OAuthStartRequest(BaseModel):
+    purpose: str = Field(default="connect", pattern="^(connect|reconnect)$")
+    connection_id: str = Field(default="", max_length=64)
+    visitor_id: str = Field(default="", max_length=64)
+
+
+class OAuthExchangeRequest(BaseModel):
+    code: str = Field(min_length=8, max_length=2048)
+    state: str = Field(min_length=8, max_length=128)
+
+
+class AccountSwitchRequest(BaseModel):
+    account_id: str = Field(min_length=3, max_length=64)
+
+
 @router.get("/oauth/status")
-def oauth_status():
-    configured = bool(settings.deriv_oauth_client_id and settings.deriv_oauth_redirect_uri)
+def oauth_status(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """What the Connect panel needs. Never returns tokens or client secrets."""
+    link = referrals.link_config(db)
+    connection = (
+        db.query(Connection)
+        .filter(Connection.org_id == user.org_id, Connection.provider == "deriv")
+        .order_by(Connection.created_at)
+        .first()
+    )
     return {
-        "configured": configured,
-        "authorize_url": (
-            f"{settings.deriv_oauth_auth_url}?response_type=code"
-            f"&client_id={settings.deriv_oauth_client_id}"
-            f"&redirect_uri={settings.deriv_oauth_redirect_uri}&scope=read%20trade"
-            if configured
-            else ""
+        "configured": deriv_oauth.configured(),
+        "client_id": settings.deriv_oauth_client_id,
+        "redirect_uri": settings.deriv_oauth_redirect,
+        "scopes": deriv_oauth.requested_scopes(),
+        "single_account_policy": True,
+        "referral": {"url": link["url"] if link["enabled"] else "", "enabled": link["enabled"]},
+        "connection": (
+            {
+                "id": connection.id,
+                "status": connection.status,
+                "account_id": connection.provider_account_id,
+                "account_type": connection.provider_account_type,
+                "currency": connection.provider_currency,
+                "accounts": (connection.provider_meta or {}).get("accounts", []),
+                "nickname": (connection.provider_meta or {}).get("nickname", ""),
+                "token": deriv_oauth.token_state(connection),
+            }
+            if connection
+            else None
         ),
         "note": (
-            "OAuth 2.0 requires a Deriv application registered with VELTRANE's client id and an "
-            "exact redirect URI. Until that exists, use a Personal Access Token."
+            "Deriv issues no refresh token: when the access token expires, reconnect from this panel."
+            if connection
+            else "Connect with your Deriv login. VELTRANE never asks for withdrawal permission."
         ),
     }
 
 
-@router.post("/oauth/exchange")
-def oauth_exchange(
-    code: str = Query(min_length=8),
-    connection_id: str = Query(default=""),
+@router.post("/oauth/start")
+def oauth_start(
+    payload: OAuthStartRequest,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Exchange an authorisation code for an access token.
+    """Begin the authorisation-code + PKCE handshake.
 
-    Unverified against a registered Deriv application: it is disabled until
-    ``VELTRANE_DERIV_OAUTH_CLIENT_ID`` and ``..._OAUTH_REDIRECT_URI`` are set.
+    Returns the Deriv URL to open in the current tab and the referral link to open in a new
+    tab for people who do not have a Deriv account yet.
     """
-    if not (settings.deriv_oauth_client_id and settings.deriv_oauth_redirect_uri):
-        raise bad_request(
-            "oauth_not_configured",
-            "OAuth is not configured on this deployment. Register a Deriv application and set "
-            "VELTRANE_DERIV_OAUTH_CLIENT_ID / VELTRANE_DERIV_OAUTH_REDIRECT_URI, or use a Personal Access Token.",
-        )
-    import httpx
-
-    try:
-        response = httpx.post(
-            settings.deriv_oauth_token_url,
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "client_id": settings.deriv_oauth_client_id,
-                "redirect_uri": settings.deriv_oauth_redirect_uri,
-            },
-            timeout=20,
-        )
-    except httpx.HTTPError as exc:
-        raise bad_request("oauth_unreachable", "Could not reach Deriv's token endpoint.") from exc
-    if response.status_code >= 400:
-        raise bad_request("oauth_exchange_failed", "Deriv rejected the authorisation code.")
-    token = (response.json() or {}).get("access_token")
-    if not token:
-        raise bad_request("oauth_exchange_failed", "Deriv returned no access token.")
-
-    from app.providers.base import CredentialBundle
-    from app.services import connections as connection_service
-
-    identity = deriv_sessions.adapter().test_connection(CredentialBundle(api_key=token, app_id="__oauth__"))
-    if connection_id:
-        connection = _deriv_connection(db, user.org_id, connection_id)
-        connection_service.store_credentials(
-            db,
-            connection,
-            CredentialBundle(
-                api_key=token,
-                app_id="__oauth__",
-                account_id=identity.get("account_id") or "",
-            ),
-        )
-        connection_service.apply_identity(connection, identity)
-        db.commit()
-        return {"status": "connected", "connection_id": connection.id, "identity": identity}
-
-    connection = connection_service.create_connection(
+    limit.enforce(request, "deriv_oauth_start", limit=12, window=600)
+    link = referrals.link_config(db)
+    result = deriv_oauth.authorize_url(
         db,
         user=user,
-        provider_key="deriv",
-        label=f"Deriv OAuth {_utcnow():%Y-%m-%d}",
-        environment="live",
-        api_key=token,
-        app_id="__oauth__",
+        purpose=payload.purpose,
+        connection_id=payload.connection_id,
+        visitor_id=referrals.valid_visitor(payload.visitor_id),
+    )
+    referrals.record_oauth_start(
+        db, user=user, visitor_id=payload.visitor_id, purpose=payload.purpose
+    )
+    audit.record(
+        db,
+        action="deriv.oauth_started",
+        org_id=user.org_id,
+        actor_user_id=user.id,
+        actor_email=user.email,
+        target_type="deriv_oauth_state",
+        target_id=result["state"],
+        meta={"purpose": payload.purpose, "scopes": result["scopes"]},
     )
     db.commit()
-    return {"status": "connected", "connection_id": connection.id}
+    return {**result, "referral_url": referrals.signup_url(link)}
+
+
+@router.post("/oauth/exchange")
+def oauth_exchange(
+    payload: OAuthExchangeRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Complete the handshake from a browser that received the callback."""
+    result = deriv_oauth.complete(db, state=payload.state, code=payload.code, user=user)
+    referrals.record_connection(
+        db,
+        user=user,
+        connection_id=result["connection_id"],
+        accounts=len(result["identity"]["accounts"]),
+    )
+    db.commit()
+    return {"status": "connected", **result}
+
+
+@router.get("/oauth/callback")
+def oauth_callback(
+    code: str = Query(default=""),
+    state: str = Query(default=""),
+    error: str = Query(default=""),
+    error_description: str = Query(default=""),
+    db: Session = Depends(get_db),
+):
+    """Deriv's redirect target.
+
+    The browser arrives here without a VELTRANE session, so the single-use ``state`` row is
+    what authorises the exchange. The result is a redirect to the app either way: this route
+    is never an API for scripts.
+    """
+    web = settings.web_base_url.rstrip("/")
+    if error:
+        log.info("deriv_oauth_denied", extra={"extra_fields": {"error": error}})
+        return RedirectResponse(
+            f"{web}/app/accounts?deriv=denied&reason={quote(error_description or error)[:120]}", status_code=302
+        )
+    if not code or not state:
+        return RedirectResponse(f"{web}/app/accounts?deriv=invalid", status_code=302)
+    try:
+        result = deriv_oauth.complete(db, state=state, code=code)
+        owner = db.get(User, db.query(Connection).filter(Connection.id == result["connection_id"]).first().created_by)
+        if owner is not None:
+            referrals.record_connection(
+                db,
+                user=owner,
+                connection_id=result["connection_id"],
+                accounts=len(result["identity"]["accounts"]),
+            )
+        db.commit()
+    except Exception as exc:  # noqa: BLE001 - the browser must always land somewhere useful
+        db.rollback()
+        code_name = getattr(exc, "code", "deriv_oauth_failed")
+        log.exception("deriv_oauth_callback_failed", extra={"extra_fields": {"code": str(code_name)}})
+        return RedirectResponse(f"{web}/app/accounts?deriv=error&reason={quote(str(code_name))[:80]}", status_code=302)
+    return RedirectResponse(
+        f"{web}/app/accounts?deriv=connected&accounts={len(result['identity']['accounts'])}", status_code=302
+    )
+
+
+@router.post("/connections/{connection_id}/account")
+def switch_deriv_account(
+    connection_id: str,
+    payload: AccountSwitchRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Switch between the demo and real accounts under one Deriv authorisation."""
+    connection = _deriv_connection(db, user.org_id, connection_id)
+    result = deriv_oauth.switch_account(db, connection=connection, account_id=payload.account_id)
+    audit.record(
+        db,
+        action="deriv.account_switched",
+        org_id=user.org_id,
+        actor_user_id=user.id,
+        actor_email=user.email,
+        target_type="connection",
+        target_id=connection.id,
+        meta={"account_type": result["account_type"]},
+    )
+    db.commit()
+    return {"status": "switched", "connection_id": connection.id, **result}
+
+
+@router.post("/referral/click")
+def referral_click(
+    payload: OAuthStartRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record that a signed-in user opened the referral link to create a Deriv account."""
+    limit.enforce(request, "deriv_referral_click", limit=10, window=3600)
+    event = referrals.record_click(
+        db, visitor_id=payload.visitor_id, referrer="app.accounts", landing="deriv-signup"
+    )
+    db.commit()
+    return {"status": "recorded", "event_id": event.id}
 
 
 # ------------------------------------------------------------------ automation
