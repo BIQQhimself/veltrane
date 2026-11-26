@@ -312,6 +312,11 @@ def build_context(
     )
 
 
+def paper_session_for(db: Session, user: User, session_id: str | None = None) -> PaperSession:
+    """Public alias: resolve (or lazily create) the caller's running paper session."""
+    return _paper_session_for(db, user, session_id)
+
+
 def submit_order(db: Session, *, user: User, request: OrderRequest, source: str = "ai_strategy") -> dict:
     if request.mode not in (TradeMode.PAPER, TradeMode.LIVE):
         raise bad_request("invalid_mode", "Mode must be paper or live.")

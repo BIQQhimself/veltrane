@@ -25,6 +25,7 @@ from app.db.models.ops import (
 )
 from app.db.models.trading import (
     Backtest,
+    BinaryContract,
     Fee,
     Instrument,
     KillSwitch,
@@ -40,7 +41,7 @@ from app.db.models.trading import (
 )
 
 __all__ = [
-    "Base", "AiUsage", "AuditLog", "Backtest", "Balance", "Connection", "ConnectionCredential",
+    "Base", "AiUsage", "AuditLog", "Backtest", "Balance", "BinaryContract", "Connection", "ConnectionCredential",
     "EmailOutbox", "EntitlementOverride", "Fee", "FeeConsent", "FeatureFlag", "HighWaterMark",
     "Instrument", "Invoice", "KillSwitch", "LedgerTransaction", "Notification", "OneTimeToken",
     "Order", "Organization", "PaperSession", "Payment", "PerformanceFeeRecord", "Plan", "Position",

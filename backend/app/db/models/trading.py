@@ -307,3 +307,52 @@ class KillSwitch(Base, IdTimestampMixin):
     engaged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     released_by: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("users.id"))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BinaryContract(Base, IdTimestampMixin):
+    """A fixed-odds binary contract (paper only in this build).
+
+    The stake is debited at open and the payout credited at settlement, so cash
+    accounting matches the economic risk. ``status`` is open | won | lost | void |
+    rejected. Rejected rows exist for audit parity with orders.
+    """
+
+    __tablename__ = "binary_contracts"
+    __table_args__ = (
+        UniqueConstraint("org_id", "idempotency_key", name="uq_binary_org_idempotency"),
+    )
+
+    org_id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    paper_session_id: Mapped[str | None] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("paper_sessions.id", ondelete="SET NULL"), index=True
+    )
+    mode: Mapped[str] = mapped_column(String(8), default="paper", nullable=False)
+    instrument_symbol: Mapped[str] = mapped_column(String(48), nullable=False, index=True)
+    asset_class: Mapped[str] = mapped_column(String(24), nullable=False)
+    direction: Mapped[str] = mapped_column(String(8), nullable=False)
+    stake: Mapped[float] = mapped_column(MoneyType, nullable=False)
+    payout_pct: Mapped[float] = mapped_column(MoneyType, nullable=False)
+    duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
+    entry_price: Mapped[float] = mapped_column(MoneyType, nullable=False)
+    exit_price: Mapped[float | None] = mapped_column(MoneyType)
+    price_source: Mapped[str] = mapped_column(String(24), default="demo", nullable=False)
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="open", nullable=False, index=True)
+    net_pnl: Mapped[float] = mapped_column(MoneyType, default=0, nullable=False)
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    risk_decision_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False))
+    strategy_version_id: Mapped[str | None] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
+    )
+    source: Mapped[str] = mapped_column(String(24), default="human", nullable=False)
+    entry_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
+    risk_snapshot: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)

@@ -375,3 +375,48 @@ RULES = (
     check_trading_session,
     check_demo_execution_limit,
 )
+
+
+def check_binary_terms(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
+    """Binary-specific contract terms: duration whitelist, payout and stake bounds."""
+    terms = rules.get("binary_terms") or {}
+    duration = int(terms.get("duration_seconds") or 0)
+    allowed = tuple(terms.get("allowed_durations") or ())
+    if duration not in allowed:
+        return _r(
+            "binary_terms",
+            False,
+            f"Contract duration {duration}s is not offered. Choose one of {list(allowed)}.",
+            {"duration_seconds": duration, "allowed": list(allowed)},
+        )
+    payout = float(terms.get("payout_pct") or 0)
+    if not 1 <= payout <= 95:
+        return _r(
+            "binary_terms",
+            False,
+            f"Payout {payout}% is outside the permitted 1-95% band.",
+            {"payout_pct": payout},
+        )
+    stake = float(intent.quantity) * float(ctx.market.price or 0)
+    min_stake = float(terms.get("min_stake") or 0)
+    max_stake = float(terms.get("max_stake") or 0)
+    if stake < min_stake:
+        return _r(
+            "binary_terms",
+            False,
+            f"Stake {stake:.2f} is below the {min_stake:.2f} minimum.",
+            {"stake": stake, "min_stake": min_stake},
+        )
+    if max_stake and stake > max_stake:
+        return _r(
+            "binary_terms",
+            False,
+            f"Stake {stake:.2f} exceeds the {max_stake:.2f} per-contract cap.",
+            {"stake": stake, "max_stake": max_stake},
+        )
+    return _r(
+        "binary_terms",
+        True,
+        f"{duration}s contract accepted at {payout:.0f}% payout for a {stake:.2f} stake.",
+        {"duration_seconds": duration, "payout_pct": payout, "stake": stake},
+    )

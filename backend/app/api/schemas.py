@@ -259,3 +259,24 @@ class SupportTicketCreate(BaseModel):
     subject: str = Field(min_length=3, max_length=200)
     body: str = Field(min_length=5, max_length=4000)
     priority: Literal["low", "normal", "high", "urgent"] = "normal"
+
+
+# ------------------------- binary contracts -------------------------
+class BinaryQuoteRequest(BaseModel):
+    symbol: str = Field(min_length=3, max_length=48)
+    duration_seconds: int = Field(gt=0, le=86_400)
+
+
+class BinaryContractRequest(BaseModel):
+    symbol: str = Field(min_length=3, max_length=48)
+    direction: Literal["call", "put"]
+    stake: float = Field(gt=0, le=100_000)
+    duration_seconds: int = Field(gt=0, le=86_400)
+    idempotency_key: str | None = Field(default=None, max_length=120)
+    reason: str = Field(default="Manual contract from terminal", max_length=400)
+
+
+class CopilotAnalyseRequest(BaseModel):
+    symbol: str = Field(min_length=3, max_length=48)
+    timeframe: Literal["1m", "5m", "15m", "30m", "1h", "4h", "1d"] = "15m"
+    duration_seconds: int | None = Field(default=None, gt=0, le=86_400)

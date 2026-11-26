@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     paper_spread_bps: float = 4.0
     paper_slippage_bps: float = 3.0
     paper_starting_balance: float = 25_000.0
+    # Fixed-odds binary contracts. Paper only in this build; live routing is not implemented.
+    binary_min_stake: float = 10.0
+    binary_max_stake: float = 2_000.0
+    binary_settlement_grace_seconds: int = 0
 
     billing_provider: Literal["mock", "stripe"] = "mock"
     stripe_secret_key: str = ""

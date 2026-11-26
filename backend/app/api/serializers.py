@@ -129,6 +129,7 @@ def trade_dict(trade: Trade) -> dict:
         "intervention_note": trade.intervention_note,
         "opened_at": iso(trade.opened_at),
         "closed_at": iso(trade.closed_at),
+        "risk_snapshot": trade.risk_snapshot,
     }
 
 

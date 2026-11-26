@@ -3,7 +3,9 @@ from app.api.v1 import (
     analytics,
     auth,
     billing,
+    binary,
     connections,
+    copilot,
     health,
     markets,
     notifications,
@@ -21,6 +23,8 @@ api_router.include_router(connections.router)
 api_router.include_router(markets.router)
 api_router.include_router(strategies.router)
 api_router.include_router(trading.router)
+api_router.include_router(binary.router)
+api_router.include_router(copilot.router)
 api_router.include_router(portfolio.router)
 api_router.include_router(analytics.router)
 api_router.include_router(notifications.router)

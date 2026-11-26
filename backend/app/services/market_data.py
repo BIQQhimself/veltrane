@@ -36,6 +36,13 @@ CRYPTO_SYMBOLS = {
     "ADA/USDT": {"base": "ADA", "quote": "USDT", "price": 0.45, "vol": 0.032, "min_qty": 1.0, "step": 1.0, "venue": "binance"},
 }
 
+STOCK_SYMBOLS = {
+    "AAPL/USD": {"base": "AAPL", "quote": "USD", "price": 228.0, "vol": 0.011, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
+    "NVDA/USD": {"base": "NVDA", "quote": "USD", "price": 132.0, "vol": 0.021, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
+    "TSLA/USD": {"base": "TSLA", "quote": "USD", "price": 248.0, "vol": 0.024, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
+    "MSFT/USD": {"base": "MSFT", "quote": "USD", "price": 425.0, "vol": 0.010, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
+}
+
 TRADFI_SYMBOLS = {
     "EUR/USD": {"base": "EUR", "quote": "USD", "price": 1.085, "vol": 0.004, "min_qty": 1000.0, "step": 1000.0, "asset_class": "forex"},
     "GBP/USD": {"base": "GBP", "quote": "USD", "price": 1.27, "vol": 0.005, "min_qty": 1000.0, "step": 1000.0, "asset_class": "forex"},
@@ -66,6 +73,8 @@ def instrument_spec(symbol: str) -> dict | None:
         spec = dict(CRYPTO_SYMBOLS[symbol])
         spec["asset_class"] = "crypto"
         return spec
+    if symbol in STOCK_SYMBOLS:
+        return dict(STOCK_SYMBOLS[symbol])
     if symbol in TRADFI_SYMBOLS:
         return dict(TRADFI_SYMBOLS[symbol])
     return None
@@ -84,6 +93,20 @@ def supported_symbols() -> list[dict]:
                 "min_qty": spec["min_qty"],
                 "qty_step": spec["step"],
                 "data_source": settings.market_data_source,
+            }
+        )
+    for symbol, spec in STOCK_SYMBOLS.items():
+        rows.append(
+            {
+                "symbol": symbol,
+                "asset_class": "stock",
+                "venue": "simulated",
+                "base": spec["base"],
+                "quote": spec["quote"],
+                "min_qty": spec["min_qty"],
+                "qty_step": spec["step"],
+                "data_source": "demo",
+                "note": "Equity venue integration is not enabled; quotes are simulated.",
             }
         )
     for symbol, spec in TRADFI_SYMBOLS.items():
