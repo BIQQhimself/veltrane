@@ -254,8 +254,15 @@ export function fetchSignals(connectionId: string, status = "", signal?: AbortSi
   });
 }
 
+export type SignalDecision = {
+  approved?: boolean;
+  signal?: DerivSignal;
+  order?: { id?: string } | null;
+  risk?: { decision?: string; failed_rules?: Array<{ code?: string; message?: string }> } | null;
+};
+
 export function decideSignal(signalId: string, decision: "approve" | "reject") {
-  return api<Record<string, unknown>>(`/deriv/signals/${signalId}/${decision}`, { method: "POST" });
+  return api<SignalDecision>(`/deriv/signals/${signalId}/${decision}`, { method: "POST" });
 }
 
 export const MARKET_LABELS: Record<string, string> = {

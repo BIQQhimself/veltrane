@@ -484,8 +484,17 @@ export function DerivTerminal({ connections }: Props) {
               onDecide={async (decision) => {
                 setBusy(true);
                 try {
-                  await decideSignal(signal.id, decision);
-                  toast.success(decision === "approve" ? "Signal executed" : "Signal rejected");
+                  const result = await decideSignal(signal.id, decision);
+                  if (decision === "reject") {
+                    toast.success("Signal rejected");
+                  } else if (result.approved === false) {
+                    const reasons = (result.risk?.failed_rules ?? [])
+                      .map((rule) => rule.message)
+                      .filter(Boolean);
+                    toast.error("Risk engine refused the signal", reasons.join("; ") || "No reason recorded.");
+                  } else {
+                    toast.success("Signal executed", "The venue confirmed the contract.");
+                  }
                   signals.refetch();
                   recent.refetch();
                   status.refetch();
