@@ -119,6 +119,9 @@ class RiskContext:
     realized_pnl_today: float = 0.0
     unrealized_pnl: float = 0.0
     consecutive_losses: int = 0
+    # When the most recent loss closed. The consecutive-loss breaker lifts after a cool-down
+    # instead of waiting for a win that the block itself prevents.
+    last_loss_at: datetime | None = None
 
     positions: list[PositionView] = field(default_factory=list)
     account_exposure: float = 0.0
@@ -204,6 +207,7 @@ DEFAULT_RISK_RULES: dict = {
     "max_order_notional_abs": 100_000,
     "min_notional": 10,
     "max_consecutive_losses": 4,
+    "circuit_breaker_cooldown_minutes": 60,
     "allow_short": True,
     "limit_price_band_pct": 5.0,
 }

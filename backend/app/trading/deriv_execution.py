@@ -632,7 +632,15 @@ def record_settlement(
     return trade
 
 
-def close_contract(db: Session, *, user: User, connection: Connection, contract_id: str) -> dict:
+def close_contract(
+    db: Session,
+    *,
+    user: User,
+    connection: Connection,
+    contract_id: str,
+    reason: str = "deriv_early_exit",
+    intervention_note: str = "Closed early by the account owner from the trading terminal.",
+) -> dict:
     gate = execution_gate.evaluate(db, user=user, connection=connection)
     if not gate.allowed:
         raise bad_request("execution_blocked", gate.blocking_message, {"gate": gate.as_dict()})
@@ -681,10 +689,10 @@ def close_contract(db: Session, *, user: User, connection: Connection, contract_
             position=position,
             realized=realized,
             exit_price=sold_for,
-            reason="deriv_early_exit",
+            reason=reason,
             contract=result,
-            human_intervention=True,
-            intervention_note="Closed early by the account owner from the trading terminal.",
+            human_intervention=intervention_note != "",
+            intervention_note=intervention_note,
         )
     audit.record(
         db,

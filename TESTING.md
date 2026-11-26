@@ -5,7 +5,7 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 233 tests, ~80 s
+.venv/bin/python -m pytest                  # 235 tests, ~80 s
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```

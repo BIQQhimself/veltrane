@@ -294,3 +294,28 @@ def test_notional_at_the_minimum_is_not_rejected_by_float_error():
     instrument = InstrumentView(symbol="R_100", asset_class="synthetic", min_qty=0.0, qty_step=0.0, max_leverage=1)
     assessment = engine.evaluate(intent(quantity=quantity), context(market=market, instrument=instrument))
     assert assessment.approved, [f.message for f in assessment.failed]
+
+
+def test_consecutive_loss_breaker_holds_both_sides_then_lifts():
+    """The breaker must not be avoidable by selling, and must not lock the account for ever."""
+    from datetime import timedelta
+
+    held = dict(consecutive_losses=4, last_loss_at=NOW - timedelta(minutes=10))
+    for side in ("buy", "sell"):
+        assessment = engine.evaluate(intent(side=side), context(**held))
+        assert not assessment.approved
+        assert "circuit_breaker" in codes(assessment)
+    reduce_only = engine.evaluate(intent(side="sell", reduce_only=True), context(**held))
+    assert reduce_only.approved, [f.message for f in reduce_only.failed]
+
+    cooled = dict(consecutive_losses=4, last_loss_at=NOW - timedelta(minutes=61))
+    assessment = engine.evaluate(intent(), context(**cooled))
+    assert assessment.approved, [f.message for f in assessment.failed]
+    breaker = next(check for check in assessment.checks if check.code == "circuit_breaker")
+    assert breaker.passed and "cooled down" in breaker.message
+
+
+def test_consecutive_loss_breaker_without_a_timestamp_stays_engaged():
+    assessment = engine.evaluate(intent(), context(consecutive_losses=5, last_loss_at=None))
+    assert not assessment.approved
+    assert "circuit_breaker" in codes(assessment)

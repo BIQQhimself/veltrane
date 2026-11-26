@@ -111,3 +111,15 @@ competent reviewer would find, so it is cheaper to state it here.
 A foundation a small team can extend: the safety model, tenancy, billing state machine, risk engine
 and audit trail are real and tested. It is not a product that can be sold tomorrow, and the gap
 between the two is the list above.
+
+## Seeded Deriv history
+
+- `scripts/seed_deriv_history.py` walks the public API as the account owner would: open, then close
+  each contract. The seeded rows are genuinely produced by the execution gate and the risk engine,
+  but the *decision* to trade is the script's, not a strategy's, and every settlement is recorded as
+  an owner-initiated early exit because that is what the sandbox supports.
+- The mock gateway always sells a contract back at 92% of stake, so seeded history is loss-only and
+  never expires on its own. Real Deriv contracts settle against the underlying's final price; that
+  path (`record_settlement` from reconciliation) is exercised only by unit tests.
+- Seeded history is capped at three contracts so that the consecutive-loss breaker (four losses)
+  stays disengaged and a reviewer can still place a trade.

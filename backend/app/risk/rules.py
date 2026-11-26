@@ -6,6 +6,8 @@ no AI input. Rules are evaluated in order and all failures are reported.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from app.risk.types import OrderIntent, RiskContext, RuleResult
 
 
@@ -322,14 +324,27 @@ def check_drawdown(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleRe
 
 def check_consecutive_losses(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
     cap = int(rules["max_consecutive_losses"])
-    if cap > 0 and ctx.consecutive_losses >= cap and not intent.reduce_only and intent.side == "buy":
+    cooldown = timedelta(minutes=float(rules.get("circuit_breaker_cooldown_minutes") or 0))
+    if cap <= 0 or ctx.consecutive_losses < cap or intent.reduce_only:
+        return _r("circuit_breaker", True, "Consecutive-loss circuit breaker is not triggered.")
+
+    # A loss streak on its own is not a reason to lock an account out for ever: the breaker holds
+    # new entries for a cool-down, then lets the account trade again.
+    released_at = ctx.last_loss_at + cooldown if ctx.last_loss_at and cooldown else None
+    if released_at is not None and ctx.now >= released_at:
         return _r(
             "circuit_breaker",
-            False,
-            f"{ctx.consecutive_losses} consecutive losing trades — circuit breaker active for new entries.",
+            True,
+            f"Loss streak of {ctx.consecutive_losses} cooled down at {released_at.isoformat()}.",
             {"consecutive_losses": ctx.consecutive_losses, "cap": cap},
         )
-    return _r("circuit_breaker", True, "Consecutive-loss circuit breaker is not triggered.")
+    remaining = f"{max((released_at - ctx.now).total_seconds() // 60, 0):.0f} min" if released_at else "no cool-down configured"
+    return _r(
+        "circuit_breaker",
+        False,
+        f"{ctx.consecutive_losses} consecutive losing trades — new entries held for {remaining}.",
+        {"consecutive_losses": ctx.consecutive_losses, "cap": cap, "released_at": released_at.isoformat() if released_at else None},
+    )
 
 
 def check_stop_loss(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:

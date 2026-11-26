@@ -205,9 +205,12 @@ def risk_budget(db: Session, user: User) -> dict:
         .all()
     )
     consecutive_losses = 0
+    last_loss_at = None
     for trade in recent:
         if float(trade.net_pnl) < 0:
             consecutive_losses += 1
+            if last_loss_at is None:
+                last_loss_at = trade.closed_at
         else:
             break
 
@@ -297,9 +300,12 @@ def build_context(
         .all()
     )
     consecutive_losses = 0
+    last_loss_at = None
     for t in recent:
         if float(t.net_pnl) < 0:
             consecutive_losses += 1
+            if last_loss_at is None:
+                last_loss_at = t.closed_at
         else:
             break
 
@@ -367,6 +373,7 @@ def build_context(
         realized_pnl_today=realized_today,
         unrealized_pnl=unrealised,
         consecutive_losses=consecutive_losses,
+        last_loss_at=last_loss_at,
         positions=[
             PositionView(
                 symbol=p.instrument_symbol,

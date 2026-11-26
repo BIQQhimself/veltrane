@@ -137,3 +137,5 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
 - **Duplicates are terms, not symbols.** Two entries on the same underlying with different stakes
   are different orders. Matching on symbol and side alone locks a user out of their own account for
   the length of the window, and it hides real trades from the risk engine.
+
+- Seed Deriv demo history (sandbox gateway): `VELTRANE_TESTER_PASSWORD=... python -m scripts.seed_deriv_history --email elite@veltrane.dev`

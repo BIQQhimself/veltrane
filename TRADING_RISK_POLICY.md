@@ -29,7 +29,7 @@ version that evaluated them. Rule codes below are the ones emitted by `app/risk/
 | `kill_switch` | Global / org / provider / user switch engaged | engaged = reject |
 | `mode_authorization` | Live mode requested without entitlement or platform flag | off = reject live |
 | `org_suspended` | Tenant suspended by an operator | on |
-| `circuit_breaker` | Repeated losses or repeated provider failures | 4 consecutive losses |
+| `circuit_breaker` | Four consecutive losses hold *new* entries, on either side, for a cool-down (`circuit_breaker_cooldown_minutes`); exits and reduce-only orders stay allowed | 4 losses, 60 min |
 | `trading_session` | Instrument inside its trading session | on |
 | `instrument_tradable` | Instrument supported by the provider and not halted | on |
 | `market_data` | Quote exists and is fresher than the window | 30 s |

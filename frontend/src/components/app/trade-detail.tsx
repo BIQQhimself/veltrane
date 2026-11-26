@@ -28,6 +28,8 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
   if (!tradeId) return null;
 
   const decision = data?.risk_decision ?? data?.order?.risk_decision ?? null;
+  const snapshot = data?.risk_snapshot ?? null;
+  const costNote = typeof snapshot?.cost_note === "string" ? snapshot.cost_note : null;
 
   return (
     <Dialog open onClose={onClose} title="Trade record" description="Immutable record of the closed trade, including costs and risk checks." wide>
@@ -123,6 +125,10 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
                     ))}
                   </ul>
                 </div>
+              ) : costNote ? (
+                <p className="rounded-lg border border-line-soft bg-obsidian-900/40 px-3 py-2 text-xs leading-relaxed text-paper-muted">
+                  {costNote}
+                </p>
               ) : (
                 <p className="text-xs text-paper-faint">No separate fee rows recorded for this trade.</p>
               )}

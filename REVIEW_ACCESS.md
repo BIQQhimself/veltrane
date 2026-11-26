@@ -73,21 +73,28 @@ Read this before drawing conclusions from any number on screen.
    the risk engine, a settlement countdown, and a full contract record. Then open
    **Settled** and click any contract: entry reason, checks passed and failed, fees,
    slippage estimate against actual, net P&L, and whether a human intervened.
-5. **Strategies → Paper session.** Start a session on Aurum Trend (`pro@veltrane.dev`), or open
+5. **Terminal as `elite@veltrane.dev`.** That account holds a Deriv demo connection with three
+   settled contracts seeded through the public API by
+   `python -m scripts.seed_deriv_history --email elite@veltrane.dev`. Open a trade: entry reason,
+   the contract's stake and payout, the venue's own margin note, risk checks, and the settlement the
+   gateway returned. Then place a contract yourself and close it from the open-contracts list. After
+   four consecutive losses the breaker holds new entries for an hour and says so; the seeded history
+   stops at three so you can still try one.
+6. **Strategies → Paper session.** Start a session on Aurum Trend (`pro@veltrane.dev`), or open
    `demo@veltrane.ai`, which already has one running with 42 settled trades. It keeps trading on its
    own: a background runner ticks every running session once a minute, whether or not a
    browser is open. Watch equity move, then stop the session.
-6. **Analytics.** Attribution by instrument and by strategy version, with every fee shown
+7. **Analytics.** Attribution by instrument and by strategy version, with every fee shown
    as a deduction. Nothing is annualised or extrapolated.
-7. **Kill all trading** (bottom of the sidebar). Engage it, confirm new entries are
+8. **Kill all trading** (bottom of the sidebar). Engage it, confirm new entries are
    rejected, then release it. The switch lives in the database, so it holds even if the app
    is closed and restarted.
-8. **Settings → Live trading.** Try to enable it. The checklist refuses to complete while
+9. **Settings → Live trading.** Try to enable it. The checklist refuses to complete while
    prerequisites are unmet, and the platform flag is off regardless.
-9. **Sign in as the staff owner** (`VELTRANE_ADMIN_EMAIL`) and open `/admin`. MRR, ARR, conversion, churn,
+10. **Sign in as the staff owner** (`VELTRANE_ADMIN_EMAIL`) and open `/admin`. MRR, ARR, conversion, churn,
    revenue by tier, provider readiness, the paper runner's last tick, feature flags, risk
    policy, audit log. No subscriber credential is ever rendered, in any view.
-10. **Try to reach `/admin` as `free@veltrane.dev`.** You get a 404, not a 403: staff
+11. **Try to reach `/admin` as `free@veltrane.dev`.** You get a 404, not a 403: staff
     surfaces are not advertised to non-staff.
 
 ## Verified on this instance
@@ -105,7 +112,10 @@ server answered.
 | Same symbol, different stake | second contract accepted and priced on its own |
 | Autotrade runner on the demo feed | emits a pending signal when the EMA cross fires, with the trigger reason recorded |
 | Signal refused by the risk engine | stored `rejected`, no venue contract id, order row kept for the audit trail |
-| Demo account data | 42 settled contracts, 1 open position, 1 running paper session, costs attributed per trade |
+| Demo account data (`demo@veltrane.ai`, mock venue) | 42 settled contracts, 1 open position, 1 running paper session, costs attributed per trade |
+| Deriv demo history (`elite@veltrane.dev`) | 3 settled contracts, each opening a full trade record: reason, stake, payout, settlement payload, net P&L |
+| Trade detail for a Deriv contract | `200` with `cost_summary`, `fees_breakdown`, `risk_snapshot.cost_note`, `risk_decision`, exit reason |
+| Consecutive-loss breaker | holds entries on both sides, names the remaining cool-down, lets reduce-only exits through |
 | Analyst opens the command centre | `200` on overview, revenue, kill-switch state, users and audit |
 | Analyst attempts owner-only writes | `404 not_found` on plan edit, kill-switch engage, cost model and email delivery — staff surfaces are not advertised |
 | Staff owner | full admin surface: overview, revenue, kill switches, connections, audit log |
