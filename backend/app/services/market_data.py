@@ -126,27 +126,62 @@ def supported_symbols() -> list[dict]:
     return rows
 
 
-def _demo_candles(symbol: str, timeframe: str, limit: int) -> list[Candle]:
+def _value_noise(seed: int, ts: float, grid: int) -> float:
+    """Smooth, non-periodic noise in [-1, 1] (linear grid with smoothstep easing)."""
+    position = ts / grid
+    left = math.floor(position)
+    frac = position - left
+
+    def sample(index: int) -> float:
+        digest = hashlib.sha256(f"{seed}:{index}".encode()).digest()
+        return (int.from_bytes(digest[:4], "big") / 0xFFFFFFFF) * 2 - 1
+
+    eased = frac * frac * (3 - 2 * frac)
+    return sample(left) * (1 - eased) + sample(left + 1) * eased
+
+
+def _demo_price(symbol: str, ts: int, spec: dict) -> float:
+    """Deterministic synthetic price for a given epoch second.
+
+    Two slow sines give the series a trend; layered value noise supplies the
+    irregular texture a real tape has. Every component is continuous in time, so
+    a candle's open equals the previous close and the live quote never jumps.
+    """
+    seed = int(hashlib.sha256(symbol.encode()).hexdigest()[:12], 16)
+    rng = random.Random(seed)
+    amp1 = 0.55 + 0.45 * rng.random()
+    period1 = float(rng.choice([43200, 86400, 172800]))
+    phase1 = rng.random() * 2 * math.pi
+    amp2 = 0.18 + 0.18 * rng.random()
+    period2 = period1 / rng.choice([3, 4, 6])
+    phase2 = rng.random() * 2 * math.pi
+    trend = amp1 * math.sin(2 * math.pi * ts / period1 + phase1) + amp2 * math.sin(
+        2 * math.pi * ts / period2 + phase2
+    )
+    texture = 0.55 * _value_noise(seed, ts, 900) + 0.25 * _value_noise(seed + 1, ts, 180) + 0.1 * _value_noise(
+        seed + 2, ts, 45
+    )
+    return spec["price"] * math.exp(spec["vol"] * 0.7 * (trend + texture))
+
+
+def _demo_candles(symbol: str, timeframe: str, limit: int, now: float | None = None) -> list[Candle]:
     spec = instrument_spec(symbol) or {"price": 100.0, "vol": 0.02}
     step = TIMEFRAME_SECONDS.get(timeframe, 3600)
-    now_bucket = int(time.time() // step) * step
-    seed = int(hashlib.sha256(f"{symbol}|{timeframe}".encode()).hexdigest()[:12], 16)
-    rng = random.Random(seed)
-    price = spec["price"]
+    current = now if now is not None else time.time()
+    now_bucket = int(current // step) * step
     vol = spec["vol"] * math.sqrt(step / 3600)
     candles: list[Candle] = []
     for i in range(limit):
-        ts = (now_bucket - (limit - 1 - i) * step) * 1000
-        drift = rng.gauss(0, vol)
-        open_ = price
-        close = max(open_ * (1 + drift), 1e-8)
-        high = max(open_, close) * (1 + abs(rng.gauss(0, vol / 3)))
-        low = min(open_, close) * (1 - abs(rng.gauss(0, vol / 3)))
-        volume = abs(rng.gauss(1000, 300))
-        candles.append(Candle(ts=ts, open=open_, high=high, low=low, close=close, volume=volume))
-        price = close
-    # Re-anchor the final close near the reference price so demo charts look plausible
-    # without ever claiming to be real market data.
+        start = now_bucket - (limit - 1 - i) * step
+        open_ = _demo_price(symbol, start, spec)
+        # The newest bar is still forming, so its close is the live price.
+        close = _demo_price(symbol, int(current), spec) if i == limit - 1 else _demo_price(symbol, start + step, spec)
+        # Deterministic wick size per bar so the chart looks like a market, not a line.
+        bar_rng = random.Random(int(hashlib.sha256(f"{symbol}|{start}".encode()).hexdigest()[:12], 16))
+        high = max(open_, close) * (1 + abs(bar_rng.gauss(0, vol / 4)))
+        low = min(open_, close) * (1 - abs(bar_rng.gauss(0, vol / 4)))
+        volume = abs(bar_rng.gauss(1000, 300))
+        candles.append(Candle(ts=start * 1000, open=open_, high=high, low=low, close=close, volume=volume))
     return candles
 
 
@@ -229,8 +264,7 @@ def get_ticker(symbol: str) -> MarketSnapshot:
         from app.core.errors import AppError
 
         raise AppError(503, "market_data_unavailable", "Live market data is unavailable and the demo feed is disabled.")
-    candles = _demo_candles(symbol, "1m", 2)
-    price = candles[-1].close
+    price = _demo_price(symbol, int(time.time()), spec)
     spread_bps = 3.0 if spec.get("asset_class") == "crypto" else 1.5
     half = price * spread_bps / 20_000
     return MarketSnapshot(

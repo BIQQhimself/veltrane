@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     refresh_token_days: int = 14
     require_email_verification: bool = True
     cookie_secure: bool = False
+    # "none" is required when the web app and the API are on different sites
+    # (separate hosts/subdomains), where SameSite=Lax cookies are not sent.
+    cookie_samesite: str = "lax"
     mfa_issuer: str = "VELTRANE"
 
     live_trading_enabled: bool = False
@@ -87,8 +90,18 @@ class Settings(BaseSettings):
         # Ephemeral key: credentials created in this process cannot be read after restart.
         return secrets.token_bytes(32)
 
+    @field_validator("cookie_samesite")
+    @classmethod
+    def _check_samesite(cls, v: str) -> str:
+        value = v.strip().lower()
+        if value not in {"lax", "strict", "none"}:
+            raise ValueError("cookie_samesite must be lax, strict or none")
+        return value
+
     @model_validator(mode="after")
     def _production_guards(self) -> Settings:
+        if self.cookie_samesite == "none" and not self.cookie_secure:
+            raise RuntimeError("VELTRANE_COOKIE_SECURE must be true when SameSite=None")
         if self.env == "production":
             if self.secret_key == INSECURE_SECRET or len(self.secret_key) < 32:
                 raise RuntimeError("VELTRANE_SECRET_KEY must be a unique 32+ char value in production")

@@ -364,3 +364,104 @@ export type AdminOverview = {
   cost_model: Record<string, number>;
   note: string;
 };
+
+export type BinaryAsset = {
+  symbol: string;
+  name: string;
+  asset_class: string;
+  venue: string;
+  base: string;
+  quote: string;
+  payouts: Record<string, number>;
+  durations: number[];
+  min_stake: number;
+  max_stake: number;
+  data_source: string;
+  is_demo: boolean;
+};
+
+export type BinaryContract = {
+  id: string;
+  symbol: string;
+  asset_class: string;
+  direction: "call" | "put";
+  stake: number;
+  payout_pct: number;
+  potential_return: number;
+  duration_seconds: number;
+  entry_price: number;
+  exit_price: number | null;
+  status: "open" | "won" | "lost" | "void" | "rejected";
+  net_pnl: number;
+  opened_at: string;
+  expires_at: string;
+  settled_at: string | null;
+  seconds_remaining: number;
+  source: string;
+  entry_reason: string;
+  rejection_reason: string | null;
+  price_source: string;
+  is_demo: boolean;
+  mode: string;
+  risk: {
+    terms?: Record<string, unknown>;
+    checks_passed?: string[];
+    checks_failed?: string[];
+    price_source?: string;
+    is_demo?: boolean;
+  };
+  risk_decision_id: string | null;
+};
+
+export type BinaryQuote = {
+  symbol: string;
+  name: string;
+  asset_class: string;
+  price: number;
+  payout_pct: number;
+  duration_seconds: number;
+  expires_at: string;
+  min_stake: number;
+  max_stake: number;
+  price_source: string;
+  is_demo: boolean;
+  price_age_seconds: number | null;
+  quoted_at: string;
+  disclaimer: string;
+};
+
+export type BinarySummary = {
+  contracts: number;
+  open: number;
+  open_stake: number;
+  settled: number;
+  wins: number;
+  losses: number;
+  voids: number;
+  win_rate_pct: number | null;
+  net_pnl: number;
+  staked_total: number;
+  return_on_stake_pct: number | null;
+  avg_payout_pct: number | null;
+  is_demo: boolean;
+  note: string;
+};
+
+export type CopilotRead = {
+  model: string;
+  symbol: string;
+  timeframe: string;
+  generated_at: string;
+  price: number;
+  bias: "call" | "put" | "neutral";
+  confidence: number;
+  trend: string;
+  momentum: string;
+  rsi: number | null;
+  atr_pct: number;
+  range: { low: number | null; high: number | null };
+  rationale: string[];
+  invalidation: string;
+  data: { source: string; is_demo: boolean; candles: number };
+  disclaimer: string;
+};

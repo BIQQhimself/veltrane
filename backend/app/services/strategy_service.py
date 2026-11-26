@@ -283,6 +283,9 @@ def run_backtest(
     if timeframe not in impl.timeframes:
         raise bad_request("unsupported_timeframe", f"{impl.name} supports {', '.join(impl.timeframes)}.")
     candles, meta = market_data.get_candles(symbol, timeframe, 1000)
+    # Backtests use closed bars only: the newest bar is still forming, so including
+    # it would make an otherwise identical run depend on the second it started.
+    candles = candles[:-1]
     if start:
         candles = [c for c in candles if c.ts >= start.timestamp() * 1000]
     if end:

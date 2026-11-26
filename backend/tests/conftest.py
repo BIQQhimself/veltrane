@@ -39,6 +39,8 @@ os.environ["VELTRANE_REDIS_URL"] = "redis://127.0.0.1:6379/9"
 os.environ["VELTRANE_LIVE_TRADING_ENABLED"] = "false"
 os.environ["VELTRANE_DEMO_MARKET_DATA_ENABLED"] = "true"
 os.environ["VELTRANE_LOG_LEVEL"] = "WARNING"
+os.environ["VELTRANE_COOKIE_SECURE"] = "false"
+os.environ["VELTRANE_COOKIE_SAMESITE"] = "lax"
 
 from datetime import UTC
 

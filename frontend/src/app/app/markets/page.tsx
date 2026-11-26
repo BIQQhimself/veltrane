@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useApi, useInterval } from "@/lib/hooks";
 import { dateTime, money } from "@/lib/format";
@@ -31,6 +32,8 @@ export default function MarketsPage() {
   useInterval(() => summary.refetch(), 30_000);
 
   const closes = candles.data?.candles.map((candle) => candle.close) ?? [];
+  const changePct = closes.length > 1 ? ((closes[closes.length - 1]! - closes[0]!) / closes[0]!) * 100 : null;
+  const activeMarket = markets.find((market) => market.symbol === active);
 
   return (
     <div className="space-y-6">
@@ -43,7 +46,7 @@ export default function MarketsPage() {
 
       {summary.error ? <ErrorNote message={summary.error} onRetry={summary.refetch} /> : null}
 
-      <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+      <div className="grid items-start gap-4 xl:grid-cols-[1.35fr_1fr]">
         <Panel>
           <PanelHeader title="Instruments" subtitle="Refreshed every 30 seconds" />
           {summary.loading ? (
@@ -87,7 +90,11 @@ export default function MarketsPage() {
         <Panel>
           <PanelHeader
             title={active}
-            subtitle={candles.data ? `${candles.data.candles.length} candles` : "Select an instrument"}
+            subtitle={
+              candles.data
+                ? `${candles.data.candles.length} candles${changePct === null ? "" : ` · ${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}% over window`}`
+                : "Select an instrument"
+            }
             action={
               <div className="flex gap-1">
                 {TIMEFRAMES.map((tf) => (
@@ -130,10 +137,35 @@ export default function MarketsPage() {
                     <p className="num mt-1 text-sm text-paper">{money(Math.min(...closes), "USD", 5)}</p>
                   </div>
                 </div>
-                <p className="mt-4 text-2xs text-paper-faint">
-                  This view plots closes only. Volume is available in the API response and is not smoothed or
-                  interpolated here.
-                </p>
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-4 text-xs">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-paper-faint">Venue</dt>
+                    <dd className="text-paper">{activeMarket?.venue ?? "demo"}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-paper-faint">Class</dt>
+                    <dd className="text-paper">{activeMarket?.asset_class ?? "—"}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-paper-faint">Session</dt>
+                    <dd className="text-paper">{activeMarket?.market_open ? "open" : "closed"}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <dt className="text-paper-faint">Bars</dt>
+                    <dd className="num text-paper">{closes.length}</dd>
+                  </div>
+                </dl>
+                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line-soft pt-4">
+                  <Link
+                    href={`/app/terminal?symbol=${encodeURIComponent(active)}`}
+                    className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-1.5 text-xs text-gold-300 transition hover:border-gold-300 hover:bg-gold-400/15"
+                  >
+                    Trade in terminal
+                  </Link>
+                  <p className="text-2xs text-paper-faint">
+                    Closes only. Volume is in the API response and is not smoothed here.
+                  </p>
+                </div>
               </>
             ) : (
               <EmptyState title="No candles" description="The selected instrument has no candle history from this source." />

@@ -4,388 +4,735 @@ import * as React from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  BadgeCheck,
   BarChart3,
+  Bot,
+  ChevronRight,
+  CircleDollarSign,
   Fingerprint,
   Gauge,
   KeyRound,
   Layers,
   LineChart,
+  Lock,
+  Menu,
   ShieldCheck,
-  Wallet,
+  Timer,
+  TrendingUp,
+  X,
+  Zap,
 } from "lucide-react";
-import { api } from "@/lib/api";
-import { useApi } from "@/lib/hooks";
-import { money } from "@/lib/format";
-import { Monogram, Wordmark } from "@/components/brand";
-import { DemoTape } from "@/components/marketing/demo-tape";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import type { Plan } from "@/lib/types";
+import { Wordmark, BrandMark } from "@/components/brand";
+import { MarketTape } from "@/components/marketing/market-tape";
+import { CandleChart, type Candle } from "@/components/charts/candles";
+import { cn } from "@/lib/cn";
+
+/** Deterministic illustrative candles for the hero visual. Labelled as illustrative. */
+function illustrativeCandles(seed: number, base: number, vol: number, count = 64): Candle[] {
+  const candles: Candle[] = [];
+  let price = base;
+  let state = seed;
+  const random = () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+  for (let i = 0; i < count; i += 1) {
+    const drift = (random() - 0.47) * vol;
+    const open = price;
+    const close = Math.max(0.0001, open * (1 + drift));
+    const high = Math.max(open, close) * (1 + random() * vol * 0.5);
+    const low = Math.min(open, close) * (1 - random() * vol * 0.5);
+    candles.push({
+      ts: 1_700_000_000 + i * 900,
+      open,
+      high,
+      low,
+      close,
+      volume: 40 + random() * 100,
+    });
+    price = close;
+  }
+  return candles;
+}
+
+const NAV = [
+  { href: "#platform", label: "Platform" },
+  { href: "#trading", label: "Trading" },
+  { href: "#modes", label: "Modes" },
+  { href: "#risk", label: "Risk" },
+  { href: "#pricing", label: "Pricing" },
+];
 
 const PILLARS = [
   {
+    icon: Timer,
+    title: "Fixed-odds contracts, priced honestly",
+    body: "Call or put, a duration you choose, a payout you can read before you commit. Stake is capped at open, and a losing contract pays nothing — the terminal says so on every ticket.",
+  },
+  {
     icon: ShieldCheck,
     title: "An independent risk engine",
-    body: "Strategies propose. The risk engine decides. Position, exposure, leverage, drawdown, stop-loss, stale data and duplicate-order checks run before anything reaches a venue — and a refusal is stored, not swallowed.",
+    body: "Size, exposure, leverage, daily loss, drawdown, data staleness and duplicate orders are checked by a deterministic engine that the strategy layer cannot bypass.",
   },
   {
-    icon: LineChart,
-    title: "Every trade, fully inspectable",
-    body: "Each fill opens an immutable record: entry reason, strategy version, every risk check with its result, fees, slippage estimate against actual, and net P&L after costs.",
+    icon: Bot,
+    title: "A copilot that shows its work",
+    body: "Trend, momentum, range position and volatility, with the reasoning and the invalidation level attached. No black-box signals, no implied certainty.",
   },
   {
-    icon: KeyRound,
-    title: "Your accounts, your funds",
-    body: "VELTRANE never custodies money. You connect your own exchange or broker, trading-only permissions, credentials encrypted with envelope encryption and never returned through the API.",
+    icon: Gauge,
+    title: "Three modes, one kill switch",
+    body: "Manual, AI-assisted and autonomous. Autonomous requires explicit activation, its own limits, and stops the moment you pull the switch — from any device.",
   },
 ];
 
-const STEPS = [
-  ["01", "Connect read-only", "Point VELTRANE at an exchange with trading disabled. Balances and positions sync; nothing can move."],
-  ["02", "Simulate with real rules", "Paper trading runs the same risk engine as live, on labelled demo data, with the same fee and slippage model."],
-  ["03", "Authorise deliberately", "Live execution needs an eligible plan, a checklist, MFA and a cooling-off period. Then an operator must open the platform gate."],
-  ["04", "Intervene at any moment", "Pause a strategy, disable a venue, or halt the whole platform. Switches persist outside the app, so they still hold when it is closed."],
+const MODES = [
+  {
+    key: "manual",
+    label: "Manual",
+    icon: Fingerprint,
+    headline: "You are the decision maker",
+    body: "Full chart, full ticket, nothing pre-filled. Every contract passes the same risk checks as an automated one.",
+    points: ["Chart, depth and payout in one view", "Stake guardrails before submit", "Immutable contract record"],
+  },
+  {
+    key: "assisted",
+    label: "AI-assisted",
+    icon: Bot,
+    headline: "Analysis on tap, execution on you",
+    body: "The copilot reads the same candles you do and explains its bias. It cannot place a contract — that stays your click.",
+    points: ["Bias with confidence and rationale", "Invalidation level stated up front", "Weight reduced on noise-dominated expiries"],
+  },
+  {
+    key: "autonomous",
+    label: "Autonomous",
+    icon: Zap,
+    headline: "Rules run while you are away",
+    body: "Strategies trade inside limits you set, with a daily loss cap, an exposure cap and a global stop that works without the app open.",
+    points: ["Explicit activation and consent record", "Per-strategy capital allocation", "Global and per-user kill switches"],
+  },
 ];
 
-export default function LandingPage() {
-  const plans = useApi<{ plans: Plan[] }>((signal) => api("/plans", { signal, retryOnAuth: false }));
+const RISK_RULES = [
+  "Maximum position and account exposure",
+  "Daily loss and drawdown circuit breakers",
+  "Stale market data rejection",
+  "Duplicate order prevention",
+  "Leverage ceilings where applicable",
+  "Trading-session validation",
+  "Per-provider trading disable",
+  "Global kill switch",
+];
+
+const PLANS = [
+  {
+    name: "Free",
+    price: "$0",
+    cadence: "forever",
+    blurb: "Read-only connections, portfolio analytics and simulated trading.",
+    features: ["2 connected accounts", "5 simulated executions a day", "Market monitoring", "No real-money execution"],
+    cta: "Start free",
+    highlight: false,
+  },
+  {
+    name: "Basic",
+    price: "$19",
+    cadence: "per month",
+    blurb: "Core strategies and guardrailed automation.",
+    features: ["3 connected accounts", "50 simulated executions a day", "Two-strategy library", "Paper automation"],
+    cta: "Choose Basic",
+    highlight: false,
+  },
+  {
+    name: "Pro",
+    price: "$49",
+    cadence: "per month",
+    blurb: "Backtesting, customisation and advanced analytics.",
+    features: ["8 connected accounts", "250 simulated executions a day", "Backtesting and walk-forward", "Eligible for live after authorisation"],
+    cta: "Choose Pro",
+    highlight: true,
+  },
+  {
+    name: "Elite",
+    price: "$149",
+    cadence: "per month",
+    blurb: "Full library, portfolio optimisation, priority support.",
+    features: ["25 connected accounts", "1,000 simulated executions a day", "Portfolio optimisation", "Optional performance-fee agreement"],
+    cta: "Choose Elite",
+    highlight: false,
+  },
+];
+
+export default function MarketingPage() {
+  const [open, setOpen] = React.useState(false);
+  const heroCandles = React.useMemo(() => illustrativeCandles(97, 64200, 0.012), []);
+  const secondaryCandles = React.useMemo(() => illustrativeCandles(41, 1.084, 0.0022, 48), []);
+  const [mode, setMode] = React.useState("assisted");
+  const activeMode = MODES.find((item) => item.key === mode) ?? MODES[1]!;
 
   return (
-    <div className="min-h-screen bg-ink-950">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-ink-800 focus:px-4 focus:py-2 focus:text-sm focus:text-paper"
-      >
-        Skip to content
-      </a>
-
-      <header className="sticky top-0 z-40 border-b border-line-soft/80 bg-ink-950/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
-          <Link href="/" aria-label="VELTRANE home" className="flex items-center gap-2">
+    <div className="min-h-screen bg-obsidian-950 text-paper">
+      <header className="sticky top-0 z-40 border-b border-line-soft bg-obsidian-950/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 lg:px-8">
+          <Link href="/" aria-label="VELTRANE home">
             <Wordmark />
           </Link>
-          <nav className="hidden items-center gap-7 text-xs text-paper-muted md:flex" aria-label="Primary">
-            <a href="#platform" className="transition hover:text-paper">
-              Platform
-            </a>
-            <a href="#discipline" className="transition hover:text-paper">
-              Risk discipline
-            </a>
-            <a href="#pricing" className="transition hover:text-paper">
-              Pricing
-            </a>
-            <a href="#honesty" className="transition hover:text-paper">
-              What we do not promise
-            </a>
+          <nav className="hidden items-center gap-7 md:flex" aria-label="Primary">
+            {NAV.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="text-xs text-paper-muted transition-colors hover:text-paper"
+              >
+                {item.label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
+          <div className="hidden items-center gap-2 md:flex">
+            <Link
+              href="/login"
+              className="rounded-lg px-3 py-2 text-xs text-paper-muted transition-colors hover:text-paper"
+            >
+              Sign in
             </Link>
-            <Link href="/register">
-              <Button size="sm">
-                Open an account
-                <ArrowRight className="h-3 w-3" />
-              </Button>
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-electric-500 px-3.5 py-2 text-xs font-medium text-white shadow-glow transition hover:bg-electric-400"
+            >
+              Open an account
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </div>
+          <button
+            type="button"
+            className="rounded-lg border border-line-strong p-2 text-paper-muted md:hidden"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-label={open ? "Close menu" : "Open menu"}
+          >
+            {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
+        {open ? (
+          <div className="border-t border-line-soft bg-obsidian-900 px-5 py-4 md:hidden">
+            <nav className="grid gap-1" aria-label="Mobile">
+              {NAV.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-2 py-2.5 text-sm text-paper-muted hover:bg-obsidian-800 hover:text-paper"
+                >
+                  {item.label}
+                </a>
+              ))}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link href="/login" className="rounded-lg border border-line-strong px-3 py-2.5 text-center text-sm">
+                  Sign in
+                </Link>
+                <Link href="/register" className="rounded-lg bg-electric-500 px-3 py-2.5 text-center text-sm font-medium text-white">
+                  Open account
+                </Link>
+              </div>
+            </nav>
+          </div>
+        ) : null}
       </header>
 
       <main id="main">
-        <section className="relative overflow-hidden border-b border-line-soft/70">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-[0.5]"
-            style={{
-              background:
-                "radial-gradient(60% 50% at 75% 0%, rgba(200,169,106,0.10) 0%, rgba(10,14,22,0) 70%), radial-gradient(50% 40% at 10% 20%, rgba(60,90,140,0.18) 0%, rgba(10,14,22,0) 70%)",
-            }}
-          />
-          <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="gold">Simulation first</Badge>
-                <Badge tone="outline">No custody of funds</Badge>
-              </div>
-              <h1 className="mt-5 text-balance text-4xl font-light leading-[1.1] tracking-tight text-paper sm:text-5xl lg:text-6xl">
-                Institutional discipline
-                <span className="block text-champagne-300">for autonomous retail trading</span>
+        {/* Hero */}
+        <section className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 grid-bg opacity-70" aria-hidden />
+          <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-electric-500/10 blur-[120px]" aria-hidden />
+          <div className="relative mx-auto grid max-w-7xl gap-14 px-5 pb-16 pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:px-8 lg:pb-24 lg:pt-24">
+            <div className="animate-fade-up">
+              <span className="chip">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+                Paper trading live · live routing gated
+              </span>
+              <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-paper sm:text-5xl lg:text-6xl">
+                Trade with an
+                <span className="block bg-gradient-to-r from-electric-300 via-electric-400 to-emerald-300 bg-clip-text text-transparent">
+                  instrument, not a guess.
+                </span>
               </h1>
-              <p className="mt-5 max-w-xl text-sm leading-relaxed text-paper-muted sm:text-base">
-                VELTRANE runs strategies on accounts you already own — with a deterministic risk engine that can refuse
-                any order, a complete record of every trade, and a halt that works whether or not the app is open.
+              <p className="mt-6 max-w-xl text-sm leading-relaxed text-paper-muted sm:text-base">
+                VELTRANE is a precision terminal for crypto, forex, equities and metals. Fixed-odds
+                contracts with the payout in plain sight, an independent risk engine on every order,
+                and a copilot that explains its reasoning instead of promising outcomes.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link href="/register">
-                  <Button size="lg">
-                    Start with simulation
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 rounded-lg bg-electric-500 px-5 py-3 text-sm font-medium text-white shadow-glow transition hover:bg-electric-400"
+                >
+                  Open a paper account
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <Link href="/login">
-                  <Button size="lg" variant="secondary">
-                    Sign in
-                  </Button>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-obsidian-850 px-5 py-3 text-sm text-paper transition hover:border-electric-600/60"
+                >
+                  <LineChart className="h-4 w-4 text-electric-300" aria-hidden />
+                  Explore the terminal
                 </Link>
               </div>
-              <p className="mt-4 max-w-lg text-2xs leading-relaxed text-paper-faint">
-                No performance figures appear on this page. Nothing here is a promise of profit, and past or simulated
-                results do not indicate future returns.
-              </p>
-
               <dl className="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-line-soft pt-6">
                 {[
-                  ["0", "funds held"],
-                  ["1", "engine that can refuse"],
-                  ["100%", "of fills inspectable"],
+                  ["4", "asset classes"],
+                  ["14", "instruments"],
+                  ["0", "custody of funds"],
                 ].map(([value, label]) => (
                   <div key={label}>
-                    <dt className="num text-2xl font-light text-paper">{value}</dt>
+                    <dt className="num text-2xl font-medium text-paper">{value}</dt>
                     <dd className="mt-1 text-2xs uppercase tracking-label text-paper-faint">{label}</dd>
                   </div>
                 ))}
               </dl>
             </div>
 
-            <div className="space-y-4">
-              <DemoTape />
-              <div className="panel p-5">
-                <div className="flex items-center justify-between">
-                  <p className="label">Risk decision</p>
-                  <Badge tone="loss">rejected</Badge>
+            <div className="relative animate-fade-in">
+              <div className="hero-frame p-4 sm:p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BrandMark className="h-5 w-5" />
+                    <span className="font-mono text-xs text-paper">BTC/USDT</span>
+                    <span className="rounded border border-line-strong px-1.5 py-px text-3xs uppercase tracking-label text-paper-faint">
+                      illustrative
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    {["1m", "5m", "15m", "1h"].map((tf, index) => (
+                      <span
+                        key={tf}
+                        className={cn(
+                          "rounded px-2 py-1 text-3xs",
+                          index === 2 ? "bg-electric-500/15 text-electric-300" : "text-paper-faint",
+                        )}
+                      >
+                        {tf}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-paper-muted">
-                  <span className="text-paper">max_position_notional_pct</span> — order notional 18.4% of equity exceeds
-                  the 10.0% limit. No venue was contacted.
+                <CandleChart candles={heroCandles} height={260} livePrice={heroCandles.at(-1)?.close} />
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
+                    <p className="text-3xs uppercase tracking-label text-emerald-300/80">Call · 5m</p>
+                    <p className="num mt-1 text-lg font-medium text-emerald-300">+80%</p>
+                  </div>
+                  <div className="rounded-lg border border-loss/30 bg-loss/10 px-3 py-2.5">
+                    <p className="text-3xs uppercase tracking-label text-loss/80">Put · 5m</p>
+                    <p className="num mt-1 text-lg font-medium text-loss">+80%</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-3xs leading-relaxed text-paper-faint">
+                  Illustrative interface. Payout is what a winning contract pays; a losing contract
+                  returns nothing. Not a forecast.
                 </p>
-                <div className="mt-3 space-y-1.5 border-t border-line-soft pt-3">
-                  {[
-                    ["kill_switch", true],
-                    ["instrument_active", true],
-                    ["market_data_fresh", true],
-                    ["stop_loss_present", true],
-                    ["position_size", false],
-                  ].map(([rule, passed]) => (
-                    <div key={String(rule)} className="flex items-center justify-between text-2xs">
-                      <span className="num text-paper-faint">{rule}</span>
-                      <span className={passed ? "text-gain" : "text-loss"}>{passed ? "pass" : "fail"}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-2xs text-paper-faint">Illustrative decision record, not a live order.</p>
+              </div>
+              <div className="absolute -left-4 -top-5 hidden w-52 rounded-xl border border-line bg-obsidian-900/95 p-3 shadow-lift lg:block">
+                <p className="text-3xs uppercase tracking-label text-paper-faint">Risk engine</p>
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-emerald-300">
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> 17 checks passed
+                </p>
+                <p className="mt-1 text-3xs text-paper-faint">Stake 100.00 · 0.4% of equity</p>
               </div>
             </div>
           </div>
+          <MarketTape />
         </section>
 
-        <section id="platform" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <p className="label">Platform</p>
-          <h2 className="mt-2 max-w-2xl text-2xl font-light text-paper sm:text-3xl">
-            Built like a trading desk, priced like software
-          </h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+        {/* Pillars */}
+        <section id="platform" className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+          <div className="max-w-2xl">
+            <p className="label">The platform</p>
+            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              Built like an instrument, not a casino
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-paper-muted">
+              Every screen exists to answer one question: what is my risk right now, and what will it
+              cost me? VELTRANE shows the payout, the probability you are implicitly accepting and the
+              checks that ran before anything was placed.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
             {PILLARS.map((pillar) => (
-              <article key={pillar.title} className="panel p-5">
-                <pillar.icon className="h-4 w-4 text-champagne-400" aria-hidden />
-                <h3 className="mt-3 text-sm text-paper">{pillar.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-paper-muted">{pillar.body}</p>
+              <article
+                key={pillar.title}
+                className="group relative overflow-hidden rounded-xl border border-line bg-obsidian-850 p-6 transition-colors hover:border-electric-600/50"
+              >
+                <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-electric-500/5 blur-2xl transition group-hover:bg-electric-500/10" aria-hidden />
+                <pillar.icon className="h-5 w-5 text-electric-300" aria-hidden />
+                <h3 className="mt-4 font-display text-lg font-medium text-paper">{pillar.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-paper-muted">{pillar.body}</p>
               </article>
             ))}
           </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <article className="panel p-5">
-              <Gauge className="h-4 w-4 text-champagne-400" aria-hidden />
-              <h3 className="mt-3 text-sm text-paper">Net-of-cost accounting</h3>
-              <p className="mt-2 text-xs leading-relaxed text-paper-muted">
-                Fees, spread, slippage and funding are recorded per fill. Performance is reported after costs, because a
-                gross curve is a story, not a result.
-              </p>
-            </article>
-            <article className="panel p-5">
-              <Layers className="h-4 w-4 text-champagne-400" aria-hidden />
-              <h3 className="mt-3 text-sm text-paper">One abstraction, honest adapters</h3>
-              <p className="mt-2 text-xs leading-relaxed text-paper-muted">
-                Crypto venues first through CCXT, then retail forex and indices. Each provider reports its real
-                capabilities; the interface never pretends two venues behave alike.
-              </p>
-            </article>
-          </div>
         </section>
 
-        <section id="discipline" className="border-y border-line-soft/70 bg-ink-900">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <p className="label">Risk discipline</p>
-            <h2 className="mt-2 max-w-2xl text-2xl font-light text-paper sm:text-3xl">
-              Four gates between an idea and your capital
-            </h2>
-            <ol className="mt-8 grid gap-4 md:grid-cols-2">
-              {STEPS.map(([number, title, body]) => (
-                <li key={number} className="panel flex gap-4 p-5">
-                  <span className="num text-xs text-champagne-400">{number}</span>
-                  <div>
-                    <h3 className="text-sm text-paper">{title}</h3>
-                    <p className="mt-1.5 text-xs leading-relaxed text-paper-muted">{body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section id="pricing" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+        {/* Trading experience */}
+        <section id="trading" className="border-y border-line-soft bg-obsidian-900/40">
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-8">
             <div>
-              <p className="label">Pricing</p>
-              <h2 className="mt-2 text-2xl font-light text-paper sm:text-3xl">Capability, not promises</h2>
-              <p className="mt-2 max-w-xl text-xs leading-relaxed text-paper-muted">
-                Tiers unlock strategies, automation and higher configured limits. None of them unlock real-money
-                execution on their own.
+              <p className="label">The terminal</p>
+              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                One ticket, every number that matters
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-paper-muted">
+                Choose an asset, a direction and a duration. The ticket prices the payout, shows the
+                maximum loss before you commit, and holds the stake as collateral for the contract
+                term. Settlement is automatic and each contract keeps its own audit trail.
               </p>
-            </div>
-            <Badge tone="info">Prices from the live plan configuration</Badge>
-          </div>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {plans.loading
-              ? [0, 1, 2, 3].map((index) => <div key={index} className="panel h-72 animate-pulse" />)
-              : (plans.data?.plans ?? []).map((plan) => (
-                  <article
-                    key={plan.code}
-                    className={`panel flex flex-col p-5 ${plan.code === "pro" ? "border-champagne-600/40" : ""}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm text-paper">{plan.name}</h3>
-                      {plan.code === "pro" ? <Badge tone="gold">popular</Badge> : null}
-                    </div>
-                    <p className="mt-1 text-2xs leading-relaxed text-paper-faint">{plan.tagline}</p>
-                    <p className="num mt-4 text-3xl font-light text-paper">
-                      {plan.price_monthly === 0 ? "Free" : money(plan.price_monthly, plan.currency, 0)}
-                      {plan.price_monthly > 0 ? <span className="ml-1 text-2xs text-paper-faint">/ month</span> : null}
-                    </p>
-                    <ul className="mt-4 flex-1 space-y-1.5">
-                      {(plan.features ?? []).slice(0, 6).map((feature) => (
-                        <li key={feature} className="flex gap-2 text-2xs leading-relaxed text-paper-muted">
-                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-champagne-500" aria-hidden />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-5">
-                      <Link href={plan.price_monthly === 0 ? "/register" : "/register?plan=" + plan.code}>
-                        <Button fullWidth variant={plan.code === "pro" ? "primary" : "secondary"} size="sm">
-                          {plan.price_monthly === 0 ? "Create free account" : `Choose ${plan.name}`}
-                        </Button>
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-          </div>
-        </section>
-
-        <section id="honesty" className="border-t border-line-soft/70">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-              <div>
-                <p className="label">Plainly stated</p>
-                <h2 className="mt-2 text-2xl font-light text-paper sm:text-3xl">What we will not tell you</h2>
-                <p className="mt-3 text-xs leading-relaxed text-paper-muted">
-                  Trading carries risk of loss. Automation reduces the effort of executing a plan; it does not remove
-                  the possibility that the plan is wrong.
-                </p>
-              </div>
-              <ul className="space-y-3">
+              <ul className="mt-6 space-y-3">
                 {[
-                  "That any strategy is guaranteed, or likely, to be profitable.",
-                  "That a backtest predicts live results. Backtests are hypotheses with known biases.",
-                  "That simulated trading is real trading. Demo activity is labelled everywhere it appears.",
-                  "That a subscription authorises live execution. It does not; authorisation is separate and revocable.",
-                ].map((line) => (
-                  <li key={line} className="flex gap-3 border-b border-line-soft/60 pb-3 text-xs leading-relaxed text-paper-muted">
-                    <Fingerprint className="mt-0.5 h-3.5 w-3.5 shrink-0 text-champagne-500" aria-hidden />
-                    {line}
+                  "Call/put ticket with live payout and potential return",
+                  "Duration from 60 seconds to one hour, expiry aligned to the clock",
+                  "Open contract countdown and settlement history",
+                  "Every settled contract opens into a full risk and cost breakdown",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-paper-muted">
+                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                    {item}
                   </li>
                 ))}
               </ul>
             </div>
+            <div className="grid gap-3">
+              <div className="rounded-xl border border-line bg-obsidian-850 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-paper">EUR/USD</span>
+                  <span className="text-3xs uppercase tracking-label text-paper-faint">Forex · 15m</span>
+                </div>
+                <CandleChart candles={secondaryCandles} height={180} showVolume={false} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-line bg-obsidian-850 p-4">
+                  <p className="label">Payout</p>
+                  <p className="num mt-1 text-2xl text-paper">76%</p>
+                  <p className="mt-2 text-3xs text-paper-faint">On a 250.00 stake → 190.00 profit if correct.</p>
+                </div>
+                <div className="rounded-xl border border-line bg-obsidian-850 p-4">
+                  <p className="label">Max loss</p>
+                  <p className="num mt-1 text-2xl text-loss">250.00</p>
+                  <p className="mt-2 text-3xs text-paper-faint">Capped at the stake. No margin call, no negative balance.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="border-t border-line-soft/70 bg-ink-900">
-          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 md:flex-row md:items-center">
-            <div className="flex items-center gap-3">
-              <Monogram className="h-9 w-9" />
-              <div>
-                <p className="text-sm text-paper">Start where it is safe: simulation.</p>
-                <p className="text-2xs text-paper-faint">Connect read-only, run strategies, inspect every fill.</p>
+        {/* Modes */}
+        <section id="modes" className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <p className="label">Trading modes</p>
+              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                Autonomy you can withdraw in one click
+              </h2>
+            </div>
+            <div className="flex rounded-lg border border-line-strong bg-obsidian-850 p-1" role="tablist" aria-label="Trading modes">
+              {MODES.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === item.key}
+                  onClick={() => setMode(item.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-3 py-2 text-xs transition",
+                    mode === item.key
+                      ? "bg-electric-500/15 text-electric-200 shadow-[inset_0_0_0_1px_rgba(46,123,255,0.35)]"
+                      : "text-paper-faint hover:text-paper-muted",
+                  )}
+                >
+                  <item.icon className="h-3.5 w-3.5" aria-hidden />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-8 grid gap-6 rounded-2xl border border-line bg-gradient-to-br from-obsidian-850 to-obsidian-900 p-6 lg:grid-cols-[1.1fr_1fr] lg:p-10">
+            <div>
+              <h3 className="font-display text-2xl font-medium text-paper">{activeMode.headline}</h3>
+              <p className="mt-3 max-w-lg text-sm leading-relaxed text-paper-muted">{activeMode.body}</p>
+              <ul className="mt-6 grid gap-2.5">
+                {activeMode.points.map((point) => (
+                  <li key={point} className="flex items-center gap-2 text-xs text-paper-muted">
+                    <span className="h-1 w-1 rounded-full bg-electric-400" aria-hidden />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-xl border border-line bg-obsidian-950/70 p-5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-paper-muted">Autonomous guardrails</p>
+                <span className="chip border-emerald-500/30 text-emerald-300">armed</span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {[
+                  ["Daily loss limit", "3.0% of equity", 30],
+                  ["Account exposure cap", "30.0%", 55],
+                  ["Max open contracts", "5 of 5", 82],
+                ].map(([label, value, width]) => (
+                  <div key={label as string}>
+                    <div className="flex items-baseline justify-between text-2xs">
+                      <span className="text-paper-faint">{label}</span>
+                      <span className="num text-paper-muted">{value}</span>
+                    </div>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-obsidian-750">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-electric-500 to-emerald-400"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 border-t border-line-soft pt-3 text-3xs leading-relaxed text-paper-faint">
+                Limits are enforced server-side by the risk engine. A strategy cannot raise them, and
+                the kill switch works without the app open.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Risk */}
+        <section id="risk" className="border-y border-line-soft bg-obsidian-900/40">
+          <div className="mx-auto grid max-w-7xl gap-10 px-5 py-20 lg:grid-cols-[1fr_1.2fr] lg:px-8">
+            <div>
+              <p className="label">Risk architecture</p>
+              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                The engine that says no
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-paper-muted">
+                The risk engine is separate code from the strategy engine, with no shared state and no
+                override path. It evaluates every contract, records the outcome, and rejects anything
+                that breaches policy — including orders produced by the platform&apos;s own strategies.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["Deterministic", "Auditable", "Server-side", "Fail-closed"].map((tag) => (
+                  <span key={tag} className="chip">
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/register">
-                <Button>
-                  Open an account
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {RISK_RULES.map((rule) => (
+                <li
+                  key={rule}
+                  className="flex items-center gap-2 rounded-lg border border-line bg-obsidian-850 px-3 py-2.5 text-xs text-paper-muted"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+                  {rule}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Trust */}
+        <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              {
+                icon: Lock,
+                title: "Your funds stay with your broker",
+                body: "VELTRANE never takes custody. Connections are read-only until you separately authorise trading, and withdrawal permissions are refused.",
+              },
+              {
+                icon: KeyRound,
+                title: "Credentials sealed at rest",
+                body: "Exchange keys are envelope-encrypted with a key that never touches the database, and are never returned by any API response.",
+              },
+              {
+                icon: Layers,
+                title: "Tenant isolation by construction",
+                body: "Every query is scoped to your organisation at the data-access layer, and staff tooling cannot read subscriber secrets in plaintext.",
+              },
+            ].map((item) => (
+              <article key={item.title} className="rounded-xl border border-line bg-obsidian-850 p-6">
+                <item.icon className="h-5 w-5 text-emerald-400" aria-hidden />
+                <h3 className="mt-4 font-display text-base font-medium text-paper">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-paper-muted">{item.body}</p>
+              </article>
+            ))}
+          </div>
+          <p className="mt-8 rounded-xl border border-warn/25 bg-warn/[0.06] px-4 py-3 text-2xs leading-relaxed text-warn/90">
+            Risk disclosure: fixed-odds contracts are high-risk instruments. Most short-dated
+            contracts lose money after costs. Nothing on this site is investment advice, and no
+            performance figure shown is a forecast. Live trading remains disabled until the
+            operational, legal and security prerequisites in our production-readiness register are met.
+          </p>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="border-t border-line-soft bg-obsidian-900/40">
+          <div className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+            <div className="max-w-2xl">
+              <p className="label">Subscriptions</p>
+              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                Pay for capability, not for hope
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-paper-muted">
+                Every plan includes the full risk engine and the audit trail. Higher tiers unlock more
+                instruments, more simulation and deeper analysis — never a bypass of a safety control.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-4 lg:grid-cols-4">
+              {PLANS.map((plan) => (
+                <article
+                  key={plan.name}
+                  className={cn(
+                    "relative flex flex-col rounded-xl border bg-obsidian-850 p-6",
+                    plan.highlight ? "border-electric-500/50 shadow-glow" : "border-line",
+                  )}
+                >
+                  {plan.highlight ? (
+                    <span className="absolute -top-2.5 left-6 rounded-full bg-electric-500 px-2 py-0.5 text-3xs font-medium uppercase tracking-label text-white">
+                      Most chosen
+                    </span>
+                  ) : null}
+                  <h3 className="font-display text-lg font-medium text-paper">{plan.name}</h3>
+                  <p className="mt-1 text-2xs text-paper-faint">{plan.blurb}</p>
+                  <p className="mt-5 flex items-baseline gap-1.5">
+                    <span className="num text-3xl font-medium text-paper">{plan.price}</span>
+                    <span className="text-2xs text-paper-faint">{plan.cadence}</span>
+                  </p>
+                  <ul className="mt-5 flex-1 space-y-2">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-2xs text-paper-muted">
+                        <BadgeCheck className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/register"
+                    className={cn(
+                      "mt-6 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-xs font-medium transition",
+                      plan.highlight
+                        ? "bg-electric-500 text-white hover:bg-electric-400"
+                        : "border border-line-strong text-paper hover:border-electric-600/60",
+                    )}
+                  >
+                    {plan.cta}
+                  </Link>
+                </article>
+              ))}
+            </div>
+            <p className="mt-6 text-2xs text-paper-faint">
+              Prices shown in USD. Billing is provider-verified server-side; a subscription is only
+              activated after a signed payment confirmation. Performance fees, where offered, require a
+              separate signed agreement and a high-water mark.
+            </p>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="relative overflow-hidden border-t border-line-soft">
+          <div className="pointer-events-none absolute inset-0 aurora opacity-60" aria-hidden />
+          <div className="relative mx-auto flex max-w-5xl flex-col items-center px-5 py-20 text-center lg:px-8">
+            <BrandMark className="h-12 w-12 animate-float" glow />
+            <h2 className="mt-6 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              Start in simulation. Earn the right to go live.
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-paper-muted">
+              Open an account, connect a broker read-only, and trade the full terminal against
+              simulated capital. Live execution requires a completed safety checklist and explicit
+              authorisation — for you, not for the platform.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 rounded-lg bg-electric-500 px-5 py-3 text-sm font-medium text-white shadow-glow transition hover:bg-electric-400"
+              >
+                Create your account
+                <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-              <Link href="/login">
-                <Button variant="secondary">Sign in</Button>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-obsidian-900/70 px-5 py-3 text-sm text-paper transition hover:border-electric-600/60"
+              >
+                Sign in
               </Link>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-line-soft/70">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
-          <div>
-            <Wordmark />
-            <p className="mt-3 max-w-sm text-2xs leading-relaxed text-paper-faint">
-              VELTRANE is a provisional brand name, subject to legal and domain clearance. This deployment is a
-              development build: live trading is disabled platform-wide and no real-money order is submitted.
+      <footer className="border-t border-line-soft bg-obsidian-950">
+        <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+          <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+            <div>
+              <Wordmark />
+              <p className="mt-4 max-w-xs text-2xs leading-relaxed text-paper-faint">
+                VELTRANE is a trading technology provider. It does not hold client funds, does not
+                manage portfolios, and does not guarantee outcomes.
+              </p>
+              <div className="mt-4 flex gap-2">
+                <span className="chip">
+                  <CircleDollarSign className="h-3 w-3" aria-hidden /> No custody
+                </span>
+                <span className="chip">
+                  <TrendingUp className="h-3 w-3" aria-hidden /> Paper first
+                </span>
+              </div>
+            </div>
+            {[
+              {
+                title: "Platform",
+                links: [
+                  ["Trading terminal", "/app/terminal"],
+                  ["Markets", "/app/markets"],
+                  ["Strategies", "/app/strategies"],
+                  ["Analytics", "/app/analytics"],
+                ],
+              },
+              {
+                title: "Company",
+                links: [
+                  ["Pricing", "#pricing"],
+                  ["Risk policy", "/risk"],
+                  ["Security", "/security"],
+                  ["Status", "/status"],
+                ],
+              },
+              {
+                title: "Account",
+                links: [
+                  ["Sign in", "/login"],
+                  ["Create account", "/register"],
+                  ["Billing", "/app/billing"],
+                  ["Support", "/app/support"],
+                ],
+              },
+            ].map((column) => (
+              <div key={column.title}>
+                <p className="text-2xs uppercase tracking-label text-paper-faint">{column.title}</p>
+                <ul className="mt-3 space-y-2">
+                  {column.links.map(([label, href]) => (
+                    <li key={label}>
+                      <Link
+                        href={href as Parameters<typeof Link>[0]["href"]}
+                        className="text-xs text-paper-muted transition-colors hover:text-paper"
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 flex flex-col gap-3 border-t border-line-soft pt-6 text-2xs text-paper-faint sm:flex-row sm:items-center sm:justify-between">
+            <p>© {new Date().getFullYear()} VELTRANE. All rights reserved.</p>
+            <p className="flex items-center gap-2">
+              <BarChart3 className="h-3.5 w-3.5" aria-hidden />
+              Simulated results are not indicative of future performance.
             </p>
-          </div>
-          <div>
-            <p className="label">Product</p>
-            <ul className="mt-2 space-y-1.5 text-2xs text-paper-muted">
-              <li>
-                <Link href="/app" className="transition hover:text-paper">
-                  Workspace
-                </Link>
-              </li>
-              <li>
-                <Link href="/app/strategies" className="transition hover:text-paper">
-                  Strategy library
-                </Link>
-              </li>
-              <li>
-                <Link href="/app/billing" className="transition hover:text-paper">
-                  Plans and billing
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <p className="label">Transparency</p>
-            <ul className="mt-2 space-y-1.5 text-2xs text-paper-muted">
-              <li className="flex items-center gap-1.5">
-                <Wallet className="h-3 w-3" aria-hidden /> No custody of subscriber funds
-              </li>
-              <li className="flex items-center gap-1.5">
-                <BarChart3 className="h-3 w-3" aria-hidden /> Performance always net of costs
-              </li>
-              <li className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3 w-3" aria-hidden /> Risk engine independent of AI
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-line-soft/60">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-2xs text-paper-faint sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p>© {new Date().getFullYear()} VELTRANE. Development build, not a regulated financial service.</p>
-            <p>Nothing on this site is investment advice.</p>
           </div>
         </div>
       </footer>

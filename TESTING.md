@@ -85,9 +85,17 @@ in the workflow so lint results do not drift between runs.
 
 ## Frontend tests
 
-The front end is checked with TypeScript (`npm run typecheck`), ESLint (`npm run lint`) and a
-production build (`npm run build`) in CI. Component tests are not written yet; see
-KNOWN_LIMITATIONS.
+The front end is checked with TypeScript (`npm run typecheck`), ESLint (`npm run lint`), a
+production build (`npm run build`) and Vitest (`npm run test`). `vitest.config.ts` resolves the `@/`
+alias and runs in a node environment, so tests cover pure logic rather than DOM: the price scale
+that keeps a stale or cross-instrument quote from flattening a chart
+(`src/components/charts/candles.test.ts`) is the first such suite. Component and end-to-end browser
+tests are still outstanding; see KNOWN_LIMITATIONS.
+
+```bash
+cd frontend
+npm run test        # vitest run
+```
 
 ## Test hygiene rules for contributors
 

@@ -4,11 +4,11 @@ import * as React from "react";
 import { cn } from "@/lib/cn";
 
 const TONES = {
-  gold: { stroke: "#c8a96a", fill: "rgba(200,169,106,0.18)" },
-  gain: { stroke: "#3fb27f", fill: "rgba(63,178,127,0.16)" },
-  loss: { stroke: "#e0606f", fill: "rgba(224,96,111,0.16)" },
-  info: { stroke: "#6a9bd8", fill: "rgba(106,155,216,0.16)" },
-  platinum: { stroke: "#c6cedb", fill: "rgba(198,206,219,0.12)" },
+  gold: { stroke: "#5c9bff", fill: "rgba(46,123,255,0.20)" },
+  gain: { stroke: "#10b981", fill: "rgba(16,185,129,0.18)" },
+  loss: { stroke: "#f2555f", fill: "rgba(242,85,95,0.18)" },
+  info: { stroke: "#8fbbff", fill: "rgba(143,187,255,0.16)" },
+  platinum: { stroke: "#c6cedb", fill: "rgba(198,206,219,0.10)" },
 } as const;
 
 export type ChartTone = keyof typeof TONES;
@@ -144,7 +144,7 @@ export function Donut({
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#111a28" strokeWidth={thickness} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#141a23" strokeWidth={thickness} />
         {total > 0 &&
           segments.map((segment) => {
             const fraction = Math.max(0, segment.value) / total;

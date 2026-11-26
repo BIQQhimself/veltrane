@@ -4,7 +4,10 @@
 
 :root {
   color-scheme: dark;
-  --grid: rgba(255, 255, 255, 0.035);
+  --grid: rgba(255, 255, 255, 0.028);
+  --hairline: rgba(255, 255, 255, 0.06);
+  --electric: #2e7bff;
+  --emerald: #10b981;
 }
 
 * {
@@ -17,14 +20,16 @@ body {
 }
 
 body {
-  background-color: #05070d;
+  background-color: theme("colors.obsidian.950");
   color: theme("colors.paper.DEFAULT");
+  font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: rgba(200, 169, 106, 0.28);
+  background: rgba(46, 123, 255, 0.32);
+  color: #fff;
 }
 
 ::-webkit-scrollbar {
@@ -35,18 +40,18 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1c2534;
+  background: #1d2734;
   border-radius: 999px;
-  border: 2px solid #05070d;
+  border: 2px solid theme("colors.obsidian.950");
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #26334a;
+  background: #2a3846;
 }
 
 :focus-visible {
-  outline: 2px solid theme("colors.champagne.500");
+  outline: 2px solid theme("colors.electric.400");
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 @layer base {
@@ -54,14 +59,18 @@ body {
   h2,
   h3,
   h4 {
+    font-family: theme("fontFamily.display");
     font-weight: 500;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+  }
+  ::placeholder {
+    color: theme("colors.paper.faint");
   }
 }
 
 @layer components {
   .panel {
-    @apply rounded-xl border border-line bg-ink-850 shadow-panel;
+    @apply rounded-xl border border-line bg-obsidian-850/90 shadow-panel backdrop-blur-[2px];
   }
   .panel-header {
     @apply flex items-center justify-between gap-3 border-b border-line-soft px-5 py-4;
@@ -79,13 +88,33 @@ body {
     @apply border-t border-line-soft;
   }
   .link-underline {
-    @apply underline decoration-champagne-600/50 decoration-1 underline-offset-4 transition hover:decoration-champagne-400;
+    @apply underline decoration-electric-500/40 decoration-1 underline-offset-4 transition hover:decoration-electric-400;
   }
   .grid-bg {
     background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 85% 65% at 50% 0%, black 35%, transparent 100%);
+  }
+  .grid-full {
+    background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .aurora {
+    background-image: theme("backgroundImage.aurora");
+  }
+  .glass {
+    @apply border border-white/[0.06] bg-obsidian-900/70 backdrop-blur-xl;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-obsidian-800/80 px-2.5 py-1 text-2xs text-paper-muted;
+  }
+  .kbd {
+    @apply rounded border border-line-strong bg-obsidian-800 px-1.5 py-0.5 font-mono text-3xs text-paper-faint;
+  }
+  .stat-value {
+    @apply font-mono text-2xl font-medium tabular-nums tracking-tight text-paper;
   }
   .shimmer {
     position: relative;
@@ -98,7 +127,21 @@ body {
     inset: 0;
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
-    animation: shimmer 1.6s infinite;
+    animation: shimmer 1.8s infinite;
+  }
+  .divider-glow {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(46, 123, 255, 0.5), transparent);
+  }
+  .hero-frame {
+    position: relative;
+    border-radius: 1.25rem;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+      theme("colors.obsidian.900");
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 40px 120px -60px rgba(46, 123, 255, 0.55);
   }
 }
 
@@ -109,5 +152,6 @@ body {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -24,6 +24,19 @@ from sqlalchemy.orm import Session
 router = APIRouter(tags=["trading"])
 
 
+@router.post("/trading/paper-session", status_code=201)
+def ensure_paper_session(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Idempotently provision the organisation's simulated account.
+
+    New workspaces have no paper session until their first simulated order, which
+    left the dashboard showing a zero balance with no way to start. This endpoint
+    returns the running session or creates one with the configured starting balance.
+    """
+    session = trading_engine.paper_session_for(db, user, None)
+    db.commit()
+    return serializers.session_dict(session)
+
+
 @router.post("/orders", status_code=201)
 def create_order(
     payload: OrderCreateRequest,

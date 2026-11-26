@@ -134,3 +134,40 @@ def test_dependency_vulnerability_snapshot_documented():
     root = Path(__file__).resolve().parents[2]
     assert (root / "SECURITY.md").exists()
     assert (root / "THREAT_MODEL.md").exists()
+
+
+def test_cookie_samesite_rejects_unknown_values(monkeypatch):
+    from app.core.config import Settings
+
+    base = dict(
+        database_url="postgresql+psycopg://user:pass@localhost:5432/veltrane",
+        redis_url="redis://localhost:6379/0",
+    )
+    monkeypatch.setenv("VELTRANE_COOKIE_SAMESITE", "sometimes")
+    try:
+        Settings(**base)
+    except Exception as exc:  # pydantic ValidationError
+        assert "cookie_samesite" in str(exc)
+    else:
+        raise AssertionError("invalid SameSite value must be rejected")
+
+
+def test_samesite_none_requires_secure_cookies():
+    from app.core.config import Settings
+
+    try:
+        Settings(
+            database_url="postgresql+psycopg://user:pass@localhost:5432/veltrane",
+            cookie_samesite="none",
+            cookie_secure=False,
+        )
+    except RuntimeError as exc:
+        assert "COOKIE_SECURE" in str(exc)
+    else:
+        raise AssertionError("SameSite=None without Secure must be rejected")
+
+    Settings(
+        database_url="postgresql+psycopg://user:pass@localhost:5432/veltrane",
+        cookie_samesite="none",
+        cookie_secure=True,
+    )

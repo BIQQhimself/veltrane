@@ -24,18 +24,22 @@ never enables real-money trading by default.
 | Live trading | Code paths exist and are gated: entitlement, verified trade-only connection, risk acknowledgement, 8-item checklist, MFA or written waiver, 60-second cooling-off token, platform flag. Off by default |
 | Admin | Owner/analyst/support RBAC, revenue and cost analytics, plan and entitlement management, risk policy versioning, kill switches, flags, audit log, support inbox, fraud signals |
 | Performance fees | Elite-only, high-water-mark accounting, realised P&L only, consent records, jurisdiction gate, disabled until legal review is recorded |
-| Tests | 128 backend tests against real PostgreSQL and Redis |
+| Web app | Next.js 15 App Router + TypeScript + Tailwind. Twelve workspace screens (overview, terminal, markets, strategies, copilot, accounts, portfolio, analytics, notifications, billing, settings, onboarding), an admin console, and an installable PWA shell |
+| Tests | 151 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
 
 ## What does **not** exist yet
 
-A production front end, verified live exchange connectivity, a payment provider in live mode,
-performance/load testing, an independent security review, and the legal work for performance
-fees. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and
+Native iOS and Android apps (the web app is installable as a PWA instead), verified live exchange
+connectivity, a payment provider in live mode, a scheduler that runs strategies unattended
+autonomously, performance/load testing, an independent security review, and the legal work for
+performance fees. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and
 [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).
 
 ## Repository layout
 
 ```
+frontend/                Next.js app (App Router, React 19, Tailwind), design tokens in
+                         src/app/globals.css + tailwind.config.ts, Vitest unit suite
 backend/                 FastAPI application, Alembic migrations, pytest suite
   app/api/v1/            HTTP routers (auth, billing, connections, markets, strategies,
                          trading, portfolio, analytics, notifications, admin, health)

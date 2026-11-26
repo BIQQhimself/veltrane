@@ -5,15 +5,21 @@ competent reviewer would find, so it is cheaper to state it here.
 
 ## Product
 
-1. **No front end in this repository.** The API is complete enough to drive a UI; the UI is not
-   built. Nothing is screenshot-ready.
+1. **The web app is working software, not a finished product.** `frontend/` is a Next.js 15 app
+   with twelve workspace screens, onboarding and an admin console that talks to this API, and it is
+   installable as a PWA. It has not been through design QA on real devices, has no localisation,
+   no end-to-end browser tests in CI, and only a thin unit suite (chart scale invariants).
 2. **No AI model is wired in.** The strategy library is deterministic (trend following, mean
    reversion, breakout, momentum rotation) and clearly labelled as such. "AI strategy generation"
    is a feature flag with no implementation behind it. No LLM is called anywhere, so there is no
    AI cost per subscriber yet — the analytics field exists and reads zero.
-3. **Onboarding is API-only.** The ten steps exist as endpoints and state on `users.onboarding_step`;
-   there is no guided flow.
-4. **No mobile app.** The API is mobile-friendly; there is no client.
+3. **Onboarding is a guided flow over API endpoints.** `/app/onboarding` walks the ten steps and
+   records progress on `users.onboarding_step`, but several steps are explanatory rather than
+   enforced: skipping them does not block paper trading, and only the live-trading checklist is
+   hard-gated server-side.
+4. **No native mobile app.** The web app is responsive and installable (manifest, maskable icons,
+   standalone display, iOS `appleWebApp` metadata, safe-area padding), but there is no Capacitor or
+   React Native shell, so there is nothing to submit to the App Store or Play Store yet.
 5. **Single-user organisations.** The schema supports more seats; the API assumes one user per org.
 
 ## Trading

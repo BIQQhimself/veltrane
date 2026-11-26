@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { bps, dateTime, money, percent, signedMoney } from "@/lib/format";
-import { BarList, Donut } from "@/components/charts";
+import { Donut } from "@/components/charts";
 import { Badge, DemoBadge, StatusBadge } from "@/components/ui/badge";
 import { EmptyState, ErrorNote, KeyValue, Skeleton, Stat } from "@/components/ui/data";
 import { Panel, PanelBody, PanelHeader, SectionHeading } from "@/components/ui/panel";
@@ -81,7 +82,7 @@ export default function PortfolioPage() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_1.3fr]">
         <Panel>
           <PanelHeader title="Allocation" subtitle="Balances and open position value" />
           <PanelBody>
@@ -116,7 +117,26 @@ export default function PortfolioPage() {
                 </ul>
               </div>
             ) : (
-              <EmptyState title="Nothing allocated" description="Connect an account or open a paper position to see allocation." />
+              <EmptyState
+                title="Nothing allocated yet"
+                description="Allocation fills in as soon as a paper position is open or a read-only connection reports balances."
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Link
+                      href="/app/terminal"
+                      className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-1.5 text-xs text-gold-300 transition hover:border-gold-300 hover:bg-gold-400/15"
+                    >
+                      Open a paper position
+                    </Link>
+                    <Link
+                      href="/app/accounts"
+                      className="rounded-lg border border-line px-3 py-1.5 text-xs text-paper-muted transition hover:border-line-strong hover:text-paper"
+                    >
+                      Connect an account
+                    </Link>
+                  </div>
+                }
+              />
             )}
           </PanelBody>
         </Panel>
@@ -152,7 +172,7 @@ export default function PortfolioPage() {
         </Panel>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <Panel>
           <PanelHeader title="Balances" subtitle="As reported by each venue" />
           {overview.loading ? (
@@ -189,19 +209,72 @@ export default function PortfolioPage() {
               </TBody>
             </Table>
           ) : (
-            <EmptyState title="No balances synced" description="Connect an account and run a sync." />
+            <EmptyState
+              title="No balances synced"
+              description="Balances appear after a read-only sync. VELTRANE never requests withdrawal permission."
+              action={
+                <Link
+                  href="/app/accounts"
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs text-paper-muted transition hover:border-line-strong hover:text-paper"
+                >
+                  Manage connections
+                </Link>
+              }
+            />
           )}
         </Panel>
 
         <Panel>
-          <PanelHeader title="Allocation by value" subtitle="Largest first" />
-          <PanelBody>
-            {allocation.length ? (
-              <BarList items={allocation} />
-            ) : (
-              <p className="py-6 text-center text-xs text-paper-faint">No allocation to display yet.</p>
-            )}
-          </PanelBody>
+          <PanelHeader
+            title="Open positions"
+            subtitle="Marked against the latest quote"
+            action={
+              <span className="text-2xs text-paper-faint">
+                {overview.data?.positions.length ?? 0} open
+              </span>
+            }
+          />
+          {overview.data && overview.data.positions.length ? (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Instrument</TH>
+                  <TH>Side</TH>
+                  <TH align="right">Qty</TH>
+                  <TH align="right">Entry</TH>
+                  <TH align="right">Mark</TH>
+                  <TH align="right">Unrealised</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {overview.data.positions.map((position) => (
+                  <TR key={position.id}>
+                    <TD mono>{position.symbol}</TD>
+                    <TD>{position.side}</TD>
+                    <TD align="right" mono>
+                      {position.quantity}
+                    </TD>
+                    <TD align="right" mono>
+                      {money(position.avg_entry_price)}
+                    </TD>
+                    <TD align="right" mono>
+                      {position.mark_price === null ? "—" : money(position.mark_price)}
+                    </TD>
+                    <TD align="right" mono>
+                      <span className={position.unrealized_pnl >= 0 ? "text-gain" : "text-loss"}>
+                        {signedMoney(position.unrealized_pnl)}
+                      </span>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          ) : (
+            <EmptyState
+              title="No open positions"
+              description="Simulated contracts and synced venue positions both appear here while they are live."
+            />
+          )}
         </Panel>
       </div>
 

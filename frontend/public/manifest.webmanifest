@@ -1,0 +1,23 @@
+{
+  "name": "VELTRANE — Trading Intelligence",
+  "short_name": "VELTRANE",
+  "description": "Multi-tenant AI trading workspace. Connect your own exchange or broker, trade in simulation, and enable live trading only after explicit authorisation.",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04060a",
+  "theme_color": "#04060a",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Trading terminal", "url": "/app/terminal" },
+    { "name": "Portfolio", "url": "/app/portfolio" },
+    { "name": "Kill switch", "url": "/app/settings" }
+  ]
+}

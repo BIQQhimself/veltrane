@@ -1,20 +1,73 @@
+import * as React from "react";
 import { cn } from "@/lib/cn";
 
-export function Wordmark({ className, compact }: { className?: string; compact?: boolean }) {
+/**
+ * VELTRANE mark — "The Meridian".
+ *
+ * A hexagonal aperture cut by two counter-tapered chevrons that read as a V and as
+ * an order-book spread. The emerald node marks the settlement point. Drawn as
+ * geometry rather than a font glyph so it stays crisp from 16px to billboard size.
+ */
+export function BrandMark({ className, glow = false }: { className?: string; glow?: boolean }) {
+  const id = React.useId().replace(/[:]/g, "");
   return (
-    <span className={cn("inline-flex items-baseline gap-2", className)}>
-      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 self-center" aria-hidden>
-        <defs>
-          <linearGradient id="vmark" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#e7d3a6" />
-            <stop offset="100%" stopColor="#a8894f" />
-          </linearGradient>
-        </defs>
-        <path d="M3 5h3.6L12 18.2 17.4 5H21L12 23 3 5Z" fill="url(#vmark)" opacity="0.92" />
-        <path d="M9.2 5h5.6L12 12.4 9.2 5Z" fill="#05070d" opacity="0.55" />
-      </svg>
-      <span className="text-[15px] font-medium uppercase tracking-[0.34em] text-paper">
-        {compact ? "V" : "VELTRANE"}
+    <svg viewBox="0 0 40 40" className={cn("h-8 w-8", className)} role="img" aria-label="VELTRANE">
+      <defs>
+        <linearGradient id={`vlt-a-${id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#8fbbff" />
+          <stop offset="55%" stopColor="#2e7bff" />
+          <stop offset="100%" stopColor="#10b981" />
+        </linearGradient>
+        <linearGradient id={`vlt-b-${id}`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#2e7bff" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0.55" />
+        </linearGradient>
+        <radialGradient id={`vlt-c-${id}`} cx="50%" cy="45%" r="60%">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {glow ? <circle cx="20" cy="20" r="19" fill={`url(#vlt-c-${id})`} /> : null}
+
+      <path
+        d="M20 2.6 34.9 11.3v17.4L20 37.4 5.1 28.7V11.3Z"
+        fill="none"
+        stroke={`url(#vlt-a-${id})`}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path d="M20 7.1 30.9 13.4v13.2L20 32.9 9.1 26.6V13.4Z" fill={`url(#vlt-b-${id})`} opacity="0.35" />
+
+      {/* Counter-tapered chevrons: the V, and the bid/ask spread. */}
+      <path d="M12.2 12.6h4.6L20 25.4l3.2-12.8h4.6L20 31.2Z" fill={`url(#vlt-a-${id})`} />
+      <path d="M17.6 12.6h4.8L20 20.4Z" fill="#04060a" opacity="0.72" />
+
+      <circle cx="20" cy="31.4" r="1.7" fill="#10b981" />
+      <circle cx="20" cy="31.4" r="3.6" fill="none" stroke="#10b981" strokeOpacity="0.35" strokeWidth="0.9" />
+    </svg>
+  );
+}
+
+export function Wordmark({
+  className,
+  compact,
+  glow,
+}: {
+  className?: string;
+  compact?: boolean;
+  glow?: boolean;
+}) {
+  return (
+    <span className={cn("inline-flex items-center gap-2.5", className)}>
+      <BrandMark className={compact ? "h-7 w-7" : "h-8 w-8"} glow={glow} />
+      <span className="flex flex-col leading-none">
+        <span className="font-display text-[15px] font-semibold uppercase tracking-wordmark text-paper">
+          {compact ? "V" : "VELTRANE"}
+        </span>
+        {compact ? null : (
+          <span className="mt-1 text-3xs uppercase tracking-[0.2em] text-paper-faint">Trading intelligence</span>
+        )}
       </span>
     </span>
   );
@@ -22,14 +75,14 @@ export function Wordmark({ className, compact }: { className?: string; compact?:
 
 export function Monogram({ className }: { className?: string }) {
   return (
-    <div
+    <span
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-lg border border-champagne-600/40 bg-champagne-500/10 text-xs font-medium text-champagne-300",
+        "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line-strong bg-obsidian-800",
         className,
       )}
       aria-hidden
     >
-      V
-    </div>
+      <BrandMark className="h-5 w-5" />
+    </span>
   );
 }
