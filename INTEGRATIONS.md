@@ -80,13 +80,26 @@ as auth events and surfaced on the connection.
 risk engine as any other venue, then through the execution gate (platform switch, live
 authorisation, connection permission, session state). Fixed-odds contracts have no traded price,
 so the underlying spot is stored as the reference price and the fee is the contract's own spread
-(payout below stake). Duplicate submission is prevented with an idempotency key.
+(payout below stake). Two contracts are duplicates only when every term matches — instrument,
+side, contract type, stake and duration; an idempotency key derived from those terms prevents a
+double submission of the same intent, while a genuinely different contract is priced and assessed
+on its own. A contract opened on a demo account counts against the subscriber's daily simulated
+execution allowance, exactly like a paper fill.
+
+**Venue error mapping.** Deriv's status codes are translated rather than passed through:
+`401` becomes `invalid_token` (or `app_id_required` when the response names the App-ID header),
+`403` becomes `missing_scope`, `402` becomes `payment_required` with the three causes worth
+checking — App ID mismatch, a token without read/trade scope, or an account with no balance —
+and `429` becomes a retryable rate limit. Every message says that nothing was sent to the venue.
+`402` in particular is a credential/account problem, not a balance the platform can top up.
 
 **Verification status.** Public market data and contract pricing are verified against the live
-gateway. Account authorisation, proposal, buy/sell, close and reconciliation are verified against
-a protocol-faithful test server (`tests/support/deriv_mock.py`) with 21 passing integration tests.
-They have **not** been verified against a funded Deriv account, so the status stays
-`implemented_unverified` and live execution remains behind the platform switch.
+gateway (`tests/test_deriv_live_market_data.py`, opt-in). Account authorisation, proposal,
+buy/sell, close, reconciliation and the scheduled runner are verified against a protocol-faithful
+test server (`tests/support/deriv_mock.py`, `tests/test_deriv_integration.py`,
+`tests/test_deriv_provider.py`, `tests/test_deriv_autotrade.py`). They have **not** been verified
+against a funded Deriv account, so the status stays `implemented_unverified` and live execution
+remains behind the platform switch.
 
 If Deriv proves unreliable in production, OANDA v20 (REST, well documented) is the fallback —
 not implemented.

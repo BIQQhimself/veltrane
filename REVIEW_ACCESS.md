@@ -106,7 +106,8 @@ server answered.
 | Autotrade runner on the demo feed | emits a pending signal when the EMA cross fires, with the trigger reason recorded |
 | Signal refused by the risk engine | stored `rejected`, no venue contract id, order row kept for the audit trail |
 | Demo account data | 42 settled contracts, 1 open position, 1 running paper session, costs attributed per trade |
-| Analyst opens the command centre | `200` on `/admin/overview`; an owner-only plan edit returns `404` |
+| Analyst opens the command centre | `200` on overview, revenue, kill-switch state, users and audit |
+| Analyst attempts owner-only writes | `404 not_found` on plan edit, kill-switch engage, cost model and email delivery — staff surfaces are not advertised |
 | Staff owner | full admin surface: overview, revenue, kill switches, connections, audit log |
 | Credentials in admin payloads | none: no key, hint or hash in `/admin/users` |
 | Login brute force | `429` after a burst, as designed |

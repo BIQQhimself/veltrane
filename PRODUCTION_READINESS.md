@@ -7,7 +7,7 @@ the platform is not ready to take paying customers while any blocking cross rema
 
 | # | Item | State | Notes |
 | --- | --- | --- | --- |
-| 1 | Front end | ✗ | No UI exists. The API is usable; the product is not |
+| 1 | Front end | ◐ | Next.js app with 15 routes, onboarding, admin console and a Deriv terminal exists and is type-checked, but has no design QA on real devices, no browser E2E in CI, and only a thin unit suite |
 | 2 | Verified exchange connectivity | ✗ | No adapter has touched a real account. Status is `implemented_unverified` |
 | 3 | Independent security review | ✗ | Never performed |
 | 4 | Regulatory and legal review | ✗ | Not started; required before live trading or performance fees |
@@ -22,16 +22,16 @@ the platform is not ready to take paying customers while any blocking cross rema
 
 | # | Control | Evidence |
 | --- | --- | --- |
-| 1 | Registration, verification, login, MFA, refresh rotation, logout, revocation | `tests/test_auth.py`, `tests/test_security.py` |
+| 1 | Registration, verification, login, MFA, refresh rotation, logout, revocation | `tests/test_auth_and_system.py`, `tests/test_security.py` |
 | 2 | Tenant isolation on every object route | `tests/test_tenancy.py` (7 resource types) |
 | 3 | Server-side entitlements | `tests/test_strategies_and_entitlements.py`, `tests/test_billing.py` |
 | 4 | Free tier cannot place live orders | `tests/test_trading.py` |
-| 5 | Five simulated executions per day, then refusal | `tests/test_trading.py` |
+| 5 | Five simulated executions per day, then refusal — on paper fills and on venue demo contracts | `tests/test_trading.py`, `tests/test_deriv_integration.py` |
 | 6 | Demo activity labelled `is_demo` in API payloads and notifications | `tests/test_trading.py`, `tests/test_portfolio_and_notifications.py` |
 | 7 | Webhook signature verification and replay protection | `tests/test_billing.py` |
 | 8 | Credential encryption and non-disclosure | `tests/test_connections.py` |
 | 9 | Risk engine rejects unsafe orders, with reasons | `tests/test_risk_engine.py`, `tests/test_trading.py` |
-| 10 | Duplicate order prevention | `tests/test_trading.py` |
+| 10 | Duplicate prevention on identical terms, not on symbol and side | `tests/test_trading.py`, `tests/test_deriv_integration.py` |
 | 11 | Kill switches at four scopes | `tests/test_trading.py`, `tests/test_admin.py` |
 | 12 | Admin RBAC and subscriber lockout | `tests/test_admin.py` |
 | 13 | Audit trail on auth, orders, risk, billing, admin | asserted across the suite |
@@ -40,6 +40,10 @@ the platform is not ready to take paying customers while any blocking cross rema
 | 16 | Trade detail contains costs, slippage, risk checks, intervention | `tests/test_trading.py` |
 | 17 | Performance fees blocked without legal review | `tests/test_performance_fees.py` |
 | 18 | Production configuration guards (secret, cookies, billing) | `app/core/config.py` validators |
+| 19 | Venue execution refuses to run without the platform switch, a live authorisation and a verified connection | `tests/test_deriv_integration.py` |
+| 20 | A signal the risk engine refuses is stored rejected, never executed | `tests/test_deriv_autotrade.py` |
+| 21 | Schema parity between Alembic head and the ORM models | `tests/test_migrations.py` |
+| 22 | Fixed-odds exposure is the stake, so position size cannot be bypassed by a one-contract position | `tests/test_deriv_integration.py`, `tests/test_risk_engine.py` |
 
 ## Ready to take money?
 
