@@ -465,3 +465,22 @@ export type CopilotRead = {
   data: { source: string; is_demo: boolean; candles: number };
   disclaimer: string;
 };
+
+/** Open or closed CFD position from the paper book. */
+export type CfdPosition = {
+  id: string;
+  mode: string;
+  symbol: string;
+  side: "buy" | "sell" | string;
+  quantity: number;
+  avg_entry_price: number;
+  mark_price: number | null;
+  unrealized_pnl: number | null;
+  realized_pnl: number | null;
+  leverage: number | null;
+  stop_loss: number | null;
+  take_profit: number | null;
+  status: string;
+  opened_at: string;
+  closed_at: string | null;
+};

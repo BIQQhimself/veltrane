@@ -189,6 +189,42 @@ def _cache_key(prefix: str, symbol: str, timeframe: str, limit: int) -> str:
     return f"md:{prefix}:{symbol}:{timeframe}:{limit}"
 
 
+def price_at(symbol: str, when: datetime, timeframe: str = "1m") -> float | None:
+    """Price of ``symbol`` at the instant ``when``.
+
+    Late settlement must use the price the contract expired at, not whatever the
+    market happens to be when a worker gets around to it: a worker restart would
+    otherwise reprice every expired contract at the same moment.
+
+    The demo feed is a pure function of the timestamp, so it is evaluated directly
+    at any age. Real feeds are read from the finest candle that still covers the
+    instant, because providers only expose a limited history per request.
+    """
+    spec = instrument_spec(symbol)
+    if spec is None:
+        return None
+    if settings.market_data_source != "ccxt" or spec.get("asset_class") != "crypto":
+        return float(_demo_price(symbol, int(when.timestamp()), spec))
+
+    age_minutes = max(0.0, (time.time() - when.timestamp()) / 60)
+    for candidate, span_minutes in (("1m", 1), ("5m", 5), ("15m", 15), ("1h", 60), ("4h", 240), ("1d", 1440)):
+        if age_minutes / span_minutes <= 900:
+            timeframe = candidate
+            break
+    try:
+        candles, _meta = get_candles(symbol, timeframe, 1000)
+    except Exception:
+        return None
+    target_ms = when.timestamp() * 1000
+    chosen: Candle | None = None
+    for candle in candles:
+        if candle.ts <= target_ms:
+            chosen = candle
+        else:
+            break
+    return float(chosen.close) if chosen else None
+
+
 def get_candles(symbol: str, timeframe: str = "1h", limit: int = 200) -> tuple[list[Candle], dict]:
     spec = instrument_spec(symbol)
     if spec is None:

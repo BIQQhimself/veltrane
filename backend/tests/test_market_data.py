@@ -35,3 +35,19 @@ def test_demo_price_stays_within_a_plausible_band():
     for offset in range(0, 86_400, 600):
         price = market_data._demo_price("BTC/USDT", 1_800_000_000 + offset, spec)
         assert spec["price"] * 0.5 < price < spec["price"] * 2.0
+
+
+def test_price_at_returns_a_stable_historical_close():
+    from datetime import UTC, datetime, timedelta
+
+    when = datetime.now(UTC) - timedelta(minutes=20)
+    first = market_data.price_at("BTC/USDT", when)
+    second = market_data.price_at("BTC/USDT", when)
+    assert first is not None and first > 0
+    assert first == second
+
+
+def test_price_at_is_unknown_for_an_unsupported_instrument():
+    from datetime import UTC, datetime
+
+    assert market_data.price_at("NOT/A/PAIR", datetime.now(UTC)) is None

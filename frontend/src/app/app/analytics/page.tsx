@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
               tone={(data?.net_pnl_total ?? 0) >= 0 ? "gain" : "loss"}
               hint="all closed trades"
             />
-            <Stat label="Total costs" value={money(data?.costs.total ?? 0, "USD", 4)} hint="fees and funding" />
+            <Stat label="Total costs" value={money(data?.costs.total ?? 0)} hint="fees and funding" />
             <Stat label="Open positions" value={`${data?.open_positions ?? 0}`} hint="live and simulated" />
             <Stat
               label="Paper sessions"
@@ -156,7 +156,7 @@ export default function AnalyticsPage() {
               <KeyValue
                 items={Object.entries(data.costs.by_kind).map(([kind, amount]) => ({
                   label: kind.replace(/_/g, " "),
-                  value: money(amount, "USD", 4),
+                  value: money(amount),
                   mono: true,
                 }))}
               />

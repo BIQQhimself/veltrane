@@ -247,7 +247,7 @@ export default function MarketingPage() {
           <div className="relative mx-auto grid max-w-7xl gap-14 px-5 pb-16 pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:px-8 lg:pb-24 lg:pt-24">
             <div className="animate-fade-up">
               <span className="chip">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+                <span className="h-1.5 w-1.5 rounded-full bg-gain" aria-hidden />
                 Paper trading live · live routing gated
               </span>
               <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-paper sm:text-5xl lg:text-6xl">
@@ -317,9 +317,9 @@ export default function MarketingPage() {
                 </div>
                 <CandleChart candles={heroCandles} height={260} livePrice={heroCandles.at(-1)?.close} />
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
-                    <p className="text-3xs uppercase tracking-label text-emerald-300/80">Call · 5m</p>
-                    <p className="num mt-1 text-lg font-medium text-emerald-300">+80%</p>
+                  <div className="rounded-lg border border-gain/30 bg-gain/10 px-3 py-2.5">
+                    <p className="text-3xs uppercase tracking-label text-gain/80">Call · 5m</p>
+                    <p className="num mt-1 text-lg font-medium text-gain">+80%</p>
                   </div>
                   <div className="rounded-lg border border-loss/30 bg-loss/10 px-3 py-2.5">
                     <p className="text-3xs uppercase tracking-label text-loss/80">Put · 5m</p>
@@ -333,7 +333,7 @@ export default function MarketingPage() {
               </div>
               <div className="absolute -left-4 -top-5 hidden w-52 rounded-xl border border-line bg-obsidian-900/95 p-3 shadow-lift lg:block">
                 <p className="text-3xs uppercase tracking-label text-paper-faint">Risk engine</p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-emerald-300">
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-gain">
                   <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> 17 checks passed
                 </p>
                 <p className="mt-1 text-3xs text-paper-faint">Stake 100.00 · 0.4% of equity</p>
@@ -392,7 +392,7 @@ export default function MarketingPage() {
                   "Every settled contract opens into a full risk and cost breakdown",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-paper-muted">
-                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-gain" aria-hidden />
                     {item}
                   </li>
                 ))}
@@ -468,7 +468,7 @@ export default function MarketingPage() {
             <div className="rounded-xl border border-line bg-obsidian-950/70 p-5">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-paper-muted">Autonomous guardrails</p>
-                <span className="chip border-emerald-500/30 text-emerald-300">armed</span>
+                <span className="chip border-gain/30 text-gain">armed</span>
               </div>
               <div className="mt-4 space-y-3">
                 {[
@@ -483,7 +483,7 @@ export default function MarketingPage() {
                     </div>
                     <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-obsidian-750">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-electric-500 to-emerald-400"
+                        className="h-full rounded-full bg-gradient-to-r from-electric-500 to-gain"
                         style={{ width: `${width}%` }}
                       />
                     </div>
@@ -525,7 +525,7 @@ export default function MarketingPage() {
                   key={rule}
                   className="flex items-center gap-2 rounded-lg border border-line bg-obsidian-850 px-3 py-2.5 text-xs text-paper-muted"
                 >
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-gain" aria-hidden />
                   {rule}
                 </li>
               ))}
@@ -554,7 +554,7 @@ export default function MarketingPage() {
               },
             ].map((item) => (
               <article key={item.title} className="rounded-xl border border-line bg-obsidian-850 p-6">
-                <item.icon className="h-5 w-5 text-emerald-400" aria-hidden />
+                <item.icon className="h-5 w-5 text-gain" aria-hidden />
                 <h3 className="mt-4 font-display text-base font-medium text-paper">{item.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-paper-muted">{item.body}</p>
               </article>
@@ -604,7 +604,7 @@ export default function MarketingPage() {
                   <ul className="mt-5 flex-1 space-y-2">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-2xs text-paper-muted">
-                        <BadgeCheck className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        <BadgeCheck className="mt-px h-3.5 w-3.5 shrink-0 text-gain" aria-hidden />
                         {feature}
                       </li>
                     ))}

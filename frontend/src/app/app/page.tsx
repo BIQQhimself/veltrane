@@ -18,9 +18,10 @@ import {
   Zap,
 } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
+import { byAssetClass } from "@/lib/assets";
 import { useApi } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
-import { money, signedMoney } from "@/lib/format";
+import { money, price, signedMoney } from "@/lib/format";
 import { AreaChart } from "@/components/charts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ function Metric({
       <p
         className={cn(
           "stat-value mt-2",
-          tone === "gain" && "text-emerald-300",
+          tone === "gain" && "text-gain",
           tone === "loss" && "text-loss",
           tone === "info" && "text-electric-300",
         )}
@@ -91,7 +92,7 @@ function GaugeRow({ label, value, cap, hint }: { label: string; value: number; c
       </div>
       <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-obsidian-750">
         <div
-          className={cn("h-full rounded-full transition-all", danger ? "bg-loss" : "bg-gradient-to-r from-electric-500 to-emerald-400")}
+          className={cn("h-full rounded-full transition-all", danger ? "bg-loss" : "bg-gradient-to-r from-electric-500 to-gain")}
           style={{ width: `${ratio * 100}%` }}
         />
       </div>
@@ -141,7 +142,13 @@ export default function OverviewPage() {
   };
 
   const firstName = (user?.full_name ?? "Trader").split(" ")[0];
-  const topAssets = (assets.data?.assets ?? []).slice(0, 6);
+  const topAssets = [...(assets.data?.assets ?? [])].sort(byAssetClass).slice(0, 6);
+  // The risk engine charges spot/CFD notional against the same 30% cap, so the
+  // posture panel must count it or it reads as zero exposure while a trade is open.
+  const positionNotional = (portfolio.data?.positions ?? []).reduce(
+    (sum, position) => sum + Math.abs(position.quantity * (position.mark_price ?? position.avg_entry_price)),
+    0,
+  );
 
   return (
     <div className="space-y-4">
@@ -200,9 +207,11 @@ export default function OverviewPage() {
           icon={TrendingUp}
         />
         <Metric
-          label="Open contracts"
-          value={String(openContracts.length)}
-          hint={summary ? `${money(summary.open_stake)} staked` : "Fixed-odds positions"}
+          label="Open trades"
+          value={String(openContracts.length + (portfolio.data?.positions.length ?? 0))}
+          hint={`${openContracts.length} contract${openContracts.length === 1 ? "" : "s"} · ${
+            portfolio.data?.positions.length ?? 0
+          } CFD/spot`}
           icon={Timer}
         />
         <Metric
@@ -214,7 +223,7 @@ export default function OverviewPage() {
         />
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         {/* Equity curve */}
         <section className="panel">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-soft px-4 py-3">
@@ -237,7 +246,13 @@ export default function OverviewPage() {
             {performance.loading && !performance.data ? (
               <div className="shimmer h-[190px] rounded-lg" />
             ) : curve.length > 1 ? (
-              <AreaChart values={curve} height={190} tone={(curve.at(-1) ?? 0) >= 0 ? "gain" : "loss"} ariaLabel="Equity curve" />
+              <AreaChart
+                values={curve}
+                height={230}
+                tone={(curve.at(-1) ?? 0) >= 0 ? "gain" : "loss"}
+                ariaLabel="Cumulative realised P&L by day"
+                formatValue={signedMoney}
+              />
             ) : (
               <div className="flex h-[190px] flex-col items-center justify-center text-center">
                 <TrendingUp className="h-5 w-5 text-paper-faint" aria-hidden />
@@ -287,10 +302,14 @@ export default function OverviewPage() {
           </div>
           <div className="flex-1 space-y-4 p-4">
             <GaugeRow
-              label="Open stake vs equity"
-              value={summary?.open_stake ?? 0}
+              label="Open exposure vs equity"
+              value={(summary?.open_stake ?? 0) + positionNotional}
               cap={Math.max(1, (equity?.simulated_balance_usd ?? 0) * 0.3)}
-              hint="Account exposure cap is 30% of equity"
+              hint={
+                positionNotional
+                  ? `Contracts ${money(summary?.open_stake ?? 0)} + positions ${money(positionNotional)}`
+                  : "Account exposure cap is 30% of equity"
+              }
             />
             <GaugeRow
               label="Demo executions"
@@ -306,7 +325,7 @@ export default function OverviewPage() {
             />
             <div className="rounded-lg border border-line-soft bg-obsidian-900/50 p-3">
               <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+                <ShieldCheck className="h-3.5 w-3.5 text-gain" aria-hidden />
                 Independent risk engine
               </p>
               <p className="mt-1 text-3xs leading-relaxed text-paper-faint">
@@ -358,9 +377,17 @@ export default function OverviewPage() {
               : topAssets.map((asset) => (
                   <li key={asset.symbol} className="flex items-center justify-between gap-3 px-4 py-2.5">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-obsidian-800 font-mono text-3xs text-paper-muted">
-                        {asset.base.slice(0, 3)}
-                      </span>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "h-8 w-1 rounded-full",
+                          asset.asset_class === "crypto"
+                            ? "bg-gold-400/70"
+                            : asset.asset_class === "forex"
+                              ? "bg-electric-500/60"
+                              : "bg-paper-faint/40",
+                        )}
+                      />
                       <div className="min-w-0">
                         <p className="truncate font-mono text-xs text-paper">{asset.symbol}</p>
                         <p className="truncate text-3xs text-paper-faint">
@@ -373,14 +400,14 @@ export default function OverviewPage() {
                         {asset.payouts?.["300"] ?? "—"}% payout
                       </span>
                       <Link
-                        href="/app/terminal"
-                        className="flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-3xs text-emerald-300 transition hover:bg-emerald-500/20"
+                        href={`/app/terminal?symbol=${encodeURIComponent(asset.symbol)}`}
+                        className="flex items-center gap-1 rounded-md border border-gain/30 bg-gain/10 px-2 py-1 text-3xs text-gain transition hover:bg-gain/20"
                       >
                         <ArrowUpRight className="h-3 w-3" aria-hidden />
                         Call
                       </Link>
                       <Link
-                        href="/app/terminal"
+                        href={`/app/terminal?symbol=${encodeURIComponent(asset.symbol)}`}
                         className="flex items-center gap-1 rounded-md border border-loss/30 bg-loss/10 px-2 py-1 text-3xs text-loss transition hover:bg-loss/20"
                       >
                         <ArrowDownRight className="h-3 w-3" aria-hidden />
@@ -420,7 +447,7 @@ export default function OverviewPage() {
                     className={cn(
                       "rounded px-1.5 py-0.5 text-3xs uppercase tracking-label",
                       row.bias === "call"
-                        ? "bg-emerald-500/10 text-emerald-300"
+                        ? "bg-gain/10 text-gain"
                         : row.bias === "put"
                           ? "bg-loss/10 text-loss"
                           : "bg-obsidian-750 text-paper-faint",
@@ -456,7 +483,7 @@ export default function OverviewPage() {
             {openContracts.map((contract) => (
               <li key={contract.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
                 <span className="flex items-center gap-2">
-                  <span className={contract.direction === "call" ? "text-emerald-300" : "text-loss"}>
+                  <span className={contract.direction === "call" ? "text-gain" : "text-loss"}>
                     {contract.direction === "call" ? (
                       <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                     ) : (
@@ -522,7 +549,7 @@ export default function OverviewPage() {
                     </td>
                     <td className="px-4 py-2.5 text-paper-muted">{trade.side}</td>
                     <td className="num px-4 py-2.5 text-right text-paper-muted">
-                      {trade.entry_price} → {trade.exit_price}
+                      {price(trade.entry_price)} → {price(trade.exit_price)}
                     </td>
                     <td className={cn("num px-4 py-2.5 text-right", trade.net_pnl >= 0 ? "text-gain" : "text-loss")}>
                       {signedMoney(trade.net_pnl)}

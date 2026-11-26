@@ -44,43 +44,48 @@ competent reviewer would find, so it is cheaper to state it here.
 14. **No portfolio optimiser.** The flag exists; the maths does not.
 15. **Slippage estimate versus actual** is recorded per trade, but for paper trades the "actual" is
     the model's own output — it validates the pipeline, not the model's accuracy.
+16. **Demo history is generated, not historical.** `backend/scripts/seed_demo.py` writes the demo
+    account's contracts and trades from the deterministic feed, with entry prices at open and exit
+    prices at expiry, so the numbers are internally consistent — but they are a fixture, not a
+    record of a real strategy trading real markets. Every demo row is flagged `is_demo` and labelled
+    "simulated" in the interface.
 
 ## Billing
 
-16. **Stripe is untested against a live account.** The webhook verification path is shared with the
+17. **Stripe is untested against a live account.** The webhook verification path is shared with the
     mock provider and covered by tests, but no real Stripe event has been received.
-17. **No crypto payment processor or bank transfer rail.** The abstraction is ready; the adapters
+18. **No crypto payment processor or bank transfer rail.** The abstraction is ready; the adapters
     are not written.
-18. **No dunning sequence.** A failed payment notifies once and starts a 7-day grace period.
-19. **Tax is a single line item** with no jurisdiction rules. Real invoicing needs a tax engine.
-20. **Performance fees are disabled by design** and require a legal review that has not happened.
+19. **No dunning sequence.** A failed payment notifies once and starts a 7-day grace period.
+20. **Tax is a single line item** with no jurisdiction rules. Real invoicing needs a tax engine.
+21. **Performance fees are disabled by design** and require a legal review that has not happened.
 
 ## Security and operations
 
-21. **No independent security review or penetration test.**
-22. **MFA is optional**, including for staff. It should be mandatory before launch.
-23. **No WAF, CAPTCHA or IP reputation.** Rate limits and lockout are the only brute-force controls.
-24. **Redis loss re-enables revoked access tokens** until they expire (≤ 15 minutes).
-25. **No point-in-time recovery.** Nightly logical backups only; worst-case loss is 24 hours.
-26. **Email is an outbox.** Without SMTP settings nothing is delivered, so verification links must be
+22. **No independent security review or penetration test.**
+23. **MFA is optional**, including for staff. It should be mandatory before launch.
+24. **No WAF, CAPTCHA or IP reputation.** Rate limits and lockout are the only brute-force controls.
+25. **Redis loss re-enables revoked access tokens** until they expire (≤ 15 minutes).
+26. **No point-in-time recovery.** Nightly logical backups only; worst-case loss is 24 hours.
+27. **Email is an outbox.** Without SMTP settings nothing is delivered, so verification links must be
     read from the database in development.
-27. **No schema-drift test** between Alembic head and the SQLAlchemy models. Tests use
+28. **No schema-drift test** between Alembic head and the SQLAlchemy models. Tests use
     `create_all`, so a migration bug would not be caught by the suite.
-28. **No load or performance testing.** No numbers exist for throughput or latency under load, and
+29. **No load or performance testing.** No numbers exist for throughput or latency under load, and
     none are claimed.
-29. **No anomaly detection** beyond static fraud signals (multiple accounts per IP, repeated failed
+30. **No anomaly detection** beyond static fraud signals (multiple accounts per IP, repeated failed
     payments, unusual order bursts).
 
 ## Regulatory and commercial
 
-30. **No regulatory review.** Operating a trading tool for retail users has jurisdiction-specific
+31. **No regulatory review.** Operating a trading tool for retail users has jurisdiction-specific
     obligations (advice versus tooling, marketing claims, performance-fee rules). None of that work
     is done.
-31. **No terms of service or privacy policy drafted here.** The registration endpoint records
+32. **No terms of service or privacy policy drafted here.** The registration endpoint records
     acceptance of a version string; the documents themselves do not exist in this repository.
-32. **No trademark or domain clearance** for the VELTRANE name.
-33. **No support staffing model.** The ticket workflow exists; the humans do not.
-34. **Cost estimates in DEPLOYMENT.md are list-price arithmetic**, not quotes.
+33. **No trademark or domain clearance** for the VELTRANE name.
+34. **No support staffing model.** The ticket workflow exists; the humans do not.
+35. **Cost estimates in DEPLOYMENT.md are list-price arithmetic**, not quotes.
 
 ## What this build is good for
 

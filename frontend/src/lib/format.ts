@@ -20,6 +20,26 @@ export function money(value: number | null | undefined, currency = "USD", maximu
   return currencyFormatter(currency, maximumFractionDigits).format(value);
 }
 
+/**
+ * Prices need more precision than money: BTC reads in thousands, FX in five
+ * decimals and small-cap tokens in six. Defaults to roughly six significant
+ * digits so a quote never collapses to "0.61".
+ */
+export function priceDigits(value: number): number {
+  if (!Number.isFinite(value) || value === 0) return 2;
+  const magnitude = Math.floor(Math.log10(Math.abs(value)));
+  return Math.min(8, Math.max(2, 6 - magnitude - 1));
+}
+
+export function price(value: number | null | undefined, digits?: number): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const places = digits ?? priceDigits(value);
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: Math.min(2, places),
+    maximumFractionDigits: places,
+  });
+}
+
 export function signedMoney(value: number | null | undefined, currency = "USD", maximumFractionDigits = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   const formatted = money(Math.abs(value), currency, maximumFractionDigits);

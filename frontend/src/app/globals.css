@@ -49,7 +49,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid theme("colors.electric.400");
+  outline: 2px solid theme("colors.gold.400");
   outline-offset: 2px;
   border-radius: 6px;
 }

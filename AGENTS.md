@@ -49,3 +49,22 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
 - Ruff's rule set is deliberately narrow (E4/E7/E9/F/I/UP/B). Do not add broad `ignore` lists; if a
   rule is genuinely wrong for FastAPI patterns, extend `extend-immutable-calls` instead.
 - Paper and demo data must stay labelled as simulated in API responses and UI.
+
+## Session notes (Nov 2026 — Phase 2 product pass)
+
+- `app/services/market_data.py::price_at(symbol, when, timeframe)` returns the price at an exact
+  instant by interpolating the deterministic candle series. Binary settlement prices at the contract
+  expiry, not at "now", so a restarted or late worker cannot reprice a contract.
+- Demo history lives in `backend/scripts/seed_demo.py` (idempotent: `_reset()` drops the demo
+  user/org first). Entry price = open of the bar at start, exit = close of the bar at expiry, so
+  stored P&L is reproducible from the feed. Re-run after changing the feed maths.
+- `/portfolio/performance` seeds the equity curve with `settings.paper_starting_balance`; drawdown
+  is peak-to-trough on *equity*, not on cumulative P&L (a P&L-based peak goes negative and produced
+  a nonsense 85% figure).
+- Price formatting: use `price()` from `src/lib/format.ts` (≈5 significant digits, min 2 dp). The
+  chart picks axis decimals from the instrument tick, not the zoom span, and hides any rail label
+  that would sit under the live-price chip.
+- `Table` in `src/components/ui/table.tsx` must not impose a min-width: half-width panels clipped
+  their rightmost column. Cells are `px-3 sm:px-4` so four-column tables fit a 390 px viewport.
+- Allocations on `/app/portfolio` include unallocated cash as a slice; percentages are of account
+  equity, never of position value alone.

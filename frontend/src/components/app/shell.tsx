@@ -219,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Badge tone="info">{plan}</Badge>
             </div>
             <p className="mt-2 flex items-center gap-1.5 text-2xs text-paper-faint">
-              <ShieldCheck className="h-3 w-3 text-emerald-400/80" aria-hidden />
+              <ShieldCheck className="h-3 w-3 text-gain/80" aria-hidden />
               {platform?.live_trading_enabled ? "Execution gate open" : "Live execution disabled"}
             </p>
           </div>
@@ -278,8 +278,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="hidden items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/[0.08] px-2.5 py-1 text-3xs uppercase tracking-label text-emerald-300 sm:flex">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+              <span className="hidden items-center gap-1.5 rounded-full border border-gain/25 bg-gain/[0.08] px-2.5 py-1 text-3xs uppercase tracking-label text-gain sm:flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-gain" aria-hidden />
                 Paper mode
               </span>
               <div className="lg:hidden">

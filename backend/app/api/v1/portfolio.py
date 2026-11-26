@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from app.api import serializers
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.db.models import Balance, Connection, PaperSession, Position, Trade, User
 from app.db.session import get_db
 from app.services import market_data
@@ -104,25 +105,34 @@ def performance(user: User = Depends(get_current_user), db: Session = Depends(ge
     for t in trades:
         day = t.closed_at.date().isoformat()
         daily[day] += float(t.net_pnl or 0)
+    base_equity = float(settings.paper_starting_balance)
     for day in sorted(daily):
         cumulative += daily[day]
-        curve.append({"date": day, "pnl": round(daily[day], 2), "cumulative": round(cumulative, 2)})
+        curve.append(
+            {
+                "date": day,
+                "pnl": round(daily[day], 2),
+                "cumulative": round(cumulative, 2),
+                "equity": round(base_equity + cumulative, 2),
+            }
+        )
 
     wins = [t for t in trades if float(t.net_pnl) > 0]
     losses = [t for t in trades if float(t.net_pnl) <= 0]
     gross_win = sum(float(t.net_pnl) for t in wins)
     gross_loss = abs(sum(float(t.net_pnl) for t in losses))
-    peak = 0.0
+    # Drawdown is measured on equity, not on cumulative P&L: a P&L curve that starts
+    # negative has no meaningful peak, which is how it used to report absurd values.
+    peak = base_equity
     max_dd = 0.0
-    equity = 0.0
     for point in curve:
-        equity = point["cumulative"]
-        peak = max(peak, equity)
+        peak = max(peak, point["equity"])
         if peak > 0:
-            max_dd = max(max_dd, (peak - equity) / peak * 100)
+            max_dd = max(max_dd, (peak - point["equity"]) / peak * 100)
 
     return {
         "curve": curve,
+        "starting_equity": round(base_equity, 2),
         "stats": {
             "trades": len(trades),
             "win_rate_pct": round(len(wins) / len(trades) * 100, 2) if trades else 0.0,

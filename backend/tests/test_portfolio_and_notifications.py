@@ -132,3 +132,41 @@ def test_onboarding_progress_is_monotonic_and_tenant_scoped(client, trader):
 
     anonymous = client.post(f"{BASE}/users/me/onboarding", json={"step": 3})
     assert anonymous.status_code == 401
+
+
+def test_performance_drawdown_is_measured_on_equity(client, trader, db):
+    """Drawdown must be a percentage of equity, never of a negative P&L peak."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.core.config import settings
+    from app.db.models import Trade
+
+    base = float(settings.paper_starting_balance)
+    start = datetime.now(UTC) - timedelta(days=3)
+    # Equity 25,000 -> 27,000 -> 25,500: peak-to-trough drawdown is 1,500 / 27,000.
+    for offset, pnl in ((0, 2000.0), (1, -1500.0)):
+        db.add(
+            Trade(
+                org_id=trader["org_id"],
+                mode="paper",
+                instrument_symbol="BTC/USDT",
+                side="long",
+                quantity=1.0,
+                entry_price=100.0,
+                exit_price=100.0 + pnl,
+                notional=100.0,
+                fees=0.0,
+                funding=0.0,
+                gross_pnl=pnl,
+                net_pnl=pnl,
+                is_demo=True,
+                opened_at=start + timedelta(days=offset),
+                closed_at=start + timedelta(days=offset, hours=1),
+            )
+        )
+    db.commit()
+
+    body = client.get(f"{BASE}/portfolio/performance", headers=trader["headers"]).json()
+    assert body["starting_equity"] == base
+    assert body["curve"][-1]["equity"] == base + 500.0
+    assert body["stats"]["max_drawdown_pct"] == round(1500 / (base + 2000) * 100, 2)

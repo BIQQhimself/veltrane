@@ -4,8 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useApi, useInterval } from "@/lib/hooks";
-import { dateTime, money } from "@/lib/format";
-import { AreaChart } from "@/components/charts";
+import { dateTime, price } from "@/lib/format";
+import { CandleChart } from "@/components/charts/candles";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorNote, Skeleton } from "@/components/ui/data";
 import { Panel, PanelBody, PanelHeader, SectionHeading } from "@/components/ui/panel";
@@ -72,7 +72,7 @@ export default function MarketsPage() {
                     <TD mono>{market.symbol}</TD>
                     <TD className="hidden sm:table-cell">{market.asset_class ?? "—"}</TD>
                     <TD align="right" mono>
-                      {typeof market.price === "number" ? money(market.price, "USD", market.price > 100 ? 2 : 5) : "—"}
+                      {typeof market.price === "number" ? price(market.price) : "—"}
                     </TD>
                     <TD className="hidden md:table-cell">
                       <Badge tone={market.is_demo ? "info" : "gain"}>{market.is_demo ? "demo" : market.source ?? "live"}</Badge>
@@ -117,24 +117,25 @@ export default function MarketsPage() {
               <Skeleton className="h-52 w-full" />
             ) : closes.length > 1 ? (
               <>
-                <AreaChart
-                  values={closes}
-                  tone={closes[closes.length - 1]! >= closes[0]! ? "gain" : "loss"}
-                  height={220}
-                  ariaLabel={`${active} close price chart`}
+                <CandleChart
+                  candles={candles.data?.candles ?? []}
+                  height={230}
+                  showEma
+                  showCrosshair
+                  ariaLabel={`${active} candlestick chart`}
                 />
                 <div className="mt-4 grid grid-cols-3 gap-3 border-t border-line-soft pt-4">
                   <div>
                     <p className="label">Last</p>
-                    <p className="num mt-1 text-sm text-paper">{money(closes[closes.length - 1]!, "USD", 5)}</p>
+                    <p className="num mt-1 text-sm text-paper">{price(closes[closes.length - 1]!)}</p>
                   </div>
                   <div>
                     <p className="label">High</p>
-                    <p className="num mt-1 text-sm text-paper">{money(Math.max(...closes), "USD", 5)}</p>
+                    <p className="num mt-1 text-sm text-paper">{price(Math.max(...closes))}</p>
                   </div>
                   <div>
                     <p className="label">Low</p>
-                    <p className="num mt-1 text-sm text-paper">{money(Math.min(...closes), "USD", 5)}</p>
+                    <p className="num mt-1 text-sm text-paper">{price(Math.min(...closes))}</p>
                   </div>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-4 text-xs">

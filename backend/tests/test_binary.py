@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from app.db.models import BinaryContract
 from tests.conftest import BASE
 
@@ -156,3 +157,29 @@ def test_copilot_briefing_covers_tradable_assets(client, trader):
     assert body["rows"]
     assert all(row["symbol"] != "US30" for row in body["rows"])
     assert "not a guarantee" in body["disclaimer"]
+
+
+def test_late_settlement_uses_the_price_at_expiry(client, trader, db):
+    """A worker that runs late must not reprice the contract at 'now'.
+
+    The contract is expired ten minutes ago; settlement has to use the close of the
+    bar containing the expiry, so two settlements of the same contract agree.
+    """
+    from app.services import market_data
+
+    body = open_contract(client, trader["headers"], stake=100.0, duration_seconds=300).json()
+    contract_id = body["contract"]["id"]
+
+    expiry = datetime.now(UTC) - timedelta(minutes=10)
+    row = db.get(BinaryContract, contract_id)
+    row.expires_at = expiry
+    db.commit()
+
+    expected = market_data.price_at(row.instrument_symbol, expiry)
+    assert expected is not None
+
+    settled = client.post(f"{BASE}/binary/settle", headers=trader["headers"]).json()
+    assert settled["count"] == 1
+    db.expire_all()
+    row = db.get(BinaryContract, contract_id)
+    assert float(row.exit_price) == pytest.approx(expected)

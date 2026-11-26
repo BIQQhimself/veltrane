@@ -4,7 +4,9 @@ import { cn } from "@/lib/cn";
 export function Table({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div className={cn("w-full overflow-x-auto", className)}>
-      <table className="w-full min-w-full border-collapse text-sm sm:min-w-[640px]">{children}</table>
+      {/* No forced min-width: tables live in half-width panels too, where a 640px
+          floor clipped the rightmost column instead of fitting the panel. */}
+      <table className="w-full min-w-full border-collapse text-sm">{children}</table>
     </div>
   );
 }
@@ -26,7 +28,7 @@ export function TH({
     <th
       scope="col"
       className={cn(
-        "whitespace-nowrap px-4 py-2.5 text-2xs font-medium uppercase tracking-label text-paper-faint",
+        "whitespace-nowrap px-3 py-2.5 text-2xs font-medium uppercase tracking-label text-paper-faint sm:px-4",
         align === "right" && "text-right",
         align === "center" && "text-center",
         align === "left" && "text-left",
@@ -94,7 +96,7 @@ export function TD({
   return (
     <td
       className={cn(
-        "whitespace-nowrap px-4 py-3 text-paper-muted",
+        "whitespace-nowrap px-3 py-3 text-paper-muted sm:px-4",
         align === "right" && "text-right",
         align === "center" && "text-center",
         mono && "num text-paper",

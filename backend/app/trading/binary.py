@@ -334,8 +334,9 @@ def settle_due(db: Session, *, org_id: str) -> list[BinaryContract]:
     )
     settled: list[BinaryContract] = []
     for contract in due:
+        expiry_price = market_data.price_at(contract.instrument_symbol, contract.expires_at)
         snapshot = market_data.get_ticker(contract.instrument_symbol)
-        exit_price = float(snapshot.price)
+        exit_price = expiry_price if expiry_price and expiry_price > 0 else float(snapshot.price)
         entry_price = float(contract.entry_price)
         if abs(exit_price - entry_price) < 1e-12:
             status = "void"

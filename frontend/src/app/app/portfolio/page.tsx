@@ -40,6 +40,12 @@ export default function PortfolioPage() {
   const equity = overview.data?.equity;
   const allocation = (overview.data?.allocation ?? []).filter((slice) => slice.value > 0).slice(0, 7);
   const totalAllocation = allocation.reduce((sum, slice) => sum + slice.value, 0);
+  // The donut describes the whole account, so unallocated cash is a slice of its
+  // own. Showing "100% ETH" next to $29k of equity was actively misleading.
+  const accountValue = Math.max(equity?.simulated_balance_usd ?? 0, totalAllocation);
+  const cashValue = Math.max(0, accountValue - totalAllocation);
+  const donutSlices = cashValue > 0 ? [...allocation, { label: "Cash (unallocated)", value: cashValue }] : allocation;
+  const donutTotal = donutSlices.reduce((sum, slice) => sum + slice.value, 0) || 1;
 
   return (
     <div className="space-y-6">
@@ -88,29 +94,35 @@ export default function PortfolioPage() {
           <PanelBody>
             {overview.loading ? (
               <Skeleton className="h-44 w-full" />
-            ) : allocation.length ? (
+            ) : donutSlices.length ? (
               <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <Donut
-                  segments={allocation.map((slice, index) => ({
+                  segments={donutSlices.map((slice, index) => ({
                     label: slice.label,
                     value: slice.value,
-                    color: ALLOC_COLORS[index % ALLOC_COLORS.length]!,
+                    color: slice.label.startsWith("Cash")
+                      ? "#44525f"
+                      : ALLOC_COLORS[index % ALLOC_COLORS.length]!,
                   }))}
-                  centerValue={money(totalAllocation, "USD", 0)}
-                  centerLabel="allocated"
+                  centerValue={percent((totalAllocation / donutTotal) * 100, 1)}
+                  centerLabel="deployed"
                 />
                 <ul className="w-full space-y-2 sm:max-w-[190px]">
-                  {allocation.map((slice, index) => (
+                  {donutSlices.map((slice, index) => (
                     <li key={slice.label} className="flex items-center justify-between gap-2 text-xs">
                       <span className="flex min-w-0 items-center gap-2">
                         <span
                           className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: ALLOC_COLORS[index % ALLOC_COLORS.length] }}
+                          style={{
+                            backgroundColor: slice.label.startsWith("Cash")
+                              ? "#44525f"
+                              : ALLOC_COLORS[index % ALLOC_COLORS.length],
+                          }}
                         />
                         <span className="truncate text-paper-muted">{slice.label}</span>
                       </span>
                       <span className="num text-paper">
-                        {totalAllocation ? percent((slice.value / totalAllocation) * 100, 1) : "—"}
+                        {percent((slice.value / donutTotal) * 100, 1)}
                       </span>
                     </li>
                   ))}

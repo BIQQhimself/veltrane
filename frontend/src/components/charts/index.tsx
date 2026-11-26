@@ -4,9 +4,9 @@ import * as React from "react";
 import { cn } from "@/lib/cn";
 
 const TONES = {
-  gold: { stroke: "#5c9bff", fill: "rgba(46,123,255,0.20)" },
-  gain: { stroke: "#10b981", fill: "rgba(16,185,129,0.18)" },
-  loss: { stroke: "#f2555f", fill: "rgba(242,85,95,0.18)" },
+  gold: { stroke: "#e3c489", fill: "rgba(227,196,137,0.16)" },
+  gain: { stroke: "#00e07a", fill: "rgba(0,224,122,0.16)" },
+  loss: { stroke: "#ff3b52", fill: "rgba(255,59,82,0.16)" },
   info: { stroke: "#8fbbff", fill: "rgba(143,187,255,0.16)" },
   platinum: { stroke: "#c6cedb", fill: "rgba(198,206,219,0.10)" },
 } as const;
@@ -37,6 +37,7 @@ export function AreaChart({
   labels,
   showBaseline = true,
   ariaLabel,
+  formatValue,
 }: {
   values: number[];
   height?: number;
@@ -45,6 +46,7 @@ export function AreaChart({
   labels?: string[];
   showBaseline?: boolean;
   ariaLabel?: string;
+  formatValue?: (value: number) => string;
 }) {
   const width = 640;
   const id = React.useId().replace(/[:]/g, "");
@@ -88,8 +90,9 @@ export function AreaChart({
       </svg>
       <figcaption className="mt-2 flex items-center justify-between text-2xs text-paper-faint">
         <span className="num">
-          {min.toLocaleString(undefined, { maximumFractionDigits: 2 })} –{" "}
-          {max.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          {formatValue
+            ? `${formatValue(min)} – ${formatValue(max)}`
+            : `${min.toLocaleString(undefined, { maximumFractionDigits: 2 })} – ${max.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
         </span>
         {labels && labels.length > 1 ? (
           <span>

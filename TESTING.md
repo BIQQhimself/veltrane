@@ -5,7 +5,7 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 130 tests, ~45 s
+.venv/bin/python -m pytest                  # 155 tests, ~50 s
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
@@ -32,7 +32,7 @@ code as Stripe.
 | `test_trading.py` | Order submission, risk rejection, duplicate prevention, fills, fees, P&L, close, cancel, kill switches, live gating |
 | `test_admin.py` | RBAC, overview and revenue, plan editing, risk policy versioning, kill switches, flags, audit, support, costs |
 | `test_performance_fees.py` | HWM accounting, loss recovery, legal-review gate, consent, invoicing |
-| `test_portfolio_and_notifications.py` | Portfolio overview and performance, notification feed, order and trade notifications, support tickets, settings |
+| `test_portfolio_and_notifications.py` | Portfolio overview and performance (equity curve seeded with starting balance, drawdown measured on equity), notification feed, order and trade notifications, support tickets, settings |
 | `test_security.py` | Headers, password hashing, login rate limit, token tampering, CSRF, MFA secret at rest, error hygiene, session revocation |
 
 ## Safety invariants asserted by tests
