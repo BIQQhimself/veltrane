@@ -12,6 +12,7 @@ Honesty rules enforced here:
 * The stake is debited at open and the payout credited at settlement, so the
   paper cash balance always reflects committed capital.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -305,11 +306,7 @@ def open_contract(
 
 
 def _open_stake_total(db: Session, org_id: str) -> float:
-    rows = (
-        db.query(BinaryContract.stake)
-        .filter(BinaryContract.org_id == org_id, BinaryContract.status == "open")
-        .all()
-    )
+    rows = db.query(BinaryContract.stake).filter(BinaryContract.org_id == org_id, BinaryContract.status == "open").all()
     return float(sum(float(r[0]) for r in rows))
 
 
@@ -362,42 +359,43 @@ def settle_due(db: Session, *, org_id: str) -> list[BinaryContract]:
             session.cash_balance = float(session.cash_balance) + credit
             session.equity = float(session.cash_balance) + _open_stake_total(db, org_id)
 
-        db.add(
-            Trade(
-                org_id=contract.org_id,
-                order_id=None,
-                position_id=None,
-                paper_session_id=contract.paper_session_id,
-                mode="paper",
-                instrument_symbol=contract.instrument_symbol,
-                side="long" if contract.direction == "call" else "short",
-                quantity=float(contract.stake),
-                entry_price=entry_price,
-                exit_price=exit_price,
-                notional=float(contract.stake),
-                fees=0.0,
-                funding=0.0,
-                slippage_est_bps=0.0,
-                slippage_actual_bps=0.0,
-                gross_pnl=net,
-                net_pnl=net,
-                entry_reason=contract.entry_reason,
-                exit_reason=f"binary_expiry:{status}",
-                risk_snapshot={
-                    "instrument_type": "binary",
-                    "direction": contract.direction,
-                    "stake": float(contract.stake),
-                    "payout_pct": float(contract.payout_pct),
-                    "duration_seconds": contract.duration_seconds,
-                    "expiry_price": exit_price,
-                    "price_source": contract.price_source,
-                    "is_demo": True,
-                },
-                is_demo=True,
-                opened_at=contract.opened_at,
-                closed_at=now,
-            )
+        trade = Trade(
+            org_id=contract.org_id,
+            order_id=None,
+            position_id=None,
+            paper_session_id=contract.paper_session_id,
+            mode="paper",
+            instrument_symbol=contract.instrument_symbol,
+            side="long" if contract.direction == "call" else "short",
+            quantity=float(contract.stake),
+            entry_price=entry_price,
+            exit_price=exit_price,
+            notional=float(contract.stake),
+            fees=0.0,
+            funding=0.0,
+            slippage_est_bps=0.0,
+            slippage_actual_bps=0.0,
+            gross_pnl=net,
+            net_pnl=net,
+            entry_reason=contract.entry_reason,
+            exit_reason=f"binary_expiry:{status}",
+            risk_snapshot={
+                "instrument_type": "binary",
+                "direction": contract.direction,
+                "stake": float(contract.stake),
+                "payout_pct": float(contract.payout_pct),
+                "duration_seconds": contract.duration_seconds,
+                "expiry_price": exit_price,
+                "price_source": contract.price_source,
+                "is_demo": True,
+            },
+            is_demo=True,
+            opened_at=contract.opened_at,
+            closed_at=now,
         )
+        db.add(trade)
+        db.flush()
+        contract.trade_id = trade.id
         audit.record(
             db,
             action=AuditAction.TRADE_CLOSED,

@@ -42,6 +42,8 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `VELTRANE_LIVE_TRADING_ENABLED` | `false` | Global execution gate. Keep false until adapters are verified |
+| `VELTRANE_SCHEDULER_ENABLED` | `true` | Runs the unattended paper-session ticker. Paper only; it has no path to a live adapter. Set `false` on every replica except one |
+| `VELTRANE_SCHEDULER_INTERVAL_SECONDS` | `60` | How often the paper ticker looks for due sessions |
 | `VELTRANE_DEMO_MARKET_DATA_ENABLED` | `true` | Allows the deterministic feed |
 | `VELTRANE_MARKET_DATA_SOURCE` | `ccxt` | `ccxt` (public endpoints) or `demo` |
 | `VELTRANE_MARKET_DATA_CACHE_SECONDS` | `20` | |

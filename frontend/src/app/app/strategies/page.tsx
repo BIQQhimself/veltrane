@@ -312,7 +312,10 @@ export default function StrategiesPage() {
 
       {tab === "sessions" ? (
         <Panel>
-          <PanelHeader title="Paper sessions" subtitle="Simulated execution, attributed to a strategy version" />
+          <PanelHeader
+            title="Paper sessions"
+            subtitle="Simulated execution on a strategy version. Running sessions are ticked automatically about once a minute; Tick forces an extra pass."
+          />
           {sessions.loading ? (
             <div className="p-5">
               <Skeleton className="h-24 w-full" />

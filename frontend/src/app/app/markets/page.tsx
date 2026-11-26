@@ -29,6 +29,11 @@ export default function MarketsPage() {
     [active, timeframe],
   );
 
+  const [lastRefresh, setLastRefresh] = React.useState<Date | null>(null);
+  React.useEffect(() => {
+    if (summary.data) setLastRefresh(new Date());
+  }, [summary.data]);
+
   useInterval(() => summary.refetch(), 30_000);
 
   const closes = candles.data?.candles.map((candle) => candle.close) ?? [];
@@ -195,8 +200,12 @@ export default function MarketsPage() {
         <Panel>
           <PanelBody>
             <p className="label">Last refresh</p>
-            <p className="mt-2 text-sm text-paper">{dateTime(new Date().toISOString())}</p>
-            <p className="mt-1 text-2xs text-paper-faint">Auto-refresh every 30 seconds while this page is open.</p>
+            <p className="mt-2 text-sm text-paper">
+              {lastRefresh ? dateTime(lastRefresh.toISOString()) : "Waiting for the first response"}
+            </p>
+            <p className="mt-1 text-2xs text-paper-faint">
+              Time of the last successful response. Auto-refresh every 30 seconds while this page is open.
+            </p>
           </PanelBody>
         </Panel>
       </div>

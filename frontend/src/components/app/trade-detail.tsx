@@ -27,6 +27,8 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
 
   if (!tradeId) return null;
 
+  const decision = data?.risk_decision ?? data?.order?.risk_decision ?? null;
+
   return (
     <Dialog open onClose={onClose} title="Trade record" description="Immutable record of the closed trade, including costs and risk checks." wide>
       {loading ? (
@@ -63,7 +65,7 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
             tabs={[
               { id: "overview", label: "Overview" },
               { id: "costs", label: "Costs" },
-              { id: "risk", label: "Risk checks", count: data.order?.risk_decision?.checks.length },
+              { id: "risk", label: "Risk checks", count: decision?.checks.length },
               { id: "context", label: "Entry & exit" },
             ]}
             active={tab}
@@ -129,23 +131,23 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
 
           {tab === "risk" ? (
             <div className="space-y-3">
-              {data.order?.risk_decision ? (
+              {decision ? (
                 <>
                   <div className="flex items-center justify-between rounded-lg border border-line-soft px-3 py-2">
                     <div className="flex items-center gap-2 text-xs">
-                      {data.order.risk_decision.decision === "approved" ? (
+                      {decision.decision === "approved" ? (
                         <CheckCircle2 className="h-4 w-4 text-gain" aria-hidden />
                       ) : (
                         <ShieldAlert className="h-4 w-4 text-loss" aria-hidden />
                       )}
-                      <span className="text-paper">{data.order.risk_decision.decision}</span>
+                      <span className="text-paper">{decision.decision}</span>
                     </div>
                     <span className="text-2xs text-paper-faint">
-                      policy v{data.order.risk_decision.policy_version ?? "—"}
+                      policy v{decision.policy_version ?? "—"}
                     </span>
                   </div>
                   <ul className="divide-y divide-line-soft/70 rounded-lg border border-line-soft">
-                    {data.order.risk_decision.checks.map((check) => (
+                    {decision.checks.map((check) => (
                       <li key={check.code} className="flex items-start justify-between gap-4 px-3 py-2">
                         <div className="min-w-0">
                           <p className="num text-2xs text-paper">{check.code}</p>
@@ -161,7 +163,11 @@ export function TradeDetailDialog({ tradeId, onClose }: { tradeId: string | null
                   </ul>
                 </>
               ) : (
-                <p className="text-xs text-paper-faint">No risk decision is attached to this trade record.</p>
+                <p className="text-xs leading-relaxed text-paper-faint">
+                  No risk decision is stored for this row. Trades you place through the terminal record every
+                  check the deterministic engine ran; older simulated rows backfilled by the demo seeder were
+                  written straight to the ledger and never passed through it.
+                </p>
               )}
             </div>
           ) : null}

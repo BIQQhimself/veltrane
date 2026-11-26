@@ -46,6 +46,7 @@ from app.providers.registry import provider_catalog
 from app.risk.types import DEFAULT_RISK_RULES, merged_rules
 from app.services import analytics, audit, billing, entitlements, kill_switch, performance_fees, strategy_service
 from app.services.email import deliver_queued
+from app.services.scheduler import scheduler_state
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -545,6 +546,7 @@ def system_health(staff: User = Depends(require_analyst), db: Session = Depends(
         "billing_provider": settings.billing_provider,
         "market_data_source": settings.market_data_source,
         "providers": provider_catalog(),
+        "paper_scheduler": scheduler_state(),
         "queued_emails": int(queued_email),
         "email_delivery": "outbox_only" if settings.env != "production" else "provider_required",
         "version": "0.1.0",

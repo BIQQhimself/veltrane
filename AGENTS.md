@@ -68,3 +68,32 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   their rightmost column. Cells are `px-3 sm:px-4` so four-column tables fit a 390 px viewport.
 - Allocations on `/app/portfolio` include unallocated cash as a slice; percentages are of account
   equity, never of position value alone.
+
+## Session notes (Nov 2026 — trade traceability)
+
+- A binary contract has no `orders` row, so its risk decision was unreachable from the trade record.
+  `binary_contracts.trade_id` (migration `9b2e5c7a41d0`) is set when settlement writes the trade, and
+  `serializers.trade_detail` falls back to that contract's decision, returning it as a top-level
+  `risk_decision` (the drawer reads `data.risk_decision ?? data.order.risk_decision`).
+- Seeded demo history is written straight to the ledger, so those rows carry no decision. The drawer
+  says so in plain words rather than showing an empty tab; do not fabricate decisions for them.
+
+## Session notes (Nov 2026 — autonomous paper runner, chart depth, risk budget)
+
+- `app/services/scheduler.py` is a daemon thread started from the FastAPI lifespan. It ticks every
+  `running` paper session once per `VELTRANE_SCHEDULER_INTERVAL_SECONDS`. It is paper-only: it calls
+  the same tick path as `POST /paper-sessions/{id}/tick`, which never reaches a live adapter. Run it
+  on exactly one replica; it is not a distributed lock. State is in `/admin/system/health` as
+  `paper_scheduler`.
+- `trading_engine.risk_budget(db, user)` (exposed at `GET /trading/risk-budget`) mirrors the blocking
+  rules' arithmetic for display. It must stay read-only — it returns numbers, never an approval. If
+  you change a rule's maths in `app/risk/rules.py`, change `risk_budget` in the same commit;
+  `tests/test_risk_budget.py` pins the daily-loss case at 3% of equity.
+- RSI on a flat window is neutral (50), not 100: both average gain and average loss are zero, so
+  `rsiFrom()` special-cases it. Any other value makes a doji-heavy chart look overbought.
+- The candle chart's time axis switches from clock times to dates once the visible span exceeds a
+  day; keep `axisTicks`/`tickLabel` in `charts/candles.tsx` as the single source for that decision.
+- Review accounts come from `backend/scripts/seed_testers.py` (idempotent, resets the password hash).
+  Use a routable domain — `.local`, `.test`, `.example` and `.invalid` are rejected by the login
+  validator, so an account seeded on those domains can never sign in. `REVIEW_ACCESS.md` is the
+  reviewer-facing brief; keep it in step with the script's SPECS list.

@@ -109,11 +109,16 @@ The risk engine has **no import** from `app.trading` or `app.strategies`; it con
 ## 7. Data flow: paper trading loop
 
 1. User starts a paper session against a strategy version and a connected (or demo) instrument.
-2. The scheduler (APScheduler-compatible hook, invoked by an authenticated worker endpoint or CLI) pulls OHLCV from the market data service (CCXT public or clearly-labelled demo feed).
+2. A tick pulls OHLCV from the market data service (CCXT public or clearly-labelled demo feed). Ticks arrive two ways: on demand from `POST /paper-sessions/{id}/tick`, and unattended from `app/services/scheduler.py`, a single background thread that runs every `VELTRANE_SCHEDULER_INTERVAL_SECONDS` (60 by default) and advances every `running` session. The scheduler is paper-only by construction: it calls the same tick path, which never reaches a live adapter. Its state (`running`, `interval_seconds`, `last_run_at`, `last_summary`) is exposed in `/admin/system/health`.
 3. Strategy produces a `Signal`; the engine converts it into an `OrderIntent` with an `idempotency_key`.
 4. Risk engine evaluates → `RiskDecision`.
 5. Paper broker fills with spread + slippage + fees, writes `orders`, `trades`, `positions`, `fees`, `transactions`, `notifications`, `audit_logs`.
 6. Every trade row is addressable at `/trading/trades/{id}` and renders entry reason, strategy version, risk checks, fee/slippage estimate vs actual, net P&L, and human interventions.
+
+`GET /trading/risk-budget` exposes the same headroom the blocking rules will use on the next order
+(daily loss, drawdown, account exposure, open positions, consecutive losses, demo executions) so the
+terminal can show it before a trader commits. It is read-only and cannot approve anything: the risk
+engine remains the only gate.
 
 ## 8. Live trading posture (deliberate)
 
@@ -131,6 +136,7 @@ Any one failing keeps orders in paper mode. `LIVE_TRADING_ENABLED` cannot be set
 |---|---|
 | Monolith API | Simple to reason about; strategy loop shares CPU with request handling until a worker is split out |
 | Postgres-only job state (no Celery yet) | Fewer moving parts; long backtests must be bounded or moved to a worker later |
+| In-process scheduler thread | One deployment target, no broker to operate; cannot be scaled past a single scheduler-enabled replica, so a durable worker is the first thing to split out |
 | SVG charts | Full visual control, no licence risk; no advanced interactions (crosshair tooltips are basic) |
 | Synthetic demo feed | Lets the product be evaluated without credentials; must always be labelled and never presented as market truth |
 | ccxt for crypto | Broad coverage, but provider quirks need adapter-level tests before claiming support |

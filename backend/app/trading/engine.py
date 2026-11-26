@@ -167,6 +167,97 @@ def _equity_and_positions(db: Session, user: User, mode: str, session: PaperSess
     return equity, exposure, positions, unrealised
 
 
+def _budget(label: str, used: float, cap: float, unit: str) -> dict:
+    pct = (used / cap * 100.0) if cap > 0 else 0.0
+    state = "blocked" if used >= cap else "warning" if pct >= 80 else "ok"
+    return {
+        "label": label,
+        "used": round(used, 4),
+        "cap": round(cap, 4),
+        "used_pct": round(min(pct, 999.0), 2),
+        "remaining": round(max(cap - used, 0.0), 4),
+        "unit": unit,
+        "state": state,
+    }
+
+
+def risk_budget(db: Session, user: User) -> dict:
+    """Read-only view of how much risk headroom is left before the engine blocks entries.
+
+    Mirrors the arithmetic of the blocking rules exactly, so a trader sees the same
+    numbers the engine will use on the next order. It cannot approve or place anything.
+    """
+    session = paper_session_for(db, user, None)
+    policy = active_policy(db, user.org_id)
+    rules = merged_rules(policy.rules if policy else None)
+    equity, exposure, positions, unrealised = _equity_and_positions(db, user, TradeMode.PAPER, session)
+
+    today_trades = (
+        db.query(Trade)
+        .filter(Trade.org_id == user.org_id, Trade.closed_at >= _today_start(), Trade.mode == TradeMode.PAPER)
+        .all()
+    )
+    realized_today = sum(float(t.net_pnl) for t in today_trades)
+    recent = (
+        db.query(Trade)
+        .filter(Trade.org_id == user.org_id, Trade.mode == TradeMode.PAPER)
+        .order_by(Trade.closed_at.desc())
+        .limit(10)
+        .all()
+    )
+    consecutive_losses = 0
+    for trade in recent:
+        if float(trade.net_pnl) < 0:
+            consecutive_losses += 1
+        else:
+            break
+
+    peak = float((session.config or {}).get("peak_equity") or 0) if session else 0.0
+    peak = max(peak, equity)
+    drawdown_pct = ((peak - equity) / peak * 100.0) if peak > 0 else 0.0
+    daily_loss = -(realized_today + min(unrealised, 0.0))
+
+    demo_limit = entitlements.numeric_limit(db, user.org_id, Entitlement.MAX_DAILY_DEMO_EXECUTIONS)
+    demo_used = int(usage.get_usage(db, user.org_id, "demo_executions"))
+
+    budgets = [
+        _budget("Daily loss", daily_loss, equity * float(rules["daily_loss_limit_pct"]) / 100.0, "usd"),
+        _budget("Drawdown", drawdown_pct, float(rules["max_drawdown_pct"]), "pct"),
+        _budget(
+            "Account exposure",
+            (exposure / equity * 100.0) if equity > 0 else 0.0,
+            float(rules["max_account_exposure_pct"]),
+            "pct",
+        ),
+        _budget("Open positions", float(len(positions)), float(rules["max_open_positions"]), "count"),
+        _budget("Consecutive losses", float(consecutive_losses), float(rules["max_consecutive_losses"]), "count"),
+    ]
+    if demo_limit is not None:
+        budgets.append(_budget("Demo executions today", float(demo_used), float(demo_limit), "count"))
+
+    switches = kill_switch.state_for(db, user.org_id, user_id=user.id)
+    blocked = [b["label"] for b in budgets if b["state"] == "blocked"]
+    if any(switches.values()):
+        blocked.append("Kill switch")
+
+    return {
+        "mode": "paper",
+        "equity": round(equity, 2),
+        "exposure": round(exposure, 2),
+        "unrealized_pnl": round(unrealised, 2),
+        "realized_pnl_today": round(realized_today, 2),
+        "peak_equity": round(peak, 2),
+        "open_positions": len(positions),
+        "budgets": budgets,
+        "blocked": blocked,
+        "state": "blocked" if blocked else ("warning" if any(b["state"] == "warning" for b in budgets) else "ok"),
+        "kill_switches": switches,
+        "policy_id": policy.id if policy else None,
+        "policy_version": policy.version if policy else None,
+        "notice": "Paper only. A blocked budget means the risk engine will reject new entries, not that anything was closed.",
+    }
+
+
 def build_context(
     db: Session,
     *,

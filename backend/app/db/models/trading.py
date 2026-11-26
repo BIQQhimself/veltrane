@@ -348,6 +348,9 @@ class BinaryContract(Base, IdTimestampMixin):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     risk_decision_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False))
+    trade_id: Mapped[str | None] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("trades.id", ondelete="SET NULL"), index=True
+    )
     strategy_version_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
     )

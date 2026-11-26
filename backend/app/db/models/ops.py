@@ -99,6 +99,20 @@ class AiUsage(Base, IdTimestampMixin):
     cost_usd: Mapped[float] = mapped_column(MoneyType, default=0, nullable=False)
 
 
+class Counter(Base, TimestampMixin):
+    """Monotonic counters that must survive the deletion of what they number.
+
+    Invoice numbers are the motivating case: deriving the next number from the
+    rows that exist lets a deleted invoice hand its number to a different
+    customer, and the unique index then rejects the insert.
+    """
+
+    __tablename__ = "counters"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    value: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
 class SystemSetting(Base, TimestampMixin):
     """Key/value store for admin-editable configuration (never secrets)."""
 

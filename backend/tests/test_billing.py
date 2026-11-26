@@ -175,6 +175,27 @@ def test_invoices_and_payments_listed(client, trader):
     assert invoices["invoices"][0]["total"] == 49.0
 
 
+def test_invoice_numbers_survive_a_deleted_invoice(client, trader, db):
+    """Numbering must not reuse a number after a row disappears.
+
+    Deleting an organization cascades to its invoices. A count-based scheme then
+    re-issues a number that another org still holds and the insert fails.
+    """
+    from app.db.models import Invoice
+
+    send_event(client, checkout_event(trader["org_id"], "pro"))
+    invoices = client.get(f"{BASE}/billing/invoices", headers=trader["headers"]).json()["invoices"]
+    first = invoices[0]["number"]
+
+    db.query(Invoice).filter(Invoice.number == first).delete()
+    db.commit()
+
+    assert send_event(client, checkout_event(trader["org_id"], "elite", 14900)).status_code == 200
+    numbers = [row["number"] for row in client.get(f"{BASE}/billing/invoices", headers=trader["headers"]).json()["invoices"]]
+    assert first not in numbers
+    assert numbers[0] > first
+
+
 def test_refund_requires_admin_and_cannot_exceed_payment(client, trader, admin, db):
     send_event(client, checkout_event(trader["org_id"], "pro"))
     payment = client.get(f"{BASE}/billing/payments", headers=trader["headers"]).json()["payments"][0]

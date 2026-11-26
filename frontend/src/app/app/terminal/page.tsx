@@ -37,6 +37,8 @@ import {
   type Drawing,
   type DrawingTool,
 } from "@/components/charts/candles";
+import { RiskBudgetStrip } from "@/components/app/risk-budget";
+import type { RiskBudget } from "@/lib/risk-budget";
 import type {
   BinaryAsset,
   BinaryContract,
@@ -94,6 +96,7 @@ function ContractCountdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { tone: "gain" | "loss" | "neutral" | "warn"; label: string }> = {
     open: { tone: "warn", label: "Open" },
@@ -123,6 +126,8 @@ export default function TerminalPage() {
   const [lastRejection, setLastRejection] = React.useState<{ reason: string; rules: string[] } | null>(null);
   const [chartMode, setChartMode] = React.useState<ChartMode>("candles");
   const [showEma, setShowEma] = React.useState(true);
+  const [showVwap, setShowVwap] = React.useState(false);
+  const [showRsi, setShowRsi] = React.useState(false);
   const [tool, setTool] = React.useState<DrawingTool>("none");
   const [drawings, setDrawings] = React.useState<Drawing[]>([]);
   const [assetPickerOpen, setAssetPickerOpen] = React.useState(false);
@@ -160,6 +165,7 @@ export default function TerminalPage() {
       }),
     [symbol, duration],
   );
+  const riskBudget = useApi<RiskBudget>((signal) => api("/trading/risk-budget", { signal }));
 
   const assetList = React.useMemo(() => assets.data?.assets ?? [], [assets.data]);
   // Crypto leads the list: it is the first market with live trading enabled.
@@ -198,6 +204,12 @@ export default function TerminalPage() {
       return match?.symbol ?? current;
     });
   }, [assetList, deepLinkHandled]);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => riskBudget.refetch(), 20_000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Settlement is lazy server-side; poll while contracts are live so the UI converges.
   React.useEffect(() => {
@@ -377,6 +389,8 @@ export default function TerminalPage() {
         </div>
       </div>
 
+      <RiskBudgetStrip budget={riskBudget.data} />
+
       <div className="grid gap-3 xl:grid-cols-[236px_minmax(0,1fr)_320px]">
         {/* Asset rail */}
         <section className="panel order-3 flex flex-col xl:sticky xl:top-20 xl:order-1 xl:col-start-1 xl:row-start-1 xl:row-span-2 xl:max-h-[calc(100vh-6rem)] xl:self-start xl:overflow-hidden">
@@ -529,17 +543,26 @@ export default function TerminalPage() {
                     <span className="sr-only">Line</span>
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowEma((value) => !value)}
-                  aria-pressed={showEma}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-3xs transition",
-                    showEma ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
-                  )}
-                >
-                  EMA 21
-                </button>
+                {([
+                  ["EMA 21", showEma, () => setShowEma((value) => !value)],
+                  ["VWAP", showVwap, () => setShowVwap((value) => !value)],
+                  ["RSI 14", showRsi, () => setShowRsi((value) => !value)],
+                ] as const).map(([label, active, toggle]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={toggle}
+                    aria-pressed={active}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-3xs transition",
+                      active
+                        ? "border-gold-400/40 bg-gold-400/10 text-gold-300"
+                        : "border-line-soft text-paper-faint hover:text-paper-muted",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -603,6 +626,8 @@ export default function TerminalPage() {
                 height={360}
                 mode={chartMode}
                 showEma={showEma}
+                showVwap={showVwap}
+                showRsi={showRsi}
                 showCrosshair
                 drawings={drawings}
                 tool={tool}
@@ -1326,7 +1351,7 @@ export default function TerminalPage() {
             ["Payout if correct", `${payout.toFixed(0)}% · ${money(potentialReturn)} profit`],
             ["Entry price", fmtPrice(livePrice)],
             ["Expiry", new Date(Date.now() + duration * 1000).toLocaleTimeString()],
-            ["Data source", `${quote.data?.price_source ?? "simulated"}${quote.data?.is_demo ? " (demo)" : ""}`],
+            ["Data source", quote.data?.is_demo ? "Simulated demo feed" : (quote.data?.price_source ?? "Simulated feed")],
           ].map(([label, value]) => (
             <div key={label} className="flex items-center justify-between border-b border-line-soft pb-2">
               <dt className="text-paper-faint">{label}</dt>

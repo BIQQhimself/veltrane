@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 
+from app.core.config import settings
 from app.core.errors import too_many
 from app.core.redis_client import get_redis
 from fastapi import Request
@@ -37,10 +38,26 @@ def hit(key: str, limit: int, window: int) -> int:
 
 
 def client_ip(request: Request) -> str:
+    """Caller address, honouring X-Forwarded-For only from a trusted proxy.
+
+    Trusting the header unconditionally lets any client pick its own rate-limit
+    bucket by sending a made-up value, which turns the login limiter into
+    decoration. When the peer is not a configured proxy the header is ignored
+    and every caller behind that peer shares one bucket.
+    """
+    peer = request.client.host if request.client else "unknown"
+    if peer not in settings.trusted_proxy_ips:
+        return peer
+
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if not forwarded:
+        return peer
+
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    for hop in reversed(hops):
+        if hop not in settings.trusted_proxy_ips:
+            return hop
+    return hops[0] if hops else peer
 
 
 def enforce(request: Request, bucket: str, limit: int, window: int) -> None:

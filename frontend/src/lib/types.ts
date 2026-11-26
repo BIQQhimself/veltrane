@@ -316,6 +316,7 @@ export type NotificationsResponse = {
 
 export type TradeDetail = Trade & {
   order?: Order | null;
+  risk_decision?: RiskDecision | null;
   strategy?: {
     code: string;
     name: string;

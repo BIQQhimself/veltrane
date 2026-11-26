@@ -38,12 +38,21 @@ competent reviewer would find, so it is cheaper to state it here.
 12. **The backtest engine is event-loop simple.** One instrument, one timeframe, no multi-asset
     portfolio effects, no borrow costs for shorts, no corporate actions. It is honest about costs
     (fees, spread, slippage) but it is not a research platform.
-13. **No strategy scheduler.** Paper sessions advance when ticked (`/paper-sessions/{id}/tick`).
-    Nothing runs on a timer in this build, so "autonomous trading" is a capability of the engine,
-    not a running service. A worker process is required before that claim can be made.
+13. **The scheduler is an in-process thread, not a durable worker.** `app/services/scheduler.py`
+    ticks every running paper session once a minute inside the API process, which is enough for a
+    single-node deployment and is surfaced in `/admin/system/health`. It does not survive a crash
+    mid-tick, it does not coordinate across replicas (run exactly one scheduler-enabled instance),
+    and it has no queue, retry or dead-letter handling. A durable worker (Celery, RQ or a cron
+    container) is required before running more than one API replica. Live execution never runs
+    from the scheduler: it only advances paper sessions.
 14. **No portfolio optimiser.** The flag exists; the maths does not.
 15. **Slippage estimate versus actual** is recorded per trade, but for paper trades the "actual" is
     the model's own output — it validates the pipeline, not the model's accuracy.
+    The risk-budget strip on the terminal is likewise a mirror, not a gate:
+    `/trading/risk-budget` recomputes the headroom of the blocking rules for display, sharing the
+    arithmetic but not the code path. If the two ever diverge the risk engine still decides, and a
+    test pins the daily-loss case. It reports paper figures only — live headroom depends on venue
+    balances that are not verified.
 16. **Demo history is generated, not historical.** `backend/scripts/seed_demo.py` writes the demo
     account's contracts and trades from the deterministic feed, with entry prices at open and exit
     prices at expiry, so the numbers are internally consistent — but they are a fixture, not a
@@ -72,7 +81,8 @@ competent reviewer would find, so it is cheaper to state it here.
 28. **No schema-drift test** between Alembic head and the SQLAlchemy models. Tests use
     `create_all`, so a migration bug would not be caught by the suite.
 29. **No load or performance testing.** No numbers exist for throughput or latency under load, and
-    none are claimed.
+    none are claimed. The one background thread added for the paper scheduler has not been profiled
+    against a large number of open sessions.
 30. **No anomaly detection** beyond static fraud signals (multiple accounts per IP, repeated failed
     payments, unusual order bursts).
 

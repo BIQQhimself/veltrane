@@ -1,6 +1,15 @@
 export const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 export const API_PREFIX = "/api/v1";
 
+/**
+ * An empty NEXT_PUBLIC_API_URL means "same origin": a reverse proxy serves the
+ * web app and the API from one host, so requests must carry no host at all.
+ */
+function apiOrigin(): string {
+  if (API_BASE) return API_BASE;
+  return typeof window === "undefined" ? "http://localhost:8000" : window.location.origin;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -85,7 +94,7 @@ type RequestOptions = {
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, query, retryOnAuth = true, signal } = options;
-  const url = new URL(`${API_BASE}${API_PREFIX}${path}`);
+  const url = new URL(`${apiOrigin()}${API_PREFIX}${path}`);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== null && value !== undefined) url.searchParams.set(key, String(value));

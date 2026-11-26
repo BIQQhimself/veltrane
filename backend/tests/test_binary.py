@@ -128,6 +128,14 @@ def test_settlement_marks_contract_and_writes_trade(client, trader, db):
     assert summary["open"] == 0
     assert summary["is_demo"] is True
 
+    # The clickable trade record must carry the decision that let it through.
+    detail = client.get(f"{BASE}/trades/{binary_trades[0]['id']}", headers=trader["headers"]).json()["trade"]
+    decision = detail["risk_decision"]
+    assert decision is not None, detail
+    assert decision["decision"] == "approved"
+    assert decision["checks"]
+    assert all(check["code"] for check in decision["checks"])
+
 
 def test_contracts_are_tenant_isolated(client, trader, trader2):
     body = open_contract(client, trader["headers"]).json()

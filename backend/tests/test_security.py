@@ -34,6 +34,43 @@ def test_login_rate_limit(client, trader):
     assert blocked.json()["detail"]["code"] == "rate_limited"
 
 
+def test_forwarded_header_cannot_dodge_the_rate_limit(client, trader):
+    """A caller must not pick its own limiter bucket with X-Forwarded-For.
+
+    TestClient talks to the app directly, so the peer is not a configured
+    proxy and the header has to be ignored.
+    """
+    for index in range(11):
+        attempt = client.post(
+            f"{BASE}/auth/login",
+            json={"email": trader["email"], "password": "wrong-password"},
+            headers={"X-Forwarded-For": f"198.51.100.{index}"},
+        )
+        if index < 10:
+            assert attempt.status_code in (401, 403, 429)
+    assert attempt.status_code == 429
+
+
+def test_client_ip_honours_header_from_a_trusted_proxy():
+    from app.core.rate_limit import client_ip
+
+    class _Request:
+        headers = {"x-forwarded-for": "203.0.113.9, 10.0.0.1"}
+
+        class client:  # noqa: N801 - mimics starlette's attribute shape
+            host = "127.0.0.1"
+
+    assert client_ip(_Request()) == "10.0.0.1"
+
+    class _Spoofed(_Request):
+        headers = {"x-forwarded-for": "203.0.113.9"}
+
+        class client:  # noqa: N801
+            host = "203.0.113.9"
+
+    assert client_ip(_Spoofed()) == "203.0.113.9"
+
+
 def test_failed_logins_are_audited(client, trader, db):
     from app.db.models import AuditLog
 

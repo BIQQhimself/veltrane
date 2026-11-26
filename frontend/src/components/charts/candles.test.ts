@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHART_DOWN, CHART_UP, ema, priceScale } from "./candles";
+import { CHART_DOWN, CHART_UP, ema, priceScale, rsi, vwap } from "./candles";
 
 const ethCandles = [
   { high: 3312, low: 3122 },
@@ -62,6 +62,55 @@ describe("ema", () => {
   it("handles empty input and degenerate periods", () => {
     expect(ema([], 14)).toEqual([]);
     expect(ema([5, 6], 0)).toEqual([]);
+  });
+});
+
+describe("vwap", () => {
+  it("weights each bar by volume, so heavy volume pulls the line closer", () => {
+    const out = vwap([
+      { ts: 1, open: 100, high: 100, low: 100, close: 100, volume: 1 },
+      { ts: 2, open: 200, high: 200, low: 200, close: 200, volume: 9 },
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toBe(100);
+    // 1 part 100 plus 9 parts 200 = 190
+    expect(out[1]).toBeCloseTo(190, 6);
+  });
+
+  it("falls back to the typical price when a bar carries no volume", () => {
+    const out = vwap([{ ts: 1, open: 10, high: 12, low: 8, close: 10 }]);
+    expect(out[0]).toBeCloseTo(10, 6);
+  });
+});
+
+describe("rsi", () => {
+  const closes = [44, 44.3, 44.1, 43.6, 44.3, 44.8, 45.1, 45.5, 45.9, 46.2, 46.1, 46.6, 47, 47.3, 47.5, 47.9];
+
+  it("returns nulls for the warm-up window and one value per bar after it", () => {
+    const out = rsi(closes, 14);
+    expect(out).toHaveLength(closes.length);
+    expect(out.slice(0, 14).every((value) => value === null)).toBe(true);
+    expect(out[14]).not.toBeNull();
+  });
+
+  it("saturates at 100 when every bar closes higher", () => {
+    const rising = Array.from({ length: 20 }, (_, index) => 100 + index);
+    expect(rsi(rising, 14).at(-1)).toBe(100);
+  });
+
+  it("sits in the middle on a flat series and stays inside 0-100 otherwise", () => {
+    const flat = new Array(20).fill(50);
+    expect(rsi(flat, 14).at(-1)).toBe(50);
+    for (const value of rsi(closes, 14)) {
+      if (value !== null) {
+        expect(value).toBeGreaterThanOrEqual(0);
+        expect(value).toBeLessThanOrEqual(100);
+      }
+    }
+  });
+
+  it("returns only nulls when there is not enough history", () => {
+    expect(rsi([1, 2, 3], 14)).toEqual([null, null, null]);
   });
 });
 

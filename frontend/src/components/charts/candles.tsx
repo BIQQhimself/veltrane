@@ -31,6 +31,8 @@ type Props = {
   takeProfit?: number | null;
   showVolume?: boolean;
   showEma?: boolean;
+  showVwap?: boolean;
+  showRsi?: boolean;
   showCrosshair?: boolean;
   drawings?: Drawing[];
   tool?: DrawingTool;
@@ -94,6 +96,48 @@ export function ema(values: number[], period: number): number[] {
   return out;
 }
 
+/** Session VWAP from typical price and volume, carried forward from the first bar. */
+export function vwap(candles: Candle[]): number[] {
+  let pv = 0;
+  let vol = 0;
+  return candles.map((candle) => {
+    const typical = (candle.high + candle.low + candle.close) / 3;
+    const barVolume = candle.volume ?? 0;
+    pv += typical * barVolume;
+    vol += barVolume;
+    return vol > 0 ? pv / vol : typical;
+  });
+}
+
+/** A flat window has no average gain and no average loss, which is neutral (50). */
+function rsiFrom(avgGain: number, avgLoss: number): number {
+  if (avgLoss === 0) return avgGain === 0 ? 50 : 100;
+  return 100 - 100 / (1 + avgGain / avgLoss);
+}
+
+/** Wilder-smoothed RSI. Returns null until the first full lookback window closes. */
+export function rsi(values: number[], period = 14): Array<number | null> {
+  if (values.length <= period) return values.map(() => null);
+  const out: Array<number | null> = new Array(period).fill(null);
+  let gain = 0;
+  let loss = 0;
+  for (let i = 1; i <= period; i += 1) {
+    const delta = (values[i] as number) - (values[i - 1] as number);
+    if (delta >= 0) gain += delta;
+    else loss -= delta;
+  }
+  let avgGain = gain / period;
+  let avgLoss = loss / period;
+  out.push(rsiFrom(avgGain, avgLoss));
+  for (let i = period + 1; i < values.length; i += 1) {
+    const delta = (values[i] as number) - (values[i - 1] as number);
+    avgGain = (avgGain * (period - 1) + Math.max(delta, 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + Math.max(-delta, 0)) / period;
+    out.push(rsiFrom(avgGain, avgLoss));
+  }
+  return out;
+}
+
 function ticks(lo: number, hi: number, count = 5) {
   const step = (hi - lo) / Math.max(1, count - 1);
   return Array.from({ length: count }, (_, i) => lo + step * i);
@@ -116,6 +160,8 @@ export function CandleChart({
   takeProfit = null,
   showVolume = true,
   showEma = false,
+  showVwap = false,
+  showRsi = false,
   showCrosshair = true,
   drawings = [],
   tool = "none",
@@ -142,8 +188,11 @@ export function CandleChart({
   const railWidth = 62;
   const padTop = 10;
   const axisHeight = 18;
-  const volumeHeight = showVolume ? Math.round((height - padTop - axisHeight) * 0.18) : 0;
-  const plotHeight = Math.max(40, height - padTop - axisHeight - volumeHeight);
+  const panes = height - padTop - axisHeight;
+  const volumeHeight = showVolume ? Math.round(panes * 0.16) : 0;
+  const rsiHeight = showRsi ? Math.round(panes * 0.22) : 0;
+  const plotHeight = Math.max(40, panes - volumeHeight - rsiHeight);
+  const rsiTop = padTop + plotHeight + volumeHeight;
   const plotWidth = Math.max(60, width - railWidth);
 
   const { lo, hi } = priceScale(candles, [
@@ -163,6 +212,13 @@ export function CandleChart({
   const axisPrice = (value: number) =>
     value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
+  // A 4h or 1d series labels every bar with the same clock time; show the date instead.
+  const windowMs =
+    candles.length > 1
+      ? new Date(candles[candles.length - 1]!.ts).getTime() - new Date(candles[0]!.ts).getTime()
+      : 0;
+  const dateAxis = windowMs > 36 * 60 * 60 * 1000;
+
   const y = (price: number) => padTop + plotHeight - ((price - lo) / span) * plotHeight;
   const slot = candles.length ? plotWidth / candles.length : plotWidth;
   const x = (index: number) => slot * index + slot / 2;
@@ -177,6 +233,19 @@ export function CandleChart({
     () => (showEma ? ema(candles.map((c) => c.close), 21) : []),
     [candles, showEma],
   );
+
+  const vwapValues = React.useMemo(() => (showVwap ? vwap(candles) : []), [candles, showVwap]);
+  const rsiValues = React.useMemo(
+    () => (showRsi ? rsi(candles.map((c) => c.close), 14) : []),
+    [candles, showRsi],
+  );
+  const rsiY = (value: number) => rsiTop + rsiHeight - (value / 100) * rsiHeight;
+  const rsiPath = rsiValues.reduce((path, value, index) => {
+    if (value === null) return path;
+    const previous = index > 0 ? rsiValues[index - 1] : null;
+    return `${path}${previous === null || previous === undefined ? "M" : "L"}${x(index).toFixed(2)},${rsiY(value).toFixed(2)} `;
+  }, "");
+  const lastRsi = [...rsiValues].reverse().find((value) => value !== null) ?? null;
 
   const maxVolume = Math.max(1, ...candles.map((c) => c.volume ?? 0));
 
@@ -330,6 +399,32 @@ export function CandleChart({
             strokeWidth={1.4}
             opacity={0.9}
           />
+        ) : null}
+
+        {/* session VWAP */}
+        {showVwap && vwapValues.length ? (
+          <g>
+            <path
+              d={vwapValues
+                .map((value, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(2)},${y(value).toFixed(2)}`)
+                .join(" ")}
+              fill="none"
+              stroke="#8fbbff"
+              strokeWidth={1.2}
+              strokeDasharray="5 3"
+              opacity={0.85}
+            />
+            <text
+              x={plotWidth - 4}
+              y={y(vwapValues[vwapValues.length - 1] as number) - 5}
+              fill="#8fbbff"
+              fontSize={9}
+              textAnchor="end"
+              fontFamily="var(--font-mono, monospace)"
+            >
+              VWAP {fmtPrice(vwapValues[vwapValues.length - 1] as number)}
+            </text>
+          </g>
         ) : null}
 
         {/* saved drawings */}
@@ -493,6 +588,38 @@ export function CandleChart({
           </g>
         ) : null}
 
+        {/* RSI pane */}
+        {showRsi && rsiHeight ? (
+          <g>
+            <line x1={0} x2={plotWidth} y1={rsiTop} y2={rsiTop} stroke={GRID} strokeWidth={1} />
+            {[30, 70].map((level) => (
+              <g key={level}>
+                <line
+                  x1={0}
+                  x2={plotWidth}
+                  y1={rsiY(level)}
+                  y2={rsiY(level)}
+                  stroke={GRID}
+                  strokeDasharray="2 3"
+                />
+                <text
+                  x={plotWidth + 8}
+                  y={rsiY(level) + 3}
+                  fill={AXIS_TEXT}
+                  fontSize={9}
+                  fontFamily="var(--font-mono, monospace)"
+                >
+                  {level}
+                </text>
+              </g>
+            ))}
+            {rsiPath ? <path d={rsiPath} fill="none" stroke={EMA_COLOR} strokeWidth={1.2} /> : null}
+            <text x={6} y={rsiTop + 11} fill={AXIS_TEXT} fontSize={9} fontFamily="var(--font-mono, monospace)">
+              RSI 14{lastRsi === null ? "" : ` · ${lastRsi.toFixed(1)}`}
+            </text>
+          </g>
+        ) : null}
+
         {/* time axis */}
         {candles.length
           ? [0, Math.floor(candles.length / 3), Math.floor((candles.length * 2) / 3), candles.length - 1].map((index, position, all) => {
@@ -510,7 +637,9 @@ export function CandleChart({
                   textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
                   fontFamily="var(--font-mono, monospace)"
                 >
-                  {new Date(candle.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {dateAxis
+                    ? new Date(candle.ts).toLocaleDateString([], { day: "2-digit", month: "short" })
+                    : new Date(candle.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </text>
               );
             })

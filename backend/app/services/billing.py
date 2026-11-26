@@ -21,9 +21,10 @@ import httpx
 from app.core.config import settings
 from app.core.errors import bad_request, conflict, not_found
 from app.db.constants import AuditAction, NotificationCategory, PlanCode, Severity, SubscriptionStatus
-from app.db.models import Invoice, Payment, Plan, Refund, Subscription, User, WebhookEvent
+from app.db.models import Counter, Invoice, Payment, Plan, Refund, Subscription, User, WebhookEvent
 from app.services import audit, notifications
 from app.services.entitlements import PAST_DUE_GRACE_DAYS
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -247,9 +248,23 @@ def ensure_free_subscription(db: Session, org_id: str) -> Subscription:
 
 
 def _next_invoice_number(db: Session) -> str:
+    """Next number for the month from a counter that outlives its invoices.
+
+    Counting rows, or taking the highest number in use, re-issues a number as
+    soon as the newest invoice is deleted (org deletion, refund cleanup). The
+    counter row is incremented atomically, so numbers are unique and ordered
+    for good.
+    """
     stamp = utcnow().strftime("%Y%m")
-    count = db.query(Invoice).filter(Invoice.number.like(f"INV-{stamp}-%")).count() + 1
-    return f"INV-{stamp}-{count:05d}"
+    key = f"invoice:{stamp}"
+    statement = (
+        pg_insert(Counter)
+        .values(key=key, value=1)
+        .on_conflict_do_update(index_elements=[Counter.key], set_={"value": Counter.value + 1})
+        .returning(Counter.value)
+    )
+    sequence = db.execute(statement).scalar_one()
+    return f"INV-{stamp}-{sequence:05d}"
 
 
 def create_checkout(db: Session, *, org: str, plan_code: str, user: User) -> dict:

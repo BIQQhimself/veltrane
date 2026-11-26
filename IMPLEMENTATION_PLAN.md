@@ -100,7 +100,9 @@ must remain `false` until then.
 Microservices, a message queue, a separate execution service, multi-region, and a mobile app are all
 deferred. Each adds operational cost that a first cohort does not justify, and each makes the safety
 model harder to reason about. The seams are in place (services layer, provider protocol, worker-ready
-paper sessions) so they can be split later without a rewrite.
+paper sessions) so they can be split later without a rewrite. The unattended paper scheduler is a
+single in-process thread for the same reason: it removes the need for a broker now, and the tick path
+it calls is already the seam a real worker would use.
 
 ## Budget notes
 

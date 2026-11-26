@@ -25,14 +25,20 @@ never enables real-money trading by default.
 | Admin | Owner/analyst/support RBAC, revenue and cost analytics, plan and entitlement management, risk policy versioning, kill switches, flags, audit log, support inbox, fraud signals |
 | Performance fees | Elite-only, high-water-mark accounting, realised P&L only, consent records, jurisdiction gate, disabled until legal review is recorded |
 | Web app | Next.js 15 App Router + TypeScript + Tailwind. Twelve workspace screens (overview, terminal, markets, strategies, copilot, accounts, portfolio, analytics, notifications, billing, settings, onboarding), an admin console, and an installable PWA shell |
-| Tests | 151 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
+| Tests | 169 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
+
+## Reviewing this build
+
+If you are here to evaluate the running application rather than the code, start with
+[REVIEW_ACCESS.md](REVIEW_ACCESS.md): it lists the seeded accounts, says exactly which numbers are
+simulated, and walks a ten-minute tour.
 
 ## What does **not** exist yet
 
 Native iOS and Android apps (the web app is installable as a PWA instead), verified live exchange
-connectivity, a payment provider in live mode, a scheduler that runs strategies unattended
-autonomously, performance/load testing, an independent security review, and the legal work for
-performance fees. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and
+connectivity, a payment provider in live mode, a durable job worker (paper sessions do advance
+unattended today, but from an in-process thread), performance/load testing, an independent security
+review, and the legal work for performance fees. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) and
 [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).
 
 ## Repository layout

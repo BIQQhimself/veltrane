@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.rate_limit import enforce
+from app.services.scheduler import SessionScheduler
 
 configure_logging()
 log = logging.getLogger("veltrane")
@@ -41,7 +42,13 @@ async def lifespan(app: FastAPI):
             "LIVE_TRADING_ENABLED",
             extra={"extra_fields": {"message": "Platform live execution is enabled. Every order still passes the risk engine."}},
         )
+    scheduler = None
+    if settings.scheduler_enabled and settings.env != "test":
+        scheduler = SessionScheduler()
+        scheduler.start()
     yield
+    if scheduler is not None:
+        scheduler.stop()
     log.info("shutdown")
 
 

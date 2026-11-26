@@ -24,6 +24,13 @@ type Health = {
   providers: Array<{ code: string; name: string; status: string }>;
   queued_emails: number;
   email_delivery: string;
+  paper_scheduler?: {
+    running: boolean;
+    interval_seconds: number;
+    last_run_at: string | null;
+    last_summary: { due: number; ticked: number; actions: number; errors: number } | null;
+    last_error: string | null;
+  };
   version: string;
 };
 
@@ -177,6 +184,16 @@ export default function AdminOverviewPage() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-paper-muted">Market data</span>
                   <span className="text-paper">{titleCase(health.data.market_data_source)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-paper-muted">Paper runner</span>
+                  <span className="text-paper">
+                    {health.data.paper_scheduler
+                      ? health.data.paper_scheduler.running
+                        ? `every ${health.data.paper_scheduler.interval_seconds}s`
+                        : "stopped"
+                      : "—"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-paper-muted">Queued emails</span>

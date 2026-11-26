@@ -5,7 +5,7 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 155 tests, ~50 s
+.venv/bin/python -m pytest                  # 169 tests, ~55 s
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
@@ -26,6 +26,8 @@ code as Stripe.
 | `test_auth_and_system.py` | Registration, verification, login, MFA, refresh rotation, logout, password reset |
 | `test_billing.py` | Plans, checkout, webhook verification and replay, plan change, cancellation, invoices |
 | `test_connections.py` | Provider listing, connection creation, credential encryption, sync, error handling, no secret leakage |
+| `test_scheduler.py` | The unattended paper runner: due-session selection, tick effects, error isolation, and that it never touches live state |
+| `test_risk_budget.py` | Headroom report matches the blocking rules (daily loss cap arithmetic), reflects kill switches, is read-only, and is tenant-scoped |
 | `test_tenancy.py` | Cross-tenant reads and writes return 404 for orders, trades, positions, connections, notifications, backtests, paper sessions |
 | `test_strategies_and_entitlements.py` | Strategy catalogue, versioning and approval, backtests, paper sessions, entitlement gating by tier |
 | `test_risk_engine.py` | Each rule in isolation, and the composition of rules into a decision |
@@ -87,9 +89,13 @@ in the workflow so lint results do not drift between runs.
 
 The front end is checked with TypeScript (`npm run typecheck`), ESLint (`npm run lint`), a
 production build (`npm run build`) and Vitest (`npm run test`). `vitest.config.ts` resolves the `@/`
-alias and runs in a node environment, so tests cover pure logic rather than DOM: the price scale
-that keeps a stale or cross-instrument quote from flattening a chart
-(`src/components/charts/candles.test.ts`) is the first such suite. Component and end-to-end browser
+alias and runs in a node environment, so tests cover pure logic rather than DOM. The chart suite
+(`src/components/charts/candles.test.ts`, 16 tests) pins the price scale that keeps a stale or
+cross-instrument quote from flattening a chart, the time-axis tick spacing including the switch from
+clock times to dates on multi-day ranges, and the VWAP and Wilder RSI helpers (flat windows are
+neutral at 50, values stay inside 0–100, and the series aligns to the candle index).
+`src/lib/risk-budget.test.ts` (5 tests) pins the wording and tone of the risk-posture badge so the
+overview can never say "within limits" while a budget is breached. Component and end-to-end browser
 tests are still outstanding; see KNOWN_LIMITATIONS.
 
 ```bash

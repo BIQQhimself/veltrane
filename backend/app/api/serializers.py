@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.db.models import (
     Backtest,
+    BinaryContract,
     Connection,
     ConnectionCredential,
     Fee,
@@ -133,16 +134,29 @@ def trade_dict(trade: Trade) -> dict:
     }
 
 
+def _trade_risk_decision(db: Session, trade: Trade) -> RiskDecision | None:
+    if trade.order_id:
+        order = db.get(Order, trade.order_id)
+        if order and order.risk_decision_id:
+            return db.get(RiskDecision, order.risk_decision_id)
+    contract = db.query(BinaryContract).filter(BinaryContract.trade_id == trade.id).first()
+    if contract and contract.risk_decision_id:
+        return db.get(RiskDecision, contract.risk_decision_id)
+    return None
+
+
 def trade_detail(db: Session, trade: Trade) -> dict:
     data = trade_dict(trade)
     order = db.get(Order, trade.order_id) if trade.order_id else None
-    decision = db.get(RiskDecision, order.risk_decision_id) if order and order.risk_decision_id else None
+    decision = _trade_risk_decision(db, trade)
     version = db.get(StrategyVersion, trade.strategy_version_id) if trade.strategy_version_id else None
     strategy = db.get(Strategy, version.strategy_id) if version else None
     fees = db.query(Fee).filter(Fee.reference_id == trade.order_id).all() if trade.order_id else []
     data.update(
         {
             "order": order_dict(order, decision) if order else None,
+            # Binary contracts have no order row; their decision still belongs to the trade.
+            "risk_decision": None if order else decision_dict(decision),
             "strategy": (
                 {
                     "code": strategy.code,

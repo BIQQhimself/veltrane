@@ -200,6 +200,12 @@ def trading_state(user: User = Depends(get_current_user), db: Session = Depends(
     }
 
 
+@router.get("/trading/risk-budget")
+def risk_budget(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Headroom left before the risk engine blocks new entries. Read-only."""
+    return trading_engine.risk_budget(db, user)
+
+
 @router.post("/trading/kill-switch")
 def toggle_kill_switch(
     payload: KillSwitchRequest,

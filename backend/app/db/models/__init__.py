@@ -16,6 +16,7 @@ from app.db.models.identity import OneTimeToken, Organization, RefreshSession, S
 from app.db.models.ops import (
     AiUsage,
     AuditLog,
+    Counter,
     EmailOutbox,
     FeatureFlag,
     Notification,
@@ -42,6 +43,7 @@ from app.db.models.trading import (
 
 __all__ = [
     "Base", "AiUsage", "AuditLog", "Backtest", "Balance", "BinaryContract", "Connection", "ConnectionCredential",
+    "Counter",
     "EmailOutbox", "EntitlementOverride", "Fee", "FeeConsent", "FeatureFlag", "HighWaterMark",
     "Instrument", "Invoice", "KillSwitch", "LedgerTransaction", "Notification", "OneTimeToken",
     "Order", "Organization", "PaperSession", "Payment", "PerformanceFeeRecord", "Plan", "Position",

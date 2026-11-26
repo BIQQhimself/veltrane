@@ -26,6 +26,8 @@ import { AreaChart } from "@/components/charts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { RiskBudgetRows } from "@/components/app/risk-budget";
+import { budgetLabel, budgetTone, type RiskBudget } from "@/lib/risk-budget";
 import { TradeDetailDialog } from "@/components/app/trade-detail";
 import { cn } from "@/lib/cn";
 import type { BinaryAsset, BinaryContract, BinarySummary, PortfolioOverview, Trade, TradingState } from "@/lib/types";
@@ -79,28 +81,6 @@ function Metric({
   );
 }
 
-function GaugeRow({ label, value, cap, hint }: { label: string; value: number; cap: number; hint?: string }) {
-  const ratio = cap > 0 ? Math.min(1, value / cap) : 0;
-  const danger = ratio > 0.8;
-  return (
-    <div>
-      <div className="flex items-baseline justify-between text-2xs">
-        <span className="text-paper-faint">{label}</span>
-        <span className={cn("num", danger ? "text-loss" : "text-paper-muted")}>
-          {value.toFixed(2)} / {cap.toFixed(2)}
-        </span>
-      </div>
-      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-obsidian-750">
-        <div
-          className={cn("h-full rounded-full transition-all", danger ? "bg-loss" : "bg-gradient-to-r from-electric-500 to-gain")}
-          style={{ width: `${ratio * 100}%` }}
-        />
-      </div>
-      {hint ? <p className="mt-1 text-3xs text-paper-faint">{hint}</p> : null}
-    </div>
-  );
-}
-
 export default function OverviewPage() {
   const { user, entitlements, usage, live, platform } = useAuth();
   const [selectedTrade, setSelectedTrade] = React.useState<string | null>(null);
@@ -116,13 +96,15 @@ export default function OverviewPage() {
   );
   const assets = useApi<{ assets: BinaryAsset[] }>((signal) => api("/binary/assets", { signal }));
   const briefing = useApi<Briefing>((signal) => api("/copilot/briefing", { signal }));
+  const riskBudget = useApi<RiskBudget>((signal) => api("/trading/risk-budget", { signal }));
 
   const equity = portfolio.data?.equity;
   const stats = performance.data?.stats;
   const curve = (performance.data?.curve ?? []).map((point) => point.cumulative);
   const openContracts = (binary.data?.contracts ?? []).filter((c) => c.status === "open");
-  const summary = binary.data?.summary;
   const killEngaged = Boolean((state.data?.kill_switches as Record<string, { engaged?: boolean }> | undefined)?.org?.engaged);
+  const riskLabel = budgetLabel(riskBudget.data, killEngaged);
+  const riskTone = budgetTone(riskBudget.data, killEngaged);
   const demoLimit = Number(entitlements?.limits?.max_daily_demo_executions ?? 5);
   const demoUsed = usage?.demo_executions_today ?? 0;
   const plan = entitlements?.plan_code ?? "free";
@@ -145,11 +127,6 @@ export default function OverviewPage() {
   const topAssets = [...(assets.data?.assets ?? [])].sort(byAssetClass).slice(0, 6);
   // The risk engine charges spot/CFD notional against the same 30% cap, so the
   // posture panel must count it or it reads as zero exposure while a trade is open.
-  const positionNotional = (portfolio.data?.positions ?? []).reduce(
-    (sum, position) => sum + Math.abs(position.quantity * (position.mark_price ?? position.avg_entry_price)),
-    0,
-  );
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -298,31 +275,13 @@ export default function OverviewPage() {
         <section className="panel flex flex-col">
           <div className="flex items-center justify-between border-b border-line-soft px-4 py-3">
             <h2 className="text-sm font-medium text-paper">Risk posture</h2>
-            <Badge tone={killEngaged ? "loss" : "gain"}>{killEngaged ? "Halted" : "Within limits"}</Badge>
+            <Badge tone={riskTone}>{riskLabel}</Badge>
           </div>
           <div className="flex-1 space-y-4 p-4">
-            <GaugeRow
-              label="Open exposure vs equity"
-              value={(summary?.open_stake ?? 0) + positionNotional}
-              cap={Math.max(1, (equity?.simulated_balance_usd ?? 0) * 0.3)}
-              hint={
-                positionNotional
-                  ? `Contracts ${money(summary?.open_stake ?? 0)} + positions ${money(positionNotional)}`
-                  : "Account exposure cap is 30% of equity"
-              }
-            />
-            <GaugeRow
-              label="Demo executions"
-              value={demoUsed}
-              cap={demoLimit}
-              hint="Shared by spot and fixed-odds contracts"
-            />
-            <GaugeRow
-              label="Daily loss limit"
-              value={Math.max(0, -(stats?.net_pnl ?? 0))}
-              cap={Math.max(1, (equity?.simulated_balance_usd ?? 0) * 0.03)}
-              hint="Breaching 3% halts new risk until the next session"
-            />
+            <RiskBudgetRows budget={riskBudget.data} />
+            <p className="text-3xs text-paper-faint">
+              Read from the same rules the risk engine applies to the next order. Headroom is paper-only.
+            </p>
             <div className="rounded-lg border border-line-soft bg-obsidian-900/50 p-3">
               <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
                 <ShieldCheck className="h-3.5 w-3.5 text-gain" aria-hidden />

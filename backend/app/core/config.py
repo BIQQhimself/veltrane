@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     api_base_url: str = "http://localhost:8000"
     web_base_url: str = "http://localhost:3000"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    # Peers allowed to set X-Forwarded-For. Everything else is rate-limited by
+    # its socket address so the header cannot be used to dodge a limiter.
+    trusted_proxies: str = "127.0.0.1,::1"
 
     secret_key: str = INSECURE_SECRET
     master_encryption_key: str = ""
@@ -48,6 +51,10 @@ class Settings(BaseSettings):
     paper_spread_bps: float = 4.0
     paper_slippage_bps: float = 3.0
     paper_starting_balance: float = 25_000.0
+    # Ticks running paper sessions so strategies evaluate new candles unattended.
+    # Paper only: this loop has no live execution path.
+    scheduler_enabled: bool = True
+    scheduler_interval_seconds: int = 60
     # Fixed-odds binary contracts. Paper only in this build; live routing is not implemented.
     binary_min_stake: float = 10.0
     binary_max_stake: float = 2_000.0
@@ -62,13 +69,17 @@ class Settings(BaseSettings):
     market_data_cache_seconds: int = 20
 
     log_level: str = "INFO"
-    admin_email: str = "admin@veltrane.local"
+    admin_email: str = "admin@veltrane.dev"
     admin_password: str = ""
 
     @field_validator("cors_origins")
     @classmethod
     def _strip(cls, v: str) -> str:
         return v.strip()
+
+    @property
+    def trusted_proxy_ips(self) -> set[str]:
+        return {ip.strip() for ip in self.trusted_proxies.split(",") if ip.strip()}
 
     @property
     def cors_origin_list(self) -> list[str]:
