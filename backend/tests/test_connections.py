@@ -135,6 +135,21 @@ def test_provider_outage_does_not_break_connection(client, trader):
     assert any(n["category"] == "connection" for n in notes)
 
 
+def test_connection_success_path_reports_connected(client, trader):
+    created = create_connection(client, trader["headers"], label="Testable")
+    assert created.status_code == 201
+    connection_id = created.json()["id"]
+
+    result = client.post(f"{BASE}/connections/{connection_id}/test", headers=trader["headers"])
+    assert result.status_code == 200, result.text
+    assert result.json()["ok"] is True
+
+    detail = client.get(f"{BASE}/connections/{connection_id}", headers=trader["headers"]).json()
+    assert detail["status"] == "connected"
+    assert detail["last_error"] is None
+    assert detail["permissions"]["trade"] is False
+
+
 def test_revoke_removes_credentials(client, trader, db):
     created = create_connection(
         client,

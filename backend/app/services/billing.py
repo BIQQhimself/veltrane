@@ -15,7 +15,7 @@ import logging
 import secrets
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from app.core.config import settings
@@ -33,7 +33,7 @@ STRIPE_PROVIDER = "stripe"
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -286,7 +286,7 @@ def complete_mock_checkout(db: Session, token: str) -> dict:
         ts_str, sig, body = token.split(".", 2)
         ts = int(ts_str)
     except (ValueError, AttributeError):
-        raise bad_request("invalid_checkout_token", "Malformed checkout token.")
+        raise bad_request("invalid_checkout_token", "Malformed checkout token.") from None
     if abs(int(time.time()) - ts) > 1800:
         raise bad_request("checkout_expired", "This checkout session has expired.")
     expected = hmac.new(_mock_secret(), ts_str.encode() + b"." + body.encode(), hashlib.sha256).hexdigest()
@@ -435,8 +435,8 @@ def process_webhook(
 
     try:
         event = json.loads(raw_body)
-    except json.JSONDecodeError:
-        raise bad_request("invalid_payload", "Webhook payload is not valid JSON.")
+    except json.JSONDecodeError as exc:
+        raise bad_request("invalid_payload", "Webhook payload is not valid JSON.") from exc
 
     event_id = str(event.get("id") or "")
     event_type = str(event.get("type") or "")

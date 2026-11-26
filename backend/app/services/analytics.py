@@ -5,7 +5,7 @@ operator-provided settings, not invented numbers.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.db.constants import PlanCode, SubscriptionStatus
 from app.db.models import (
@@ -35,7 +35,7 @@ DEFAULT_COSTS = {
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def cost_model(db: Session) -> dict:

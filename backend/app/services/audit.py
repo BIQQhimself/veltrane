@@ -1,7 +1,7 @@
 """Audit trail. Append-only by convention: nothing in the codebase updates or deletes rows."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.db.models import AuditLog
 from sqlalchemy.orm import Session
@@ -57,7 +57,7 @@ def record(
         ip=ip,
         user_agent=(user_agent or "")[:400] or None,
         meta=_scrub(meta or {}),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(entry)
     if flush:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.errors import forbidden
 from app.db.constants import Entitlement, NotificationCategory, PlanCode, Severity, SubscriptionStatus
@@ -165,7 +165,7 @@ def seed_plans(db: Session) -> None:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def active_subscription(db: Session, org_id: str) -> Subscription | None:

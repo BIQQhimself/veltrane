@@ -130,7 +130,7 @@ class RiskContext:
     market_open: bool = True
     is_demo_feed: bool = False
 
-    def with_extra(self, **kwargs) -> "RiskContext":
+    def with_extra(self, **kwargs) -> RiskContext:
         data = {**self.__dict__, **kwargs}
         return RiskContext(**data)
 

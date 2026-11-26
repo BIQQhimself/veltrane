@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from app.risk.engine import engine
 from app.risk.types import (
@@ -14,7 +14,7 @@ from app.risk.types import (
     RiskContext,
 )
 
-NOW = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
 
 
 def intent(**overrides) -> OrderIntent:

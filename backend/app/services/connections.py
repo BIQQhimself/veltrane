@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.crypto import DecryptionError, Envelope, decrypt_json, encrypt_json, mask_secret
 from app.core.errors import bad_request, conflict, not_found
@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _aad(org_id: str, connection_id: str) -> str:
@@ -183,7 +183,7 @@ def test_connection(db: Session, connection: Connection) -> dict:
             data={"connection_id": connection.id},
         )
         db.commit()  # persist the error state and notification before surfacing the failure
-        raise bad_request(exc.code, exc.message)
+        raise bad_request(exc.code, exc.message) from exc
     connection.status = ConnectionStatus.CONNECTED
     connection.last_error = None
     permissions = result.get("permissions") or {}
@@ -194,8 +194,6 @@ def test_connection(db: Session, connection: Connection) -> dict:
         "balance_currencies": result.get("balance_currencies", []),
     }
     db.flush()
-    if simulated:
-        connection.status = ConnectionStatus.CONNECTED
     audit.record(
         db,
         action=AuditAction.CONNECTION_SYNCED,
@@ -231,7 +229,7 @@ def sync_connection(db: Session, connection: Connection) -> dict:
             data={"connection_id": connection.id},
         )
         db.commit()  # persist the error state and notification before surfacing the failure
-        raise bad_request(exc.code, exc.message)
+        raise bad_request(exc.code, exc.message) from exc
 
     now = utcnow()
     db.query(Balance).filter(Balance.connection_id == connection.id).delete()

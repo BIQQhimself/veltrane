@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.api import serializers
 from app.api.deps import get_or_404, require_admin, require_analyst, require_support
@@ -18,6 +18,7 @@ from app.api.schemas import (
 )
 from app.core.config import settings
 from app.core.errors import bad_request, not_found
+from app.core.redis_client import get_redis
 from app.db.constants import AuditAction
 from app.db.models import (
     AiUsage,
@@ -26,8 +27,6 @@ from app.db.models import (
     EntitlementOverride,
     FeatureFlag,
     FeeConsent,
-    HighWaterMark,
-    Invoice,
     KillSwitch,
     Order,
     Organization,
@@ -36,20 +35,17 @@ from app.db.models import (
     Plan,
     Refund,
     RiskPolicy,
-    StrategyVersion,
     Subscription,
     SupportTicket,
-    SystemSetting,
     Trade,
     UsageMetric,
     User,
 )
 from app.db.session import get_db
+from app.providers.registry import provider_catalog
 from app.risk.types import DEFAULT_RISK_RULES, merged_rules
 from app.services import analytics, audit, billing, entitlements, kill_switch, performance_fees, strategy_service
 from app.services.email import deliver_queued
-from app.core.redis_client import get_redis
-from app.providers.registry import provider_catalog
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -689,7 +685,7 @@ def reply_ticket(ticket_id: str, payload: TicketReply, staff: User = Depends(req
         {
             "role": "staff",
             "message": payload.message,
-            "at": datetime.now(timezone.utc).isoformat(),
+            "at": datetime.now(UTC).isoformat(),
             "staff_email": staff.email,
         },
     ]
@@ -710,7 +706,7 @@ def reply_ticket(ticket_id: str, payload: TicketReply, staff: User = Depends(req
 
 @router.get("/fraud/signals")
 def fraud_signals(staff: User = Depends(require_analyst), db: Session = Depends(get_db)):
-    since = datetime.now(timezone.utc) - timedelta(days=7)
+    since = datetime.now(UTC) - timedelta(days=7)
     failed_logins = (
         db.query(AuditLog.ip, func.count(AuditLog.id))
         .filter(AuditLog.action == AuditAction.USER_LOGIN_FAILED, AuditLog.created_at >= since)

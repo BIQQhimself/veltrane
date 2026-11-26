@@ -16,7 +16,7 @@ import math
 import random
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.core.redis_client import cache_get, cache_set
@@ -229,7 +229,7 @@ def is_market_open(symbol: str, now: datetime | None = None) -> bool:
         return False
     if spec.get("asset_class") == "crypto":
         return True
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     # Retail forex/indices: closed from Friday 21:00 UTC to Sunday 21:00 UTC.
     weekday = now.weekday()  # Mon=0
     if weekday == 5:

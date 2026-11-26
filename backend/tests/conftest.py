@@ -40,8 +40,9 @@ os.environ["VELTRANE_LIVE_TRADING_ENABLED"] = "false"
 os.environ["VELTRANE_DEMO_MARKET_DATA_ENABLED"] = "true"
 os.environ["VELTRANE_LOG_LEVEL"] = "WARNING"
 
+from datetime import UTC
+
 import pytest  # noqa: E402
-from app.core.config import settings  # noqa: E402
 from app.core.redis_client import get_redis  # noqa: E402
 from app.db.models import Base, FeatureFlag, RiskPolicy, SystemSetting, User  # noqa: E402
 from app.db.session import SessionLocal, engine  # noqa: E402
@@ -239,13 +240,13 @@ def admin(client, make_user, db):
 
 def mark_connection_connected(db, connection_id: str) -> None:
     """Simulate a verified read-only sync so live-authorisation preconditions can be tested."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.db.models import Connection
 
     connection = db.get(Connection, connection_id)
     connection.status = "connected"
-    connection.last_sync_at = datetime.now(timezone.utc)
+    connection.last_sync_at = datetime.now(UTC)
     db.commit()
 
 

@@ -15,10 +15,9 @@ import os
 import secrets
 from dataclasses import asdict, dataclass
 
+from app.core.config import settings
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
-from app.core.config import settings
 
 NONCE_BYTES = 12
 DEK_BYTES = 32
@@ -40,7 +39,7 @@ class Envelope:
         return json.dumps(asdict(self), separators=(",", ":"))
 
     @classmethod
-    def from_json(cls, raw: str) -> "Envelope":
+    def from_json(cls, raw: str) -> Envelope:
         data = json.loads(raw)
         return cls(
             kek_version=int(data["kek_version"]),

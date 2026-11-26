@@ -1,6 +1,17 @@
+from app.api.v1 import (
+    admin,
+    analytics,
+    auth,
+    billing,
+    connections,
+    health,
+    markets,
+    notifications,
+    portfolio,
+    strategies,
+    trading,
+)
 from fastapi import APIRouter
-
-from app.api.v1 import admin, analytics, auth, billing, connections, health, markets, notifications, portfolio, strategies, trading
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)

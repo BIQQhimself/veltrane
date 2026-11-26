@@ -9,7 +9,7 @@ from app.api.schemas import (
     StrategyVersionRequest,
 )
 from app.core.errors import not_found
-from app.db.models import Backtest, PaperSession, Position, Strategy, StrategyVersion, Trade, User
+from app.db.models import Backtest, PaperSession, Position, StrategyVersion, Trade, User
 from app.db.session import get_db
 from app.services import strategy_service
 from app.services.strategy_service import run_backtest as execute_backtest

@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-import base64
-import hmac
-import hashlib
 import json
-import time
 
-from app.core.config import settings
-from tests.conftest import BASE, PASSWORD, login, place_order, register, unique_email
+from tests.conftest import BASE, PASSWORD, login, unique_email
 
 
 def test_health_and_public_config(client):

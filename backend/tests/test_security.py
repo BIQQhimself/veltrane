@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 
-from tests.conftest import BASE, PASSWORD, login, register
+from tests.conftest import BASE, PASSWORD
 
 
 def test_security_headers_present(client):

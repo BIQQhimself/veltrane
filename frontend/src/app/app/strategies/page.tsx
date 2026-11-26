@@ -38,7 +38,7 @@ export default function StrategiesPage() {
   const [walkForward, setWalkForward] = React.useState(false);
 
   const canBacktest = hasFeature("backtesting");
-  const library = strategies.data?.strategies ?? [];
+  const library = React.useMemo(() => strategies.data?.strategies ?? [], [strategies.data]);
   const libraryCodes = (entitlements?.limits?.strategy_library as string[] | undefined) ?? null;
 
   React.useEffect(() => {

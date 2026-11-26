@@ -4,18 +4,19 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from app import __version__
-from app.api.v1.router import api_router
-from app.core.config import settings
-from app.core.errors import AppError
-from app.core.logging import configure_logging
-from app.core.rate_limit import enforce
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import StatementError
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app import __version__
+from app.api.v1.router import api_router
+from app.core.config import settings
+from app.core.errors import AppError
+from app.core.logging import configure_logging
+from app.core.rate_limit import enforce
 
 configure_logging()
 log = logging.getLogger("veltrane")

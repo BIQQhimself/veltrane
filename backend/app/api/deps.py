@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from app.core.config import settings
 from app.core.errors import forbidden, not_found, unauthorized
@@ -26,7 +26,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     try:
         payload = decode_token(token, expected_type="access")
     except ValueError:
-        raise unauthorized("invalid_token", "Your session is invalid or has expired.")
+        raise unauthorized("invalid_token", "Your session is invalid or has expired.") from None
     if payload.get("mfa_pending"):
         raise unauthorized("mfa_required", "Complete two-factor verification.")
     from app.core.security import is_token_revoked
@@ -50,7 +50,7 @@ def get_or_404(db: Session, model, value, *, code: str = "not_found", message: s
     try:
         _uuid.UUID(str(value))
     except (ValueError, AttributeError, TypeError):
-        raise not_found(code, message)
+        raise not_found(code, message) from None
     obj = db.get(model, value)
     if obj is None:
         raise not_found(code, message)

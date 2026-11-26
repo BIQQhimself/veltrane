@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, timedelta
+
 from app.api import serializers
 from app.api.deps import get_current_user
 from app.api.schemas import (
@@ -17,7 +19,6 @@ from app.core.config import settings
 from app.core.errors import bad_request, unauthorized
 from app.core.rate_limit import enforce
 from app.core.security import create_token, decode_token, new_csrf_token
-from datetime import timedelta
 from app.db.models import User
 from app.db.session import get_db
 from app.services import auth as auth_service
@@ -149,7 +150,7 @@ def verify_mfa_login(payload: MfaLoginRequest, request: Request, response: Respo
     try:
         claims = decode_token(payload.mfa_token, expected_type="access")
     except ValueError:
-        raise unauthorized("invalid_token", "MFA session expired. Sign in again.")
+        raise unauthorized("invalid_token", "MFA session expired. Sign in again.") from None
     if not claims.get("mfa_pending"):
         raise bad_request("invalid_token", "This token is not an MFA challenge.")
     user = db.get(User, claims["sub"])
@@ -188,13 +189,13 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
         db.commit()
     authorization = request.headers.get("authorization") or ""
     if authorization.lower().startswith("bearer "):
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from app.core.security import decode_token, revoke_token_jti
 
         try:
             claims = decode_token(authorization.split(" ", 1)[1], expected_type="access")
-            revoke_token_jti(claims["jti"], datetime.fromtimestamp(claims["exp"], tz=timezone.utc))
+            revoke_token_jti(claims["jti"], datetime.fromtimestamp(claims["exp"], tz=UTC))
         except (ValueError, KeyError):
             pass
     _clear_cookies(response)

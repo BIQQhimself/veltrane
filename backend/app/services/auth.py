@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import hashlib
 import re
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
 from app.core.crypto import Envelope, decrypt_json, encrypt_json
@@ -31,7 +30,7 @@ LOCKOUT_MINUTES = 15
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _slugify(email: str) -> str:
@@ -243,7 +242,7 @@ def rotate_refresh(db: Session, *, refresh_token: str, ip: str | None, user_agen
     try:
         payload = decode_token(refresh_token, expected_type="refresh")
     except ValueError:
-        raise unauthorized("invalid_refresh_token", "Session expired. Sign in again.")
+        raise unauthorized("invalid_refresh_token", "Session expired. Sign in again.") from None
     session = db.query(RefreshSession).filter(RefreshSession.jti == payload["jti"]).first()
     if session is None or session.token_hash != hash_token(refresh_token):
         raise unauthorized("invalid_refresh_token", "Session expired. Sign in again.")

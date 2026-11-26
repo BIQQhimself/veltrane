@@ -5,7 +5,7 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 128 tests, ~45 s
+.venv/bin/python -m pytest                  # 130 tests, ~45 s
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
@@ -23,7 +23,7 @@ code as Stripe.
 
 | File | Focus |
 | --- | --- |
-| `test_auth.py` | Registration, verification, login, MFA, refresh rotation, logout, password reset |
+| `test_auth_and_system.py` | Registration, verification, login, MFA, refresh rotation, logout, password reset |
 | `test_billing.py` | Plans, checkout, webhook verification and replay, plan change, cancellation, invoices |
 | `test_connections.py` | Provider listing, connection creation, credential encryption, sync, error handling, no secret leakage |
 | `test_tenancy.py` | Cross-tenant reads and writes return 404 for orders, trades, positions, connections, notifications, backtests, paper sessions |
@@ -52,6 +52,36 @@ These are not aspirations; each is checked.
 10. A non-staff account gets 404 on every admin route.
 11. Performance fees cannot be enabled without a recorded legal review.
 12. Paper trades are marked `is_demo: true` and excluded from live equity.
+
+## Linting and static checks
+
+Backend lint uses Ruff, configured in `backend/pyproject.toml` (Python 3.13 target, 120 columns,
+rules `E4`/`E7`/`E9`/`F`/`I`/`UP`/`B`). The rule set is deliberately narrow: correctness, import
+order and modernisation, not restyling. `B008` is resolved through
+`flake8-bugbear.extend-immutable-calls` because FastAPI dependency injection is a call in a default
+argument, and `E402` is ignored only in `tests/conftest.py` and `alembic/env.py`, which must set up
+the environment before importing the app.
+
+```bash
+cd backend
+.venv/bin/pip install ruff==0.17.6
+.venv/bin/ruff check app tests
+.venv/bin/ruff check app tests --fix    # safe fixes only
+```
+
+Frontend lint uses ESLint 9 with a flat config (`frontend/eslint.config.mjs`) that extends
+`next/core-web-vitals` and `next/typescript` through `FlatCompat`. `next lint` is deprecated in
+Next.js 15.5, so the `lint` script calls `eslint .` directly.
+
+```bash
+cd frontend
+npm run lint        # eslint .
+npm run typecheck   # tsc --noEmit
+npm run build       # production build
+```
+
+Dependency audit runs `pip-audit -r requirements.txt --strict` in CI. Ruff and pip-audit are pinned
+in the workflow so lint results do not drift between runs.
 
 ## Frontend tests
 

@@ -4,9 +4,8 @@ import logging
 from typing import Any
 
 import redis
-from redis.exceptions import RedisError
-
 from app.core.config import settings
+from redis.exceptions import RedisError
 
 log = logging.getLogger(__name__)
 _client: redis.Redis | None = None

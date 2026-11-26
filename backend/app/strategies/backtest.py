@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.providers.base import Candle
 from app.strategies.base import PositionState, Strategy
@@ -360,5 +360,5 @@ def walk_forward(
         "consistency_pct": round(positive / len(results) * 100, 2) if results else 0.0,
         "methodology": "Fixed parameters replayed on sequential windows. No in-sample optimisation; this measures "
         "stability, not best-case fit.",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }

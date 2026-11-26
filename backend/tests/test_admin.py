@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timedelta, timezone
-
 from tests.conftest import BASE, place_order
 from tests.test_billing import checkout_event, send_event
 

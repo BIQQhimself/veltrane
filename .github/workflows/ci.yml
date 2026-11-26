@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -39,7 +42,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install
         working-directory: backend
-        run: pip install -r requirements.txt ruff pip-audit
+        run: pip install -r requirements.txt ruff==0.17.6 pip-audit==2.10.1
       - name: Lint
         working-directory: backend
         run: ruff check app tests
@@ -81,9 +84,13 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run build
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000

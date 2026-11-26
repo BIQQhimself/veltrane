@@ -5,8 +5,8 @@ import hmac
 import json
 import time
 import uuid
+from datetime import UTC
 
-import pytest
 from app.services.billing import _mock_secret
 from tests.conftest import BASE
 
@@ -150,12 +150,12 @@ def test_change_plan_upgrade_and_downgrade(client, trader, db):
         },
     }
     # Bring the renewal date forward instead of waiting seven trial days.
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from app.db.models import Subscription
 
     sub = db.query(Subscription).filter(Subscription.org_id == trader["org_id"]).one()
-    sub.pending_effective_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    sub.pending_effective_at = datetime.now(UTC) - timedelta(seconds=1)
     db.commit()
 
     assert send_event(client, renewal).status_code == 200

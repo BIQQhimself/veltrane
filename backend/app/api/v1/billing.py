@@ -9,7 +9,6 @@ from app.api.schemas import (
     ConsentRequest,
     MockCompleteRequest,
 )
-from app.core.errors import not_found
 from app.core.rate_limit import enforce
 from app.db.models import Invoice, Payment, Plan, Refund, User
 from app.db.session import get_db

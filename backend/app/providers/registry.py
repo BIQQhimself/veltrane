@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from app.providers.base import Capabilities, ProviderInfo
 from app.providers.ccxt_provider import build_providers
 from app.providers.deriv import DerivProvider
 from app.providers.paper import PaperProvider

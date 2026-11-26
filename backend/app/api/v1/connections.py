@@ -7,11 +7,11 @@ from app.core.errors import forbidden
 from app.db.constants import Entitlement
 from app.db.models import Balance, Connection, ConnectionCredential, LedgerTransaction, User
 from app.db.session import get_db
+from app.providers.base import CredentialBundle
 from app.providers.registry import provider_catalog
 from app.services import connections as connection_service
 from app.services import entitlements
-from app.services.connections import load_credentials, store_credentials
-from app.providers.base import CredentialBundle
+from app.services.connections import store_credentials
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 

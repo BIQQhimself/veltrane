@@ -17,7 +17,6 @@ export function VerifyForm({ token }: { token: string }) {
     if (!token || attempted.current) return;
     attempted.current = true;
     void submit(token);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   async function submit(candidate: string) {

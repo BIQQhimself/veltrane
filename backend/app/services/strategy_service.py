@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.core.errors import bad_request, forbidden, not_found
 from app.db.constants import AuditAction, Entitlement, NotificationCategory, Severity
 from app.db.models import Backtest, PaperSession, Position, Strategy, StrategyVersion, User
 from app.services import audit, entitlements, market_data, notifications, usage
-from app.strategies.backtest import CostModel, run_backtest as run_backtest_engine, walk_forward
+from app.strategies.backtest import CostModel, walk_forward
+from app.strategies.backtest import run_backtest as run_backtest_engine
 from app.strategies.base import PositionState
 from app.strategies.library import LIBRARY, get_strategy
 from app.trading.engine import OrderRequest, close_position, submit_order
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def seed_system_strategies(db: Session) -> None:
@@ -308,8 +309,8 @@ def run_backtest(
         strategy_version_id=version.id,
         instrument_symbol=symbol,
         timeframe=timeframe,
-        start_at=datetime.fromtimestamp(candles[0].ts / 1000, tz=timezone.utc),
-        end_at=datetime.fromtimestamp(candles[-1].ts / 1000, tz=timezone.utc),
+        start_at=datetime.fromtimestamp(candles[0].ts / 1000, tz=UTC),
+        end_at=datetime.fromtimestamp(candles[-1].ts / 1000, tz=UTC),
         params=merged_params,
         cost_model=costs.as_dict(),
         status="completed",

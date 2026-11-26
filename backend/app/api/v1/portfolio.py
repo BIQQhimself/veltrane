@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.api import serializers
 from app.api.deps import get_current_user
@@ -148,4 +148,4 @@ def market_overview(user: User = Depends(get_current_user)):
             rows.append({**item, "price": snap.price, "is_demo": snap.is_demo, "source": snap.source})
         except Exception as exc:  # noqa: BLE001
             rows.append({**item, "price": None, "error": str(exc)[:120], "is_demo": True})
-    return {"markets": rows, "as_of": datetime.now(timezone.utc).isoformat()}
+    return {"markets": rows, "as_of": datetime.now(UTC).isoformat()}

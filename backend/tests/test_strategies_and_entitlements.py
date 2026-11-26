@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tests.conftest import BASE, place_order
+from tests.conftest import BASE
 
 
 def test_free_plan_cannot_backtest(client, trader):

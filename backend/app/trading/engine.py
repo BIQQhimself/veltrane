@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.core.errors import bad_request, conflict, forbidden, not_found
@@ -81,7 +81,7 @@ class OrderRequest:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _today_start() -> datetime:
@@ -299,7 +299,7 @@ def build_context(
             price=snapshot.price,
             bid=snapshot.bid,
             ask=snapshot.ask,
-            as_of=datetime.fromtimestamp(snapshot.ts / 1000, tz=timezone.utc),
+            as_of=datetime.fromtimestamp(snapshot.ts / 1000, tz=UTC),
             age_seconds=snapshot.age_seconds,
             spread_bps=snapshot.spread_bps,
             source=snapshot.source,
@@ -601,7 +601,7 @@ def submit_order(db: Session, *, user: User, request: OrderRequest, source: str 
             email=True,
         )
         db.commit()
-        raise bad_request(exc.code, exc.message)
+        raise bad_request(exc.code, exc.message) from exc
     order.provider_order_id = result.get("provider_order_id")
     order.status = OrderStatus.FILLED if float(result.get("filled") or 0) > 0 else OrderStatus.OPEN
     order.filled_qty = float(result.get("filled") or 0)

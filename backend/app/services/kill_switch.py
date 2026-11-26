@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.redis_client import cache_delete, cache_set, get_redis
 from app.db.constants import AuditAction, KillScope, NotificationCategory, Severity
@@ -30,7 +30,7 @@ FILE_FLAG_ENV = "VELTRANE_KILL_SWITCH_FILE"
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _file_flag_present() -> bool:
@@ -40,7 +40,6 @@ def _file_flag_present() -> bool:
 
 def _mirror(scope: str, target: str, engaged: bool) -> None:
     key = REDIS_KEY.format(scope=scope, target=target)
-    client = get_redis()
     if engaged:
         cache_set(key, "1", 60 * 60 * 24 * 30)
     else:

@@ -16,15 +16,15 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
+from app.core.crypto import Envelope, decrypt_json
 from app.core.errors import bad_request, forbidden, not_found
 from app.core.security import verify_totp
 from app.db.constants import AuditAction, Entitlement, NotificationCategory, Severity
 from app.db.models import Connection, TradingPermission, User
 from app.services import audit, entitlements, notifications
-from app.core.crypto import Envelope, decrypt_json
 from sqlalchemy.orm import Session
 
 RISK_DOCUMENT_VERSION = "risk-disclosure-2026-01"
@@ -44,7 +44,7 @@ COOLOFF_SECONDS = 60
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def current_permission(db: Session, org_id: str) -> TradingPermission | None:
@@ -245,7 +245,6 @@ def revoke_authorization(db: Session, *, user: User, reason: str) -> TradingPerm
 
 
 def _mfa_secret(db: Session, user: User) -> str:
-    from app.core.crypto import decrypt_json
 
     if not user.mfa_secret_enc:
         return ""

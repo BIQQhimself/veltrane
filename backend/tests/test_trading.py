@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from tests.conftest import BASE, mark_connection_connected, place_order
 
@@ -224,7 +224,7 @@ def test_live_authorization_requires_checklist_and_cooloff(client, pro_trader, d
 
     # Simulate the elapsed cooling-off window without sleeping in the test suite.
     permission = db.query(TradingPermission).filter(TradingPermission.org_id == pro_trader["org_id"]).first()
-    permission.risk_acknowledged_at = datetime.now(timezone.utc) - timedelta(seconds=120)
+    permission.risk_acknowledged_at = datetime.now(UTC) - timedelta(seconds=120)
     db.commit()
 
     confirmed = client.post(
@@ -242,7 +242,7 @@ def test_live_authorization_requires_checklist_and_cooloff(client, pro_trader, d
 
 
 def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db):
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from app.db.models import TradingPermission
     from app.services.live_authorization import CHECKLIST_ITEMS
@@ -261,7 +261,7 @@ def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db):
     )
     token = started.json()["confirmation_token"]
     permission = db.query(TradingPermission).filter(TradingPermission.org_id == pro_trader["org_id"]).first()
-    permission.risk_acknowledged_at = datetime.now(timezone.utc) - timedelta(seconds=120)
+    permission.risk_acknowledged_at = datetime.now(UTC) - timedelta(seconds=120)
     db.commit()
     client.post(
         f"{BASE}/trading/live-authorization/confirm",

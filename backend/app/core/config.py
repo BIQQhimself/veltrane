@@ -84,7 +84,7 @@ class Settings(BaseSettings):
         return secrets.token_bytes(32)
 
     @model_validator(mode="after")
-    def _production_guards(self) -> "Settings":
+    def _production_guards(self) -> Settings:
         if self.env == "production":
             if self.secret_key == INSECURE_SECRET or len(self.secret_key) < 32:
                 raise RuntimeError("VELTRANE_SECRET_KEY must be a unique 32+ char value in production")

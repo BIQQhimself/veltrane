@@ -1,0 +1,31 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+# Correctness and import hygiene only. Line length (E5) and opinionated
+# refactor rules (RUF, SIM, C4, PL) are deliberately out of scope so the
+# suite flags defects rather than restyling the codebase.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI expresses dependency injection as a call in a default argument.
+extend-immutable-calls = [
+    "fastapi.Body",
+    "fastapi.Cookie",
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Query",
+    "fastapi.Security",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Both files must configure the interpreter environment before importing the app.
+"tests/conftest.py" = ["E402"]
+"alembic/env.py" = ["E402"]
+# Alembic revisions are generated files; long literals are expected.
+"alembic/versions/*.py" = ["E501"]

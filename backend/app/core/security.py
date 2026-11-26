@@ -3,15 +3,14 @@ from __future__ import annotations
 import hashlib
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import jwt
 import pyotp
+from app.core.config import settings
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
-
-from app.core.config import settings
 
 _hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
 ALGORITHM = "HS256"
@@ -53,7 +52,7 @@ def password_strength_errors(password: str) -> list[str]:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def create_token(

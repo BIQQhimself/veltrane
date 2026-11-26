@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.api import serializers
 from app.api.deps import get_current_user, get_or_404
@@ -53,7 +53,7 @@ def mark_read(notification_id: str, user: User = Depends(get_current_user), db: 
     if note is None or note.org_id != user.org_id:
         raise not_found("notification_not_found", "Notification not found.")
     if note.read_at is None:
-        note.read_at = datetime.now(timezone.utc)
+        note.read_at = datetime.now(UTC)
         db.commit()
     return {"status": "read"}
 
@@ -63,7 +63,7 @@ def mark_all_read(user: User = Depends(get_current_user), db: Session = Depends(
     count = (
         db.query(Notification)
         .filter(Notification.org_id == user.org_id, Notification.read_at.is_(None))
-        .update({Notification.read_at: datetime.now(timezone.utc)})
+        .update({Notification.read_at: datetime.now(UTC)})
     )
     db.commit()
     return {"status": "read", "count": count}
@@ -116,7 +116,7 @@ def update_onboarding(payload: OnboardingUpdate, user: User = Depends(get_curren
         org.onboarding = {
             **(org.onboarding or {}),
             **payload.data,
-            "last_step_at": datetime.now(timezone.utc).isoformat(),
+            "last_step_at": datetime.now(UTC).isoformat(),
             "last_step": user.onboarding_step,
         }
     db.commit()
@@ -139,7 +139,7 @@ def create_ticket(payload: SupportTicketCreate, user: User = Depends(get_current
         body=payload.body,
         priority=payload.priority,
         status="open",
-        messages=[{"role": "user", "message": payload.body, "at": datetime.now(timezone.utc).isoformat()}],
+        messages=[{"role": "user", "message": payload.body, "at": datetime.now(UTC).isoformat()}],
     )
     db.add(ticket)
     db.commit()

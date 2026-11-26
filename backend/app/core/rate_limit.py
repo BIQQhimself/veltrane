@@ -3,10 +3,9 @@ from __future__ import annotations
 import threading
 import time
 
-from fastapi import Request
-
 from app.core.errors import too_many
 from app.core.redis_client import get_redis
+from fastapi import Request
 
 _memory: dict[str, tuple[int, float]] = {}
 _lock = threading.Lock()

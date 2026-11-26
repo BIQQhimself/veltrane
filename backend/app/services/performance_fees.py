@@ -8,7 +8,7 @@ Safety properties:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.errors import bad_request, forbidden
 from app.db.constants import AuditAction, Entitlement, NotificationCategory, Severity
@@ -38,7 +38,7 @@ DEFAULT_SETTINGS = {
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def settings_for(db: Session) -> dict:

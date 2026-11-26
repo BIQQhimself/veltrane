@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.db.constants import FeeKind, NotificationCategory, OrderStatus, Severity
@@ -37,7 +37,7 @@ class FillResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _mark_price(db: Session, session_id: str, symbol: str, fallback: float) -> float:

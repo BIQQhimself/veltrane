@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from tests.conftest import BASE, place_order
 
@@ -65,7 +65,6 @@ def test_consent_requires_legal_review_then_records(client, elite_trader, admin)
     state = client.get(f"{BASE}/billing/performance-fee", headers=elite_trader["headers"]).json()
     assert state["consent"]["fee_rate"] == 0.2
 
-    from app.db.models import AuditLog
 
     assert client.get(f"{BASE}/users/me/audit", headers=elite_trader["headers"]).json()["entries"]
 
@@ -116,11 +115,11 @@ def test_fee_computed_on_realised_pnl_above_high_water_mark(client, elite_trader
     assert realised != 0
 
     consent = db.query(FeeConsent).filter(FeeConsent.org_id == elite_trader["org_id"]).one()
-    consent.accepted_at = datetime.now(timezone.utc) - timedelta(days=2)
+    consent.accepted_at = datetime.now(UTC) - timedelta(days=2)
     db.commit()
 
-    period_start = datetime.now(timezone.utc) - timedelta(days=1)
-    period_end = datetime.now(timezone.utc) + timedelta(days=1)
+    period_start = datetime.now(UTC) - timedelta(days=1)
+    period_end = datetime.now(UTC) + timedelta(days=1)
     computed = client.post(
         f"{BASE}/admin/performance-fees/compute",
         json={"org_id": elite_trader["org_id"], "period_start": period_start.isoformat(), "period_end": period_end.isoformat()},
@@ -150,14 +149,14 @@ def test_no_fee_below_high_water_mark(client, elite_trader, admin, db):
         f"{BASE}/billing/performance-fee/consent", json={"accepted": True}, headers=elite_trader["headers"]
     )
     consent = db.query(FeeConsent).filter(FeeConsent.org_id == elite_trader["org_id"]).one()
-    consent.accepted_at = datetime.now(timezone.utc) - timedelta(days=10)
+    consent.accepted_at = datetime.now(UTC) - timedelta(days=10)
     hwm = HighWaterMark(
-        org_id=elite_trader["org_id"], scope="portfolio", value=1_000_000.0, as_of=datetime.now(timezone.utc)
+        org_id=elite_trader["org_id"], scope="portfolio", value=1_000_000.0, as_of=datetime.now(UTC)
     )
     db.add(hwm)
     db.commit()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     computed = client.post(
         f"{BASE}/admin/performance-fees/compute",
         json={"org_id": elite_trader["org_id"], "period_start": (now - timedelta(days=1)).isoformat(), "period_end": now.isoformat()},
@@ -169,7 +168,7 @@ def test_no_fee_below_high_water_mark(client, elite_trader, admin, db):
 
 def test_compute_requires_consent(client, elite_trader, admin):
     _enable_fees(client, admin)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     response = client.post(
         f"{BASE}/admin/performance-fees/compute",
         json={"org_id": elite_trader["org_id"], "period_start": (now - timedelta(days=1)).isoformat(), "period_end": now.isoformat()},
@@ -180,7 +179,7 @@ def test_compute_requires_consent(client, elite_trader, admin):
 
 
 def test_compute_blocked_when_disabled(client, elite_trader, admin):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     response = client.post(
         f"{BASE}/admin/performance-fees/compute",
         json={"org_id": elite_trader["org_id"], "period_start": (now - timedelta(days=1)).isoformat(), "period_end": now.isoformat()},

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from app.db.models import UsageMetric
 from sqlalchemy.exc import IntegrityError
@@ -69,4 +69,4 @@ def remaining_today(db: Session, org_id: str, metric: str, limit: int | None) ->
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

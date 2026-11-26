@@ -120,9 +120,13 @@ request.
 
 ## 11. Dependency and supply chain
 
-Dependencies are pinned in `backend/requirements.txt`. Run
-`pip-audit -r backend/requirements.txt` before each release and record the result in the release
-notes. No dependency is loaded from a non-standard index.
+Dependencies are pinned exactly in `backend/requirements.txt`; transitive security-relevant
+packages (`starlette`, `aiohttp`) are pinned explicitly so the audited set cannot drift. Run
+`pip-audit -r backend/requirements.txt --strict` before each release and record the result in the
+release notes. The audit runs on every push in CI and is currently clean; it was last cleared by
+upgrading FastAPI 0.115 → 0.165, Starlette 0.41 → 1.10, aiohttp 3.10 → 3.14, cryptography 44 → 50,
+PyJWT 2.10 → 2.15, python-multipart 0.0.20 → 0.0.34, ccxt 4.4 → 4.5 and pytest 8.3 → 9.2. No
+dependency is loaded from a non-standard index.
 
 ## 12. Backup and recovery
 
