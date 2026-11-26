@@ -127,7 +127,9 @@ export default function StrategiesPage() {
         description="Versioned rules with stated limitations. Backtests are net of modelled fees, spread, slippage and funding — and they are not predictions."
         action={
           <Badge tone="gold">
-            {libraryCodes ? `${libraryCodes.length} in your library` : "core library"}
+            {libraryCodes
+              ? `${library.filter((strategy) => libraryCodes.includes(strategy.code)).length} of ${library.length} unlocked`
+              : "core library"}
           </Badge>
         }
       />
@@ -151,12 +153,19 @@ export default function StrategiesPage() {
         ) : library.length ? (
           <>
             <div className="grid gap-4 md:grid-cols-2">
-              {library.map((strategy) => (
+              {library.map((strategy) => {
+                const locked = Boolean(libraryCodes && !libraryCodes.includes(strategy.code));
+                return (
                 <Panel key={strategy.code} className="flex flex-col">
                   <PanelHeader
                     title={strategy.name}
                     subtitle={strategy.category}
-                    action={strategy.version ? <Badge tone="neutral">v{strategy.version}</Badge> : null}
+                    action={
+                      <span className="flex items-center gap-1.5">
+                        {locked ? <Badge tone="outline">Elite</Badge> : null}
+                        {strategy.version ? <Badge tone="neutral">v{strategy.version}</Badge> : null}
+                      </span>
+                    }
                   />
                   <PanelBody className="flex flex-1 flex-col">
                     <p className="text-xs leading-relaxed text-paper-muted">{strategy.summary}</p>
@@ -180,13 +189,20 @@ export default function StrategiesPage() {
                       >
                         View specification
                       </button>
-                      <Button size="sm" variant="secondary" disabled={busy} onClick={() => startSession(strategy.code)}>
-                        Paper session
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={busy || locked}
+                        title={locked ? "Included from the Elite plan" : undefined}
+                        onClick={() => startSession(strategy.code)}
+                      >
+                        {locked ? "Elite plan" : "Paper session"}
                       </Button>
                     </div>
                   </PanelBody>
                 </Panel>
-              ))}
+                );
+              })}
             </div>
             <p className="text-2xs leading-relaxed text-paper-faint">{strategies.data?.disclaimer}</p>
           </>
