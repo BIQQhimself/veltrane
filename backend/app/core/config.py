@@ -36,6 +36,10 @@ class Settings(BaseSettings):
 
     database_url: str
     redis_url: str = "redis://127.0.0.1:6379/0"
+    # Connection pool budget per process. Lower it on hosts whose database caps connections
+    # (managed free tiers usually allow far fewer than the defaults).
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
 
     access_token_minutes: int = 15
     refresh_token_days: int = 14
@@ -149,6 +153,19 @@ class Settings(BaseSettings):
             raise RuntimeError("VELTRANE_MASTER_ENCRYPTION_KEY is required in production")
         # Ephemeral key: credentials created in this process cannot be read after restart.
         return secrets.token_bytes(32)
+
+    @field_validator("database_url")
+    @classmethod
+    def _psycopg_driver(cls, v: str) -> str:
+        """Accept the libpq URLs managed hosts hand out.
+
+        This project ships psycopg 3, so a bare ``postgresql://`` would make SQLAlchemy reach
+        for psycopg2, which is not installed.
+        """
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
 
     @field_validator("cookie_samesite")
     @classmethod

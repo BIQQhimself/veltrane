@@ -49,6 +49,11 @@ services:
       # The API refuses to start in production without it.
       - key: VELTRANE_MASTER_ENCRYPTION_KEY
         sync: false
+      # Free Postgres caps connections; keep each API process inside that budget.
+      - key: VELTRANE_DB_POOL_SIZE
+        value: "5"
+      - key: VELTRANE_DB_MAX_OVERFLOW
+        value: "5"
       - key: VELTRANE_COOKIE_SECURE
         value: "true"
       # corvex.fun and api.corvex.fun are the same site, so Lax cookies are sent; the

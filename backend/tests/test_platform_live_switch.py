@@ -134,3 +134,16 @@ def test_forwarded_header_ignored_from_untrusted_peer(monkeypatch):
     assert rate_limit.client_ip(request("198.51.100.7", "1.2.3.4")) == "198.51.100.7"
     # Peer inside the trusted range: the real client address is used.
     assert rate_limit.client_ip(request("10.0.1.5", "1.2.3.4")) == "1.2.3.4"
+
+
+def test_libpq_database_urls_are_mapped_to_psycopg(tmp_path):
+    from app.core.config import Settings
+
+    base = {"env": "test", "secret_key": "test-secret-key-0123456789abcdef0123456789abcdef"}
+    for given in (
+        "postgres://user:pw@db.internal:5432/veltrane",
+        "postgresql://user:pw@db.internal:5432/veltrane",
+        "postgresql+psycopg://user:pw@db.internal:5432/veltrane",
+    ):
+        settings = Settings(database_url=given, **base)
+        assert settings.database_url == "postgresql+psycopg://user:pw@db.internal:5432/veltrane", given

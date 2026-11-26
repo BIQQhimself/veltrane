@@ -12,7 +12,9 @@ in production.
 | `VELTRANE_SECRET_KEY` | dev placeholder | **required** in production, 32+ chars. Signs JWTs |
 | `VELTRANE_MASTER_ENCRYPTION_KEY` | empty | **required** in production. Base64 of 32 bytes. Wraps credential DEKs |
 | `VELTRANE_KEK_VERSION` | `1` | Increment when rotating the master key |
-| `VELTRANE_DATABASE_URL` | `postgresql+psycopg://DB_USER:DB_PASSWORD@127.0.0.1:5432/veltrane` | **Required.** No default is built in; use a pooled URL in production |
+| `VELTRANE_DATABASE_URL` | `postgresql+psycopg://DB_USER:DB_PASSWORD@127.0.0.1:5432/veltrane` | **Required.** No default is built in; use a pooled URL in production. `postgres://` and `postgresql://` are accepted and rewritten to the psycopg 3 driver, which is what managed hosts hand out |
+| `VELTRANE_DB_POOL_SIZE` | `10` | SQLAlchemy pool per process. Lower it when the database caps connections |
+| `VELTRANE_DB_MAX_OVERFLOW` | `20` | Extra connections above the pool size |
 | `POSTGRES_PASSWORD` | `choose-a-local-development-password` | Only read by `docker-compose.yml` to provision the local Postgres container |
 | `VELTRANE_REDIS_URL` | `redis://127.0.0.1:6379/0` | Rate limits, cache, token denylist |
 | `VELTRANE_API_BASE_URL` | `http://localhost:8000` | Used in email links |
