@@ -53,7 +53,7 @@ from app.risk.types import (
     RiskContext,
     merged_rules,
 )
-from app.services import audit, entitlements, kill_switch, market_data, notifications, usage
+from app.services import audit, entitlements, kill_switch, market_data, notifications, platform_switch, usage
 from app.services.connections import load_credentials
 from app.trading import paper
 from sqlalchemy.orm import Session
@@ -352,7 +352,7 @@ def build_context(
         policy=policy.rules if policy else DEFAULT_RISK_RULES,
         policy_id=policy.id if policy else None,
         policy_version=policy.version if policy else 1,
-        global_live_enabled=settings.live_trading_enabled,
+        global_live_enabled=platform_switch.effective(db),
         org_live_authorized=bool(permission and permission.live_enabled),
         org_live_entitlement=entitlements.has_feature(db, user.org_id, Entitlement.LIVE_TRADING),
         org_suspended=org_suspended,
@@ -660,7 +660,7 @@ def submit_order(db: Session, *, user: User, request: OrderRequest, source: str 
 
     # ------------------------- live path -------------------------
     # Re-check the process-wide switch immediately before any venue call (defence in depth).
-    if not settings.live_trading_enabled:
+    if not platform_switch.effective(db):
         order.status = OrderStatus.REJECTED
         order.rejection_reason = "Live trading is disabled by platform policy."
         db.flush()

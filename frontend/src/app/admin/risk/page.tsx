@@ -17,17 +17,30 @@ import { useToast } from "@/components/ui/toast";
 type Policy = { policy: { id: string | null; version: number; rules: Record<string, number | boolean>; defaults: Record<string, number | boolean> } };
 type Switch = { id: string; scope: string; target: string; engaged: boolean; reason: string | null; engaged_at: string | null; released_at: string | null };
 type Flags = { flags: Array<{ key: string; enabled: boolean; description: string; rollout: Record<string, unknown>; updated_at: string }> };
+type LiveSwitch = {
+  deployment_enabled: boolean;
+  staff_enabled: boolean;
+  effective: boolean;
+  reason: string;
+  updated_at: string | null;
+  updated_by: string | null;
+  note: string;
+};
 
 export default function AdminRiskPage() {
   const toast = useToast();
   const policy = useApi<Policy>((signal) => api("/admin/risk/policy", { signal }));
   const switches = useApi<{ switches: Switch[]; platform_live_enabled: boolean }>((signal) => api("/admin/kill-switches", { signal }));
   const flags = useApi<Flags>((signal) => api("/admin/feature-flags", { signal }));
+  const liveSwitch = useApi<LiveSwitch>((signal) => api("/admin/live-trading", { signal }));
 
   const [rules, setRules] = React.useState<Record<string, number | boolean>>({});
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [confirmHalt, setConfirmHalt] = React.useState(false);
+  const [liveDialog, setLiveDialog] = React.useState<"enable" | "disable" | null>(null);
+  const [liveReason, setLiveReason] = React.useState("");
+  const [liveConfirm, setLiveConfirm] = React.useState("");
   const [haltReason, setHaltReason] = React.useState("Operator halt: reviewing risk controls");
 
   React.useEffect(() => {
@@ -58,6 +71,31 @@ export default function AdminRiskPage() {
       flags.refetch();
     } catch (error) {
       toast.error("Flag update failed", errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setLiveTrading(enabled: boolean) {
+    setBusy(true);
+    try {
+      await api("/admin/live-trading", {
+        method: "PUT",
+        body: { enabled, reason: liveReason, confirm: liveConfirm },
+      });
+      toast.info(
+        enabled ? "Live trading armed" : "Live trading halted",
+        enabled
+          ? "Every order still passes the risk engine and each user's own authorisation."
+          : "New live orders are refused platform-wide until both keys allow them.",
+      );
+      setLiveDialog(null);
+      setLiveConfirm("");
+      setLiveReason("");
+      liveSwitch.refetch();
+      switches.refetch();
+    } catch (error) {
+      toast.error("Live trading switch failed", errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -158,6 +196,59 @@ export default function AdminRiskPage() {
         </Panel>
 
         <div className="space-y-4">
+          <Panel>
+            <PanelHeader
+              title="Live trading master switch"
+              subtitle="Two keys must agree: the operator flag and this staff key"
+              action={
+                <Badge tone={liveSwitch.data?.effective ? "loss" : "gain"}>
+                  {liveSwitch.data?.effective ? "live armed" : "live off"}
+                </Badge>
+              }
+            />
+            <PanelBody className="space-y-3">
+              {liveSwitch.loading ? (
+                <Skeleton className="h-20 w-full" />
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2 text-2xs">
+                    <div className="rounded-lg border border-line-soft px-3 py-2">
+                      <p className="text-paper-faint">Operator key</p>
+                      <p className="mt-1 text-paper">
+                        {liveSwitch.data?.deployment_enabled ? "enabled" : "disabled"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-line-soft px-3 py-2">
+                      <p className="text-paper-faint">Staff key</p>
+                      <p className="mt-1 text-paper">{liveSwitch.data?.staff_enabled ? "enabled" : "disabled"}</p>
+                    </div>
+                  </div>
+                  <p className="text-2xs leading-relaxed text-paper-faint">
+                    {liveSwitch.data?.note ?? ""}
+                    {liveSwitch.data?.updated_by
+                      ? ` Last changed by ${liveSwitch.data.updated_by} at ${dateTime(liveSwitch.data.updated_at)}.`
+                      : ""}
+                  </p>
+                  {liveSwitch.data?.staff_enabled ? (
+                    <Button variant="danger" onClick={() => setLiveDialog("disable")} disabled={busy}>
+                      <Power className="h-3.5 w-3.5" />
+                      Disable live trading
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setLiveDialog("enable")}
+                      disabled={busy || !liveSwitch.data?.deployment_enabled}
+                    >
+                      <Power className="h-3.5 w-3.5" />
+                      Enable live trading
+                    </Button>
+                  )}
+                </>
+              )}
+            </PanelBody>
+          </Panel>
+
           <Panel className={globalSwitch ? "border-loss/40" : undefined}>
             <PanelHeader title="Global kill switch" subtitle="Durable and independent of the app" />
             <PanelBody className="space-y-3">
@@ -247,6 +338,55 @@ export default function AdminRiskPage() {
           )}
         </PanelBody>
       </Panel>
+
+      <Dialog
+        open={liveDialog !== null}
+        onClose={() => setLiveDialog(null)}
+        title={liveDialog === "enable" ? "Enable live trading" : "Disable live trading"}
+        description="Live execution also needs the operator flag, each user's own authorisation and every risk check. This change is audit logged."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setLiveDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant={liveDialog === "enable" ? "danger" : "secondary"}
+              loading={busy}
+              disabled={
+                liveReason.trim().length < 3 ||
+                liveConfirm.trim().toUpperCase() !==
+                  (liveDialog === "enable" ? "ENABLE LIVE TRADING" : "DISABLE LIVE TRADING")
+              }
+              onClick={() => setLiveTrading(liveDialog === "enable")}
+            >
+              {liveDialog === "enable" ? "Enable" : "Disable"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="Reason" htmlFor="live_reason" hint="Recorded with your identity.">
+            <Textarea
+              id="live_reason"
+              value={liveReason}
+              onChange={(event) => setLiveReason(event.target.value)}
+              className="min-h-14"
+            />
+          </Field>
+          <Field
+            label="Confirmation"
+            htmlFor="live_confirm"
+            hint={`Type ${liveDialog === "enable" ? "ENABLE LIVE TRADING" : "DISABLE LIVE TRADING"} to continue.`}
+          >
+            <Input
+              id="live_confirm"
+              value={liveConfirm}
+              onChange={(event) => setLiveConfirm(event.target.value)}
+              autoComplete="off"
+            />
+          </Field>
+        </div>
+      </Dialog>
 
       <Dialog
         open={confirmHalt}

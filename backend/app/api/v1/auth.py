@@ -22,7 +22,7 @@ from app.core.security import create_token, decode_token, new_csrf_token
 from app.db.models import User
 from app.db.session import get_db
 from app.services import auth as auth_service
-from app.services import entitlements
+from app.services import entitlements, platform_switch
 from app.services.live_authorization import live_state
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
@@ -243,7 +243,7 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
         },
         "live": live_state(db, user.org_id),
         "platform": {
-            "live_trading_enabled": settings.live_trading_enabled,
+            "live_trading_enabled": platform_switch.effective(db),
             "demo_market_data_enabled": settings.demo_market_data_enabled,
             "env": settings.env,
         },

@@ -175,6 +175,12 @@ class LiveAuthorizationStart(BaseModel):
     connection_id: str | None = None
 
 
+class LiveTradingSwitchRequest(BaseModel):
+    enabled: bool
+    reason: str = Field(min_length=3, max_length=400)
+    confirm: str = Field(description="Type ENABLE LIVE TRADING or DISABLE LIVE TRADING to match the toggle.")
+
+
 class LiveAuthorizationConfirm(BaseModel):
     confirmation_token: str
     reason: str = Field(default="User confirmed live trading authorisation", max_length=300)

@@ -237,3 +237,28 @@ def test_stripe_signature_verification_unit():
 
     assert verify_stripe_signature(b"{}", None) is False
     assert verify_stripe_signature(b"{}", "t=1,v1=deadbeef") is False
+
+
+def test_billing_off_refuses_checkout_and_webhooks(client, trader, monkeypatch):
+    from app.core.errors import AppError
+    from app.services import billing
+
+    monkeypatch.setattr(billing.settings, "billing_provider", "off")
+
+    response = client.post(f"{BASE}/billing/checkout", headers=trader["headers"], json={"plan_code": "pro"})
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "billing_disabled"
+
+    webhook = client.post(
+        f"{BASE}/webhooks/billing/off", content=b"{}", headers={"Content-Type": "application/json"}
+    )
+    assert webhook.status_code in (503, 404)
+    if webhook.status_code == 503:
+        assert webhook.json()["detail"]["code"] == "billing_disabled"
+
+    try:
+        billing.provider_for()
+    except AppError as exc:
+        assert exc.status_code == 503
+    else:  # pragma: no cover - the call must raise
+        raise AssertionError("provider_for must refuse when billing is off")

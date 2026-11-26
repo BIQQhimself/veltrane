@@ -11,12 +11,16 @@ the platform is not ready to take paying customers while any blocking cross rema
 | 2 | Verified exchange connectivity | ✗ | No adapter has touched a real account. Status is `implemented_unverified` |
 | 3 | Independent security review | ✗ | Never performed |
 | 4 | Regulatory and legal review | ✗ | Not started; required before live trading or performance fees |
-| 5 | Payment provider in live mode | ✗ | Stripe adapter untested against Stripe; mock provider is refused in production |
+| 5 | Payment provider in live mode | ✗ | Stripe adapter untested against Stripe; mock provider is refused in production, and the Render blueprint runs with billing `off` so checkout refuses instead of granting plans |
 | 6 | Terms of service and privacy policy | ✗ | Not drafted |
 | 7 | Point-in-time recovery backups | ✗ | Nightly logical dumps only |
 | 8 | Mandatory MFA for staff | ✗ | MFA exists but is optional |
 | 9 | Load and soak testing | ✗ | No capacity numbers exist |
 | 10 | On-call and incident staffing | ✗ | Procedure documented, people not assigned |
+| 11 | Deployed environment | ◐ | `render.yaml` (free tier: static site + web service + Postgres) and `DEPLOYMENT_RENDER.md` are prepared and reviewed in-repo, but nothing has been deployed and `corvex.fun` is not connected |
+| 12 | Email delivery | ✗ | `deliver_queued()` only counts queued mail; no provider is wired, so verification and reset emails are never sent |
+| 13 | Durable database with backups | ✗ | Render's free Postgres expires 30 days after creation and has no managed backups |
+| 14 | Shared rate-limit store | ◐ | Redis is optional; without it the limiter is per process. Kill switches, entitlements and live gates are database-backed |
 
 ## Verified engineering controls
 
@@ -44,6 +48,32 @@ the platform is not ready to take paying customers while any blocking cross rema
 | 20 | A signal the risk engine refuses is stored rejected, never executed | `tests/test_deriv_autotrade.py` |
 | 21 | Schema parity between Alembic head and the ORM models | `tests/test_migrations.py` |
 | 22 | Fixed-odds exposure is the stake, so position size cannot be bypassed by a one-contract position | `tests/test_deriv_integration.py`, `tests/test_risk_engine.py` |
+
+## Master live-trading switch
+
+The kill switch and the live-trading authorisation flow are not the only gates. Live execution
+needs two independent keys:
+
+| Key | Owner | Storage | Effect |
+| --- | --- | --- | --- |
+| Deployment flag | Whoever operates the host | `VELTRANE_LIVE_TRADING_ENABLED` environment variable | When false, no code path can reach a live adapter, whatever the app says |
+| Staff key | Owner/Admin race inside the app | `system_settings` row `live_trading.staff_control` | Can always stop live trading; can only arm it when the deployment flag is on |
+
+Evidence: `app/services/platform_switch.py`, `backend/tests/test_platform_live_switch.py`, and the
+`PUT /api/v1/admin/live-trading` endpoint, which requires the typed phrase `ENABLE LIVE TRADING` /
+`DISABLE LIVE TRADING`, a written reason, an Owner/Admin role, and writes
+`admin.live_trading_switch` to the audit log. A member calling the endpoint receives `404`, matching
+the rest of the admin surface.
+
+## Render free-tier topology (prepared, not deployed)
+
+| Component | Target | State |
+| --- | --- | --- |
+| Frontend | Render Static Site, Next.js `output: "export"`, `corvex.fun` + `www.corvex.fun` | Blueprint + build mode implemented and built locally (`VELTRANE_STATIC_EXPORT=1`) |
+| Backend | Render Web Service, uvicorn, migrations at start, `api.corvex.fun` | Blueprint implemented; production guards exercised by tests |
+| Database | Render free Postgres | Blueprint implemented; 30-day expiry documented |
+| HTTPS | Render-managed certificates | Documented; requires DNS records the owner must add |
+| Backend `off` billing mode | `VELTRANE_BILLING_PROVIDER=off` | Implemented and tested: checkout and webhooks answer `503 billing_disabled` |
 
 ## Ready to take money?
 

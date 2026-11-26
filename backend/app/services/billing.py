@@ -20,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 from app.core.config import settings
-from app.core.errors import bad_request, conflict, not_found
+from app.core.errors import bad_request, conflict, not_found, unavailable
 from app.db.constants import AuditAction, NotificationCategory, PlanCode, Severity, SubscriptionStatus
 from app.db.models import Counter, Invoice, Payment, Plan, Refund, Subscription, User, WebhookEvent
 from app.services import audit, notifications
@@ -218,8 +218,17 @@ class StripeBillingProvider(BillingProvider):
         return {"status": "scheduled" if resp.status_code < 400 else "error"}
 
 
+OFF_PROVIDER = "off"
+
+
 def provider_for(name: str | None = None) -> BillingProvider:
     name = name or settings.billing_provider
+    if name == OFF_PROVIDER:
+        raise unavailable(
+            "billing_disabled",
+            "Payments are not enabled on this deployment. Plans can be granted by the operator from the "
+            "command centre; no card is charged.",
+        )
     if name == STRIPE_PROVIDER:
         return StripeBillingProvider()
     if name == MOCK_PROVIDER:
@@ -437,6 +446,8 @@ def process_webhook(
         valid = verify_stripe_signature(raw_body, normalized.get("stripe-signature"))
     elif provider == MOCK_PROVIDER:
         valid = verify_mock_signature(raw_body, normalized)
+    elif provider == OFF_PROVIDER:
+        raise unavailable("billing_disabled", "Payments are not enabled on this deployment.")
     else:
         raise bad_request("unknown_billing_provider", "Unsupported billing provider.")
 

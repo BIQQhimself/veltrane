@@ -139,3 +139,30 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   the length of the window, and it hides real trades from the risk engine.
 
 - Seed Deriv demo history (sandbox gateway): `VELTRANE_TESTER_PASSWORD=... python -m scripts.seed_deriv_history --email elite@veltrane.dev`
+
+## Render deployment (free tier)
+
+- `render.yaml` is the Blueprint: `veltrane-api` (Python web service, `rootDir: backend`),
+  `veltrane-web` (Render *static site* from `frontend/out`), `veltrane-db` (free Postgres).
+  `DEPLOYMENT_RENDER.md` holds the DNS/cookie/CORS/deploy notes for `corvex.fun`.
+- The static build requires `VELTRANE_STATIC_EXPORT=1` (`next.config.ts` then sets
+  `output: "export"`, `trailingSlash`, and drops rewrites/headers, which a static host cannot
+  honour). Build it locally with
+  `VELTRANE_STATIC_EXPORT=1 NEXT_PUBLIC_API_URL=https://api.corvex.fun npm run build` and check
+  `frontend/out/<route>/index.html` exists.
+- Static export forbids server-side `searchParams`; `/verify` therefore reads the token from
+  `window.location.search` in the client form. Keep new pages client-side if they need query data.
+- Production forces `VELTRANE_BILLING_PROVIDER` away from `mock`. With no processor connected use
+  `off`: checkout and billing webhooks answer `503 billing_disabled` instead of granting plans.
+- On Render every request arrives through the platform proxy, so `VELTRANE_TRUSTED_PROXIES=*`
+  (plus uvicorn `--proxy-headers`) is correct there. Without it, all visitors share one rate-limit
+  bucket. The matcher accepts exact IPs, CIDR blocks and `*` (`Settings.is_trusted_proxy`).
+- Live execution needs two keys: `VELTRANE_LIVE_TRADING_ENABLED` (operator) and the staff key in
+  `system_settings['live_trading.staff_control']` (`app/services/platform_switch.py`,
+  `PUT /api/v1/admin/live-trading`). Read the effective state with `platform_switch.effective(db)`,
+  never `settings.live_trading_enabled`, inside request paths that gate execution.
+- The frontend API client retries `502/503/504` and network errors twice (~2.5 s, ~7 s) because
+  free instances sleep; do not remove that without giving the user a cold-start message.
+- Local sandbox note: this environment has no Docker. Postgres/Redis come from apt
+  (`sudo pg_ctlcluster 17 main start`, `redis-server --daemonize yes`) and the `veltrane` role
+  password must match `.env` (`VELTRANE_DATABASE_URL`). The test suite also needs `veltrane_test`.

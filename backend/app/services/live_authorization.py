@@ -19,13 +19,12 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from app.core.config import settings
 from app.core.crypto import Envelope, decrypt_json
 from app.core.errors import bad_request, forbidden, not_found
 from app.core.security import verify_totp
 from app.db.constants import AuditAction, Entitlement, NotificationCategory, Severity
 from app.db.models import Connection, TradingPermission, User
-from app.services import audit, entitlements, notifications
+from app.services import audit, entitlements, notifications, platform_switch
 from sqlalchemy.orm import Session
 
 RISK_DOCUMENT_VERSION = "risk-disclosure-2026-01"
@@ -60,7 +59,7 @@ def current_permission(db: Session, org_id: str) -> TradingPermission | None:
 def live_state(db: Session, org_id: str) -> dict:
     perm = current_permission(db, org_id)
     return {
-        "platform_live_enabled": settings.live_trading_enabled,
+        "platform_live_enabled": platform_switch.effective(db),
         "entitlement": entitlements.has_feature(db, org_id, Entitlement.LIVE_TRADING),
         "status": perm.status if perm else "not_requested",
         "live_enabled": bool(perm and perm.live_enabled),
@@ -101,7 +100,7 @@ def start_authorization(
         )
     # An authorisation recorded while the operator has live trading switched off would sit in
     # storage and become effective the moment the flag flipped. Refuse it instead of collecting it.
-    if not settings.live_trading_enabled:
+    if not platform_switch.effective(db):
         raise forbidden(
             "live_trading_disabled",
             "Live trading is switched off on this deployment. An operator must enable it before authorisation can begin.",
@@ -178,7 +177,7 @@ def start_authorization(
 
 
 def confirm_authorization(db: Session, *, user: User, token: str, ip: str | None = None) -> TradingPermission:
-    if not settings.live_trading_enabled:
+    if not platform_switch.effective(db):
         raise forbidden(
             "live_trading_disabled",
             "Live trading was switched off on this deployment; authorisation cannot be completed.",

@@ -58,6 +58,44 @@ export const tokenStore = {
   },
 };
 
+// Render's free web services sleep after idle traffic. The first request after a sleep is
+// answered by the platform edge with 502/503/504 while the instance boots, and a request
+// that never reaches the app cannot have had an effect, so retrying those is safe.
+const WAKE_STATUSES = new Set([502, 503, 504]);
+const WAKE_DELAYS_MS = [2500, 7000] as const;
+
+function sleep(ms: number, signal?: AbortSignal | null): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function fetchWithWake(url: string, init: RequestInit, retry: boolean): Promise<Response> {
+  const signal = init.signal ?? null;
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= WAKE_DELAYS_MS.length; attempt += 1) {
+    try {
+      const response = await fetch(url, init);
+      const retryable = retry && WAKE_STATUSES.has(response.status);
+      if (!retryable || attempt === WAKE_DELAYS_MS.length) return response;
+    } catch (error) {
+      if ((error as Error).name === "AbortError") throw error;
+      lastError = error;
+      if (!retry || attempt === WAKE_DELAYS_MS.length) throw error;
+    }
+    await sleep(WAKE_DELAYS_MS[attempt] ?? 0, signal);
+  }
+  throw lastError ?? new Error("unreachable");
+}
+
 let refreshInFlight: Promise<boolean> | null = null;
 
 export async function refreshSession(): Promise<boolean> {
@@ -65,11 +103,11 @@ export async function refreshSession(): Promise<boolean> {
   const csrf = tokenStore.csrf();
   refreshInFlight = (async () => {
     try {
-      const response = await fetch(`${API_BASE}${API_PREFIX}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-        headers: csrf ? { "X-CSRF-Token": csrf } : {},
-      });
+      const response = await fetchWithWake(
+        `${API_BASE}${API_PREFIX}/auth/refresh`,
+        { method: "POST", credentials: "include", headers: csrf ? { "X-CSRF-Token": csrf } : {} },
+        true,
+      );
       if (!response.ok) return false;
       const body = (await response.json()) as { access_token?: string; csrf_token?: string };
       if (!body.access_token) return false;
@@ -107,16 +145,24 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   let response: Response;
   try {
-    response = await fetch(url.toString(), {
-      method,
-      headers,
-      credentials: "include",
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal,
-    });
+    response = await fetchWithWake(
+      url.toString(),
+      {
+        method,
+        headers,
+        credentials: "include",
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal,
+      },
+      true,
+    );
   } catch (error) {
     if ((error as Error).name === "AbortError") throw error;
-    throw new ApiError(0, "network_error", "Cannot reach the VELTRANE API. Check your connection and try again.");
+    throw new ApiError(
+      0,
+      "network_error",
+      "Cannot reach the VELTRANE API. Check your connection, then try again; a free-tier instance can take up to a minute to wake.",
+    );
   }
 
   if (response.status === 401 && retryOnAuth && !path.startsWith("/auth/")) {

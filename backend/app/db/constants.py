@@ -146,6 +146,7 @@ class AuditAction:
     LIVE_AUTH_REVOKED = "live.authorization_revoked"
     STRATEGY_VERSION_APPROVED = "strategy.version_approved"
     ADMIN_ACTION = "admin.action"
+    LIVE_SWITCH_CHANGED = "admin.live_trading_switch"
     FEATURE_FLAG_CHANGED = "feature_flag.changed"
     AUTOTRADE_UPDATED = "autotrade.updated"
     BACKTEST_COMPLETED = "backtest.completed"

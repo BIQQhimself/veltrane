@@ -35,6 +35,8 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 | `VELTRANE_REFRESH_TOKEN_DAYS` | `14` | |
 | `VELTRANE_REQUIRE_EMAIL_VERIFICATION` | `true` | Leave true in production |
 | `VELTRANE_COOKIE_SECURE` | `false` | **must** be true in production |
+| `VELTRANE_COOKIE_SAMESITE` | `lax` | `lax`, `strict` or `none`. `none` requires `VELTRANE_COOKIE_SECURE=true`; use it only when web and API sit on different sites. `corvex.fun` + `api.corvex.fun` are one site, so `lax` is correct |
+| `VELTRANE_TRUSTED_PROXIES` | `127.0.0.1,::1` | Peers allowed to set `X-Forwarded-For`. Comma list of addresses, CIDR blocks, or `*`. `*` is only correct when nothing can reach the process except the platform proxy (Render does this) |
 | `VELTRANE_MFA_ISSUER` | `VELTRANE` | Label shown in authenticator apps |
 
 ## Trading and market data
@@ -66,7 +68,7 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `VELTRANE_BILLING_PROVIDER` | `mock` | `mock` or `stripe`. **`mock` is rejected in production** |
+| `VELTRANE_BILLING_PROVIDER` | `mock` | `mock`, `stripe` or `off`. **`mock` is rejected in production.** `off` keeps the abstraction and refuses checkout with `503 billing_disabled` instead of granting paid plans for free |
 | `VELTRANE_STRIPE_SECRET_KEY` | empty | Required when provider is `stripe` |
 | `VELTRANE_STRIPE_WEBHOOK_SECRET` | empty | Required when provider is `stripe` |
 | `VELTRANE_BILLING_WEBHOOK_TOLERANCE_SECONDS` | `300` | Reject older signatures |
@@ -85,8 +87,9 @@ environment for a deployment.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | empty | Absolute API origin. Leave **empty** to call the API on the page's own origin and let Next rewrite `/api/*` |
+| `NEXT_PUBLIC_API_URL` | empty | Absolute API origin. Leave **empty** to call the API on the page's own origin and let Next rewrite `/api/*`. Public value, no secret |
 | `VELTRANE_API_PROXY` | empty | Server-side rewrite target for `/api/:path*`, e.g. `http://127.0.0.1:12001`. Only read at build/start time |
+| `VELTRANE_STATIC_EXPORT` | empty | Set to `1` to build a static site (`output: "export"`, `trailingSlash`, no rewrites/headers). Used by the Render Static Site build |
 
 Same-origin is the recommended setup: the browser then never crosses origins, so there is no CORS
 preflight and no second hostname to keep alive. `NEXT_PUBLIC_API_URL` is baked into the client
@@ -104,6 +107,8 @@ rest. Only the platform-level KEK lives in the environment.
 - `VELTRANE_SECRET_KEY` is the development placeholder or shorter than 32 characters
 - `VELTRANE_COOKIE_SECURE` is not true
 - `VELTRANE_BILLING_PROVIDER` is `mock`
+- `VELTRANE_BILLING_PROVIDER` is `stripe` while either `VELTRANE_STRIPE_SECRET_KEY` or
+  `VELTRANE_STRIPE_WEBHOOK_SECRET` is empty
 
 Set the rest deliberately:
 
@@ -114,10 +119,14 @@ VELTRANE_MASTER_ENCRYPTION_KEY=<base64 of 32 bytes>
 VELTRANE_COOKIE_SECURE=true
 VELTRANE_REQUIRE_EMAIL_VERIFICATION=true
 VELTRANE_LIVE_TRADING_ENABLED=false
-VELTRANE_BILLING_PROVIDER=stripe
+VELTRANE_BILLING_PROVIDER=stripe   # or off while no processor is connected
 VELTRANE_STRIPE_SECRET_KEY=sk_live_...
 VELTRANE_STRIPE_WEBHOOK_SECRET=whsec_...
 VELTRANE_CORS_ORIGINS=https://app.yourdomain.tld
+VELTRANE_TRUSTED_PROXIES=*
 ```
+
+The Render blueprint and the split-domain values used for `corvex.fun` are in
+[DEPLOYMENT_RENDER.md](DEPLOYMENT_RENDER.md).
 
 Never commit a `.env` file. `.env.example` holds placeholders only.

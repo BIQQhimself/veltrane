@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from app.core.config import settings
 from app.core.errors import forbidden, not_found, unauthorized
 from app.core.security import decode_token
 from app.db.constants import StaffRole, UserStatus
@@ -85,8 +84,10 @@ require_analyst = require_staff(StaffRole.OWNER, StaffRole.ADMIN, StaffRole.ANAL
 require_support = require_staff(StaffRole.OWNER, StaffRole.ADMIN, StaffRole.SUPPORT)
 
 
-def require_live_platform_flag() -> None:
-    if not settings.live_trading_enabled:
+def require_live_platform_flag(db: Session = Depends(get_db)) -> None:
+    from app.services import platform_switch
+
+    if not platform_switch.effective(db):
         raise forbidden(
             "live_trading_disabled",
             "Live trading is disabled on this deployment. Paper trading is fully available.",

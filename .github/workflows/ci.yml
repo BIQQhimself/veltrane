@@ -96,3 +96,15 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
+      # The Render deployment serves a static export, so a build that only works as a
+      # Next server would pass CI and fail the deploy.
+      - name: Build (static export)
+        run: npm run build
+        env:
+          VELTRANE_STATIC_EXPORT: "1"
+          NEXT_PUBLIC_API_URL: https://api.corvex.fun
+      - name: Static export output
+        run: |
+          test -f out/index.html
+          test -f out/verify/index.html
+          test -f out/app/terminal/index.html

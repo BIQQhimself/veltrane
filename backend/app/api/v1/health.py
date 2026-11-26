@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.db.models import Trade, User
 from app.db.session import get_db
 from app.providers.registry import provider_catalog
-from app.services import market_data
+from app.services import market_data, platform_switch
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -28,17 +28,17 @@ def ready(db: Session = Depends(get_db)):
     return {
         "status": "ready" if db_ok else "degraded",
         "database": db_ok,
-        "live_trading_enabled": settings.live_trading_enabled,
+        "live_trading_enabled": platform_switch.effective(db) if db_ok else False,
     }
 
 
 @router.get("/config")
-def public_config():
+def public_config(db: Session = Depends(get_db)):
     """Non-secret runtime configuration the frontend needs to render honest labels."""
     return {
         "app_name": settings.app_name,
         "env": settings.env,
-        "live_trading_enabled": settings.live_trading_enabled,
+        "live_trading_enabled": platform_switch.effective(db),
         "demo_market_data_enabled": settings.demo_market_data_enabled,
         "market_data_source": settings.market_data_source,
         "billing_provider": settings.billing_provider,
@@ -61,7 +61,7 @@ def status_summary(db: Session = Depends(get_db)):
         "version": __version__,
         "providers": provider_catalog(),
         "instruments": len(market_data.supported_symbols()),
-        "live_trading_enabled": settings.live_trading_enabled,
+        "live_trading_enabled": platform_switch.effective(db),
         "trades_recorded": db.query(Trade).count(),
         "users": db.query(User).count(),
     }

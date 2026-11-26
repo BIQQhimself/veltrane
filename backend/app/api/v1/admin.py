@@ -8,6 +8,7 @@ from app.api.schemas import (
     CostModelUpdate,
     EntitlementOverrideRequest,
     FeatureFlagUpdate,
+    LiveTradingSwitchRequest,
     PerformanceFeeComputeRequest,
     PerformanceFeeSettings,
     PlanUpdateRequest,
@@ -44,7 +45,16 @@ from app.db.models import (
 from app.db.session import get_db
 from app.providers.registry import provider_catalog
 from app.risk.types import DEFAULT_RISK_RULES, merged_rules
-from app.services import analytics, audit, billing, entitlements, kill_switch, performance_fees, strategy_service
+from app.services import (
+    analytics,
+    audit,
+    billing,
+    entitlements,
+    kill_switch,
+    performance_fees,
+    platform_switch,
+    strategy_service,
+)
 from app.services.email import deliver_queued
 from app.services.scheduler import scheduler_state
 from fastapi import APIRouter, Depends, Query
@@ -448,7 +458,8 @@ def kill_switches(staff: User = Depends(require_analyst), db: Session = Depends(
             for s in rows
         ],
         "global_state": kill_switch.state_for(db, org_id="__none__"),
-        "platform_live_enabled": settings.live_trading_enabled,
+        "platform_live_enabled": platform_switch.effective(db),
+        "live_trading_switch": platform_switch.state(db),
     }
 
 
@@ -465,6 +476,35 @@ def release_kill(payload: RiskPolicyUpdate, staff: User = Depends(require_admin)
     switch = kill_switch.release(db, scope="global", target="all", actor=staff, reason=payload.reason)
     db.commit()
     return {"status": "released", "scope": switch.scope}
+
+
+@router.get("/live-trading")
+def live_trading_state(staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+    return platform_switch.state(db)
+
+
+@router.put("/live-trading")
+def set_live_trading(
+    payload: LiveTradingSwitchRequest,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Owner/Admin key for platform-wide live execution.
+
+    The deployment flag stays with the operator, so this switch can always stop live
+    trading and can only start it when the operator has already enabled the deployment
+    level. Requires a typed confirmation and a reason, and is audit logged.
+    """
+    expected = "ENABLE LIVE TRADING" if payload.enabled else "DISABLE LIVE TRADING"
+    if payload.confirm.strip().upper() != expected:
+        raise bad_request("confirmation_mismatch", f'Type "{expected}" to confirm this change.')
+    if payload.enabled and not settings.live_trading_enabled:
+        raise bad_request(
+            "deployment_flag_off",
+            "This deployment has live trading switched off. An operator must set VELTRANE_LIVE_TRADING_ENABLED "
+            "before the in-app switch can enable live execution.",
+        )
+    return platform_switch.set_staff(db, user=staff, enabled=payload.enabled, reason=payload.reason)
 
 
 @router.get("/feature-flags")
@@ -564,7 +604,8 @@ def system_health(staff: User = Depends(require_analyst), db: Session = Depends(
     return {
         "database": {"ok": db_ok},
         "redis": {"ok": redis_ok, "note": "Rate limiting and caching degrade gracefully when Redis is unavailable."},
-        "live_trading_enabled": settings.live_trading_enabled,
+        "live_trading_enabled": platform_switch.effective(db),
+        "live_trading_switch": platform_switch.state(db),
         "billing_provider": settings.billing_provider,
         "market_data_source": settings.market_data_source,
         "providers": provider_catalog(),

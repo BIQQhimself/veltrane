@@ -106,6 +106,28 @@ competent reviewer would find, so it is cheaper to state it here.
 34. **No support staffing model.** The ticket workflow exists; the humans do not.
 35. **Cost estimates in DEPLOYMENT.md are list-price arithmetic**, not quotes.
 
+## Deployment (Render free tier)
+
+36. **The Render blueprint is prepared, not deployed.** `render.yaml` defines the free-tier
+    topology (static site + web service + Postgres) and `DEPLOYMENT_RENDER.md` documents the
+    custom-domain and HTTPS steps for `corvex.fun`. Nothing in this repository has been deployed to
+    Render and no domain has been connected.
+37. **No email provider is wired.** `backend/app/services/email.py:deliver_queued` only counts
+    queued messages. Verification, reset and notification mail are persisted, never sent, so a
+    public signup cannot complete email verification until a provider is added. Every unread email
+    stays in `email_outbox`.
+38. **Free Render Postgres expires 30 days after creation** and has no managed backups. It is
+    suitable for a preview, not for data you would miss.
+39. **No Redis on the free tier by default.** Rate limiting and market-data caching become
+    per-process. Kill switches, entitlements and the live-trading gates are database-backed and
+    unaffected, but a multi-instance deployment would need shared Redis for limiter accuracy.
+40. **Free web services sleep when idle.** The paper-session scheduler only ticks while the
+    instance is awake, and the first request after a sleep waits 30–60 seconds (the browser client
+    retries `502/503/504` twice before showing an error).
+41. **The live-trading master switch is a staff control, not a launch action.** An Owner/Admin can
+    disable live trading at any time, but cannot enable it unless the operator has also set
+    `VELTRANE_LIVE_TRADING_ENABLED=true`, and no verified live adapter exists.
+
 ## What this build is good for
 
 A foundation a small team can extend: the safety model, tenancy, billing state machine, risk engine

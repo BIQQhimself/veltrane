@@ -45,6 +45,7 @@ code as Stripe.
 | `test_paper_session.py` | Paper session provisioning, per-session isolation, stop, and balance accounting |
 | `test_market_data.py` | The demo feed's shape and continuity, instrument specs, market open/closed behaviour |
 | `test_migrations.py` | `alembic upgrade head` produces the same schema the ORM declares |
+| `test_platform_live_switch.py` | Two-key live trading gate: staff key defaults, both keys required for `effective`, member gets `404`, typed confirmation enforced, enabling refused while the deployment flag is off, audit record written, trusted-proxy matching (exact, CIDR, `*`) and `X-Forwarded-For` ignored from an untrusted peer |
 
 ## Safety invariants asserted by tests
 
@@ -72,6 +73,20 @@ These are not aspirations; each is checked.
     (`test_deriv_integration.py`).
 15. A fixed-odds position reports its stake as exposure, not the underlying price, so a handful of
     small contracts cannot exhaust the account exposure limit (`test_deriv_integration.py`).
+
+## Static export build (Render)
+
+The Render static site cannot run a Next server, so the frontend must also build in export mode:
+
+```bash
+cd frontend
+VELTRANE_STATIC_EXPORT=1 NEXT_PUBLIC_API_URL=https://api.corvex.fun npm run build
+test -f out/verify/index.html && test -f out/app/terminal/index.html
+```
+
+Export mode rejects server-side `searchParams`, `headers()` and rewrites; `next.config.ts` drops
+the last two when `VELTRANE_STATIC_EXPORT=1`. A page that starts reading query data on the server
+will fail this build, which is the intended early warning.
 
 ## Linting and static checks
 

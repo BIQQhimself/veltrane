@@ -74,6 +74,12 @@ Terminate TLS at the proxy and forward `X-Forwarded-Proto`. Run uvicorn with
 body limit at the proxy (1 MB is generous for this API) and a 30-second upstream timeout, except for
 backtest endpoints, which may need 120 seconds.
 
+List the proxy in `VELTRANE_TRUSTED_PROXIES` (exact address, CIDR block, or `*` only when nothing
+else can reach the process). Without it, `X-Forwarded-For` is ignored and every visitor shares the
+proxy's rate-limit bucket. For a managed host that terminates TLS itself, see
+[DEPLOYMENT_RENDER.md](DEPLOYMENT_RENDER.md), which also covers the static-export build and the
+custom-domain steps.
+
 ## Backups
 
 - Nightly `pg_dump -Fc` to object storage, 30-day retention, encrypted at rest with a key the app

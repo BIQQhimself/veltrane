@@ -88,17 +88,31 @@ password immediately after first sign-in.
 ```bash
 cd backend
 createdb veltrane_test
-.venv/bin/python -m pytest            # 128 tests
+.venv/bin/python -m pytest            # full suite
 .venv/bin/python -m pytest -k risk    # one slice
 ```
 
 Tests run against real PostgreSQL and Redis, with the demo market feed, and never submit a
 real-money order. Live-trading tests assert that execution stays blocked.
 
+## Deploy on Render (free tier)
+
+`render.yaml` is a Render Blueprint with a Static Site for the frontend, a Web Service for the API
+and a free Postgres database. [DEPLOYMENT_RENDER.md](DEPLOYMENT_RENDER.md) covers the deploy
+sequence, the DNS records for `corvex.fun` / `www.corvex.fun` / `api.corvex.fun`, the cookie and
+CORS settings for that split domain, and the smoke tests. Nothing is deployed by this repository;
+the Blueprint is applied from the Render dashboard.
+
+The blueprint keeps live trading off, runs billing in `off` mode (checkout refuses instead of
+granting plans for free) and disables the synthetic market-data fallback. Free-tier caveats —
+idle sleep, a database that expires after 30 days, no managed backups, no email provider — are
+documented in [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
+
 ## Safety rules enforced in code
 
 1. `VELTRANE_LIVE_TRADING_ENABLED=false` by default; the process re-checks the flag immediately
-   before any venue call.
+   before any venue call. Live execution needs two keys: that deployment flag and an in-app
+   Owner/Admin switch (`PUT /api/v1/admin/live-trading`, typed confirmation, audited).
 2. Free and Basic plans have `live_trading: false`; the check is server-side.
 3. Live authorisation needs a verified connection, an 8-item checklist, a risk acknowledgement,
    MFA (or a written waiver), and a 60-second cooling-off confirmation token.
@@ -115,6 +129,7 @@ real-money order. Live-trading tests assert that execution stays blocked.
 [SECURITY](SECURITY.md) · [THREAT_MODEL](THREAT_MODEL.md) ·
 [TRADING_RISK_POLICY](TRADING_RISK_POLICY.md) · [INTEGRATIONS](INTEGRATIONS.md) ·
 [SUBSCRIPTIONS](SUBSCRIPTIONS.md) · [DATABASE_SCHEMA](DATABASE_SCHEMA.md) ·
-[DEPLOYMENT](DEPLOYMENT.md) · [ENVIRONMENT_VARIABLES](ENVIRONMENT_VARIABLES.md) ·
+[DEPLOYMENT](DEPLOYMENT.md) · [DEPLOY ON RENDER](DEPLOYMENT_RENDER.md) ·
+[ENVIRONMENT_VARIABLES](ENVIRONMENT_VARIABLES.md) ·
 [TESTING](TESTING.md) · [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md) ·
 [PRODUCTION_READINESS](PRODUCTION_READINESS.md)

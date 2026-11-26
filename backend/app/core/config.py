@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import ipaddress
 import secrets
 from functools import lru_cache
 from typing import Literal
@@ -60,7 +61,10 @@ class Settings(BaseSettings):
     binary_max_stake: float = 2_000.0
     binary_settlement_grace_seconds: int = 0
 
-    billing_provider: Literal["mock", "stripe"] = "mock"
+    # "off" keeps the payment abstraction present but refuses checkout: used where a
+    # deployment has no payment processor connected, which mock cannot cover because
+    # mock would grant paid plans for free in production.
+    billing_provider: Literal["mock", "stripe", "off"] = "mock"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     billing_webhook_tolerance_seconds: int = 300
@@ -100,6 +104,32 @@ class Settings(BaseSettings):
     def trusted_proxy_ips(self) -> set[str]:
         return {ip.strip() for ip in self.trusted_proxies.split(",") if ip.strip()}
 
+    def is_trusted_proxy(self, address: str) -> bool:
+        """True when X-Forwarded-For may be believed for this peer address.
+
+        Entries may be exact addresses, CIDR blocks, or "*" to trust every peer. "*" is only
+        correct when the process cannot be reached except through the platform's proxy: on
+        Render, Fly and similar hosts the service only accepts traffic from their edge.
+        """
+        entries = self.trusted_proxy_ips
+        if "*" in entries:
+            return True
+        if address in entries:
+            return True
+        try:
+            peer = ipaddress.ip_address(address)
+        except ValueError:
+            return False
+        for entry in entries:
+            if "/" not in entry:
+                continue
+            try:
+                if peer in ipaddress.ip_network(entry, strict=False):
+                    return True
+            except ValueError:
+                continue
+        return False
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -138,7 +168,14 @@ class Settings(BaseSettings):
             if not self.cookie_secure:
                 raise RuntimeError("VELTRANE_COOKIE_SECURE must be true in production")
             if self.billing_provider == "mock":
-                raise RuntimeError("Mock billing cannot be used in production")
+                raise RuntimeError(
+                    "Mock billing cannot be used in production; set VELTRANE_BILLING_PROVIDER to stripe or off"
+                )
+            if self.billing_provider == "stripe" and not (self.stripe_secret_key and self.stripe_webhook_secret):
+                raise RuntimeError(
+                    "Stripe billing in production requires VELTRANE_STRIPE_SECRET_KEY and "
+                    "VELTRANE_STRIPE_WEBHOOK_SECRET"
+                )
         return self
 
 

@@ -17,10 +17,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.core.config import settings
 from app.db.constants import Entitlement
 from app.db.models import Connection, TradingPermission, User
-from app.services import entitlements, kill_switch
+from app.services import entitlements, kill_switch, platform_switch
 from sqlalchemy.orm import Session
 
 DEMO = "demo"
@@ -89,7 +88,7 @@ def evaluate(db: Session, *, user: User, connection: Connection) -> GateResult:
     if scope == REAL:
         record(
             "platform_live_switch",
-            settings.live_trading_enabled,
+            platform_switch.effective(db),
             "Live trading is disabled platform-wide.",
         )
         record(

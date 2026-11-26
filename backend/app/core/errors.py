@@ -35,5 +35,9 @@ def unprocessable(code: str, message: str, details: dict | None = None) -> AppEr
     return AppError(status.HTTP_422_UNPROCESSABLE_ENTITY, code, message, details)
 
 
+def unavailable(code: str, message: str, details: dict | None = None) -> AppError:
+    return AppError(status.HTTP_503_SERVICE_UNAVAILABLE, code, message, details)
+
+
 def too_many(code: str, message: str) -> AppError:
     return AppError(status.HTTP_429_TOO_MANY_REQUESTS, code, message)

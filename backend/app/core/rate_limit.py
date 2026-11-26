@@ -46,7 +46,7 @@ def client_ip(request: Request) -> str:
     and every caller behind that peer shares one bucket.
     """
     peer = request.client.host if request.client else "unknown"
-    if peer not in settings.trusted_proxy_ips:
+    if not settings.is_trusted_proxy(peer):
         return peer
 
     forwarded = request.headers.get("x-forwarded-for")
@@ -55,7 +55,7 @@ def client_ip(request: Request) -> str:
 
     hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
     for hop in reversed(hops):
-        if hop not in settings.trusted_proxy_ips:
+        if not settings.is_trusted_proxy(hop):
             return hop
     return hops[0] if hops else peer
 

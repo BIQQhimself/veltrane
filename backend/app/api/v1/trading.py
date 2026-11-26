@@ -15,7 +15,7 @@ from app.core.rate_limit import enforce
 from app.db.constants import KillScope
 from app.db.models import Order, PaperSession, Position, RiskDecision, Trade, User
 from app.db.session import get_db
-from app.services import kill_switch, live_authorization
+from app.services import kill_switch, live_authorization, platform_switch
 from app.services.usage import get_usage
 from app.trading import engine as trading_engine
 from fastapi import APIRouter, Depends, Request
@@ -192,7 +192,7 @@ def trading_state(user: User = Depends(get_current_user), db: Session = Depends(
     )
     positions = db.query(Position).filter(Position.org_id == user.org_id, Position.status == "open").all()
     return {
-        "platform_live_enabled": settings.live_trading_enabled,
+        "platform_live_enabled": platform_switch.effective(db),
         "kill_switches": kill_switch.state_for(db, user.org_id),
         "live": live_authorization.live_state(db, user.org_id),
         "paper_session": serializers.session_dict(session) if session else None,
@@ -305,7 +305,7 @@ def confirm_live_authorization(
         "status": permission.status,
         "live_enabled": permission.live_enabled,
         "authorized_at": serializers.iso(permission.authorized_at),
-        "platform_live_enabled": settings.live_trading_enabled,
+        "platform_live_enabled": platform_switch.effective(db),
         "notice": (
             "Authorisation recorded. Live orders still require the operator to enable live trading "
             "and every order must pass the risk engine."

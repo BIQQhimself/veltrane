@@ -9,7 +9,8 @@ const compat = new FlatCompat({
 
 const config = [
   {
-    ignores: [".next/**", "node_modules/**", "next-env.d.ts", "coverage/**"],
+    // `out/` is the static-export build directory; linting minified bundles is noise.
+    ignores: [".next/**", "out/**", "node_modules/**", "next-env.d.ts", "coverage/**"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {

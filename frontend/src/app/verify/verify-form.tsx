@@ -7,17 +7,20 @@ import { api, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
-export function VerifyForm({ token }: { token: string }) {
-  const [value, setValue] = useState(token);
-  const [state, setState] = useState<"idle" | "busy" | "done" | "error">(token ? "busy" : "idle");
+export function VerifyForm() {
+  const [value, setValue] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const attempted = useRef(false);
 
   useEffect(() => {
-    if (!token || attempted.current) return;
+    if (attempted.current) return;
     attempted.current = true;
+    const token = new URLSearchParams(window.location.search).get("token")?.trim() ?? "";
+    if (!token) return;
+    setValue(token);
     void submit(token);
-  }, [token]);
+  }, []);
 
   async function submit(candidate: string) {
     setState("busy");
