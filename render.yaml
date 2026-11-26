@@ -128,8 +128,9 @@ services:
   - type: web
     name: veltrane-web
     runtime: static
-    plan: free
-    region: frankfurt
+    # Static sites are free and served from Render's CDN, so they take neither a plan
+    # nor a region; the schema rejects both here. Only the API and database are pinned
+    # to frankfurt.
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/out
     envVars:

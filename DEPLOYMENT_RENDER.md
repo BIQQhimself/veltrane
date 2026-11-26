@@ -20,6 +20,41 @@ database expires, it has no managed backups and it cannot host a background work
 Marketing copy, pricing and brand assets live in the frontend; no secrets are baked into it.
 `NEXT_PUBLIC_API_URL` is public by design and only names the API origin.
 
+The blueprint is validated against Render's published schema, which sets `additionalProperties:
+false` on every resource. Two consequences worth remembering:
+
+- A **static site** takes neither `plan` nor `region`. Static sites are free and served from
+  Render's CDN; adding either property fails validation with a message that names only the first
+  offending key. Only `veltrane-api` and `veltrane-db` are pinned to a region.
+- Unknown keys anywhere are a hard error, not a warning. A typo in an env var name fails the
+  Blueprint instead of being ignored.
+
+Check the file before pushing:
+
+```bash
+pip install jsonschema   # dev-only, not a runtime dependency
+curl -sS -o /tmp/render-schema.json https://render.com/schema/render.yaml.json
+python check_blueprint.py   # see the snippet below
+```
+
+where `check_blueprint.py` is:
+
+```python
+import json, yaml, jsonschema
+
+schema = json.load(open("/tmp/render-schema.json"))
+doc = yaml.safe_load(open("render.yaml"))
+errors = sorted(
+    jsonschema.Draft202012Validator(schema).iter_errors(doc),
+    key=lambda e: list(e.absolute_path),
+)
+print(f"{len(errors)} blueprint error(s)")
+for error in errors:
+    print(" -", "/".join(str(p) for p in error.absolute_path) or "<root>", error.message[:160])
+```
+
+A clean run prints `0 blueprint error(s)`.
+
 ## Prerequisites
 
 1. Repository `BIQQhimself/veltrane` on GitHub with `render.yaml` at the root (already committed).
