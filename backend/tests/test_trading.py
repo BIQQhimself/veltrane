@@ -141,7 +141,13 @@ def test_kill_switch_blocks_new_orders_and_can_flatten(client, trader):
 def test_live_order_is_rejected_for_free_user(client, trader):
     connection = client.post(
         f"{BASE}/connections",
-        json={"provider": "binance", "label": "Read only", "environment": "read_only", "api_key": "key", "api_secret": "secret"},
+        json={
+            "provider": "binance",
+            "label": "Read only",
+            "environment": "read_only",
+            "api_key": "key",
+            "api_secret": "secret",
+        },
         headers=trader["headers"],
     )
     assert connection.status_code == 201, connection.text
@@ -279,4 +285,7 @@ def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db):
     )
     codes = [r["code"] for r in result["body"]["order"]["risk_decision"]["failed_rules"]]
     assert "mode_authorization" in codes
-    assert any("platform_live_trading_flag" in (r.get("detail", {}).get("missing") or []) for r in result["body"]["order"]["risk_decision"]["failed_rules"])
+    assert any(
+        "platform_live_trading_flag" in (r.get("detail", {}).get("missing") or [])
+        for r in result["body"]["order"]["risk_decision"]["failed_rules"]
+    )

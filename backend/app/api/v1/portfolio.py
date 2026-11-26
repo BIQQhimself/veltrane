@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.db.models import Balance, Connection, PaperSession, Position, Trade, User
 from app.db.session import get_db
 from app.services import market_data
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -28,21 +28,29 @@ def overview(user: User = Depends(get_current_user), db: Session = Depends(get_d
     )
     trades = db.query(Trade).filter(Trade.org_id == user.org_id).order_by(Trade.closed_at.desc()).limit(500).all()
 
+    # A venue demo account (Deriv VRTC, bybit testnet) is simulated money held at a real venue.
+    # It must never be added to live equity, so it is classified here, not only by environment.
     simulated_connection_ids = {
-        c.id for c in connections if c.provider == "paper" or c.environment == "paper"
+        c.id
+        for c in connections
+        if c.provider == "paper"
+        or c.environment == "paper"
+        or (c.provider_account_type or "").lower() in {"demo", "virtual", "testnet"}
+        or bool((c.provider_meta or {}).get("is_virtual"))
     }
-    live_equity = sum(
-        float(b.usd_value or 0) for b in balances if b.connection_id not in simulated_connection_ids
-    )
-    venue_simulated = sum(
-        float(b.usd_value or 0) for b in balances if b.connection_id in simulated_connection_ids
-    )
+    live_equity = sum(float(b.usd_value or 0) for b in balances if b.connection_id not in simulated_connection_ids)
+    venue_simulated = sum(float(b.usd_value or 0) for b in balances if b.connection_id in simulated_connection_ids)
     paper_equity = float(session.equity) if session else 0.0
     # A running paper session is the simulated account; its equity supersedes the
     # venue mirror balance so the same virtual capital is never counted twice.
     simulated_balance = paper_equity if session else venue_simulated
     unrealised = sum(float(p.unrealized_pnl or 0) for p in positions)
-    realized = sum(float(t.net_pnl or 0) for t in trades)
+    # Realised P&L is split by what actually stood behind the money: paper simulation, a venue
+    # demo account, or real funds. Blending them would report simulated gains as real ones.
+    realized_by_scope = {"paper": 0.0, "demo": 0.0, "live": 0.0}
+    for trade in trades:
+        realized_by_scope[_trade_scope(trade)] += float(trade.net_pnl or 0)
+    realized = realized_by_scope["live"]
     fees = sum(float(t.fees or 0) for t in trades)
 
     allocation: dict[str, float] = defaultdict(float)
@@ -61,6 +69,9 @@ def overview(user: User = Depends(get_current_user), db: Session = Depends(get_d
             "simulated_source": "paper_session" if session else ("venue_balances" if venue_simulated else "none"),
             "unrealized_pnl": round(unrealised, 2),
             "realized_pnl_net": round(realized, 2),
+            "realized_pnl_scope": "real funds only",
+            "realized_pnl_demo": round(realized_by_scope["demo"], 2),
+            "realized_pnl_paper": round(realized_by_scope["paper"], 2),
             "fees_paid": round(fees, 4),
             "currency": "USD",
         },
@@ -79,7 +90,8 @@ def overview(user: User = Depends(get_current_user), db: Session = Depends(get_d
         ],
         "positions": [serializers.position_dict(p) for p in positions],
         "allocation": [
-            {"label": k, "value": round(v, 2)} for k, v in sorted(allocation.items(), key=lambda kv: kv[1], reverse=True)
+            {"label": k, "value": round(v, 2)}
+            for k, v in sorted(allocation.items(), key=lambda kv: kv[1], reverse=True)
         ],
         "paper_session": serializers.session_dict(session) if session else None,
         "has_live_data": bool(live_equity),
@@ -90,19 +102,28 @@ def overview(user: User = Depends(get_current_user), db: Session = Depends(get_d
     }
 
 
+def _trade_scope(trade: Trade) -> str:
+    if trade.mode == "paper":
+        return "paper"
+    return "demo" if trade.is_demo else "live"
+
+
 @router.get("/performance")
-def performance(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    trades = (
-        db.query(Trade)
-        .filter(Trade.org_id == user.org_id)
-        .order_by(Trade.closed_at.asc())
-        .limit(2000)
-        .all()
-    )
+def performance(
+    scope: str = Query("all", pattern="^(all|paper|demo|live)$"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    trades = db.query(Trade).filter(Trade.org_id == user.org_id).order_by(Trade.closed_at.asc()).limit(2000).all()
+    by_scope: dict[str, list[Trade]] = {"paper": [], "demo": [], "live": []}
+    for trade in trades:
+        by_scope[_trade_scope(trade)].append(trade)
+    selected = trades if scope == "all" else by_scope[scope]
+
     daily: dict[str, float] = defaultdict(float)
     cumulative = 0.0
     curve = []
-    for t in trades:
+    for t in selected:
         day = t.closed_at.date().isoformat()
         daily[day] += float(t.net_pnl or 0)
     base_equity = float(settings.paper_starting_balance)
@@ -117,10 +138,6 @@ def performance(user: User = Depends(get_current_user), db: Session = Depends(ge
             }
         )
 
-    wins = [t for t in trades if float(t.net_pnl) > 0]
-    losses = [t for t in trades if float(t.net_pnl) <= 0]
-    gross_win = sum(float(t.net_pnl) for t in wins)
-    gross_loss = abs(sum(float(t.net_pnl) for t in losses))
     # Drawdown is measured on equity, not on cumulative P&L: a P&L curve that starts
     # negative has no meaningful peak, which is how it used to report absurd values.
     peak = base_equity
@@ -131,21 +148,33 @@ def performance(user: User = Depends(get_current_user), db: Session = Depends(ge
             max_dd = max(max_dd, (peak - point["equity"]) / peak * 100)
 
     return {
+        "scope": scope,
         "curve": curve,
         "starting_equity": round(base_equity, 2),
-        "stats": {
-            "trades": len(trades),
-            "win_rate_pct": round(len(wins) / len(trades) * 100, 2) if trades else 0.0,
-            "profit_factor": round(gross_win / gross_loss, 3) if gross_loss else None,
-            "avg_win": round(gross_win / len(wins), 2) if wins else 0.0,
-            "avg_loss": round(-gross_loss / len(losses), 2) if losses else 0.0,
-            "net_pnl": round(sum(float(t.net_pnl) for t in trades), 2),
-            "fees": round(sum(float(t.fees) for t in trades), 4),
-            "max_drawdown_pct": round(max_dd, 2),
-            "paper_trades": len([t for t in trades if t.mode == "paper"]),
-            "live_trades": len([t for t in trades if t.mode == "live"]),
-        },
-        "note": "All figures are net of recorded fees. Paper and live trades are counted separately above.",
+        "stats": {**_stats(selected), "max_drawdown_pct": round(max_dd, 2)},
+        "by_scope": {name: _stats(rows) for name, rows in by_scope.items()},
+        "trade_counts": {name: len(rows) for name, rows in by_scope.items()},
+        "note": (
+            "All figures are net of recorded fees. Paper, venue-demo and real-money results are "
+            "never merged in by_scope; the default scope 'all' sums every closed trade and is not "
+            "a claim about real performance."
+        ),
+    }
+
+
+def _stats(trades: list[Trade]) -> dict:
+    wins = [t for t in trades if float(t.net_pnl) > 0]
+    losses = [t for t in trades if float(t.net_pnl) <= 0]
+    gross_win = sum(float(t.net_pnl) for t in wins)
+    gross_loss = abs(sum(float(t.net_pnl) for t in losses))
+    return {
+        "trades": len(trades),
+        "win_rate_pct": round(len(wins) / len(trades) * 100, 2) if trades else 0.0,
+        "profit_factor": round(gross_win / gross_loss, 3) if gross_loss else None,
+        "avg_win": round(gross_win / len(wins), 2) if wins else 0.0,
+        "avg_loss": round(-gross_loss / len(losses), 2) if losses else 0.0,
+        "net_pnl": round(sum(float(t.net_pnl) for t in trades), 2),
+        "fees": round(sum(float(t.fees) for t in trades), 4),
     }
 
 

@@ -27,7 +27,13 @@ competent reviewer would find, so it is cheaper to state it here.
 6. **No live exchange connectivity has been verified.** Binance, Bybit, OKX and Deriv adapters are
    implemented but unverified against real accounts. They are marked `implemented_unverified` in
    INTEGRATIONS.md, and the platform flag keeps live execution off.
-7. **Deriv is a scaffold.** WebSocket token auth is not implemented; the adapter refuses trading.
+7. **Deriv execution is verified only against a mock gateway.** Personal Access Token auth, OTP
+   trading sockets, proposals, buy/sell, close and reconciliation are implemented and covered by
+   integration tests against `tests/support/deriv_mock.py` plus end-to-end runner tests, but no
+   funded Deriv account has been used. Until one is, the adapter stays `implemented_unverified` and live contracts stay
+   behind the platform switch. Public market data and pricing are verified against the live
+   gateway. The autotrade runner ships one deterministic baseline strategy (EMA cross with an RSI
+   filter); it is not a profitable strategy and no performance claim is made.
 8. **Stocks, futures and commodities are not covered.** Instruments exist in the schema; there is
    no equities broker adapter.
 9. **Order types are limited** to market and limit. Stop orders are modelled as a stop price on the
@@ -78,8 +84,11 @@ competent reviewer would find, so it is cheaper to state it here.
 26. **No point-in-time recovery.** Nightly logical backups only; worst-case loss is 24 hours.
 27. **Email is an outbox.** Without SMTP settings nothing is delivered, so verification links must be
     read from the database in development.
-28. **No schema-drift test** between Alembic head and the SQLAlchemy models. Tests use
-    `create_all`, so a migration bug would not be caught by the suite.
+28. **Migrations are checked for schema parity, not for data safety.**
+    `tests/test_migrations.py` runs `alembic upgrade head` against a scratch database and compares
+    it to the ORM metadata, so a missing column is caught. It does not test backfills, long-running
+    locks or downgrades on a populated database, and most other tests still build their schema with
+    `create_all`.
 29. **No load or performance testing.** No numbers exist for throughput or latency under load, and
     none are claimed. The one background thread added for the paper scheduler has not been profiled
     against a large number of open sessions.

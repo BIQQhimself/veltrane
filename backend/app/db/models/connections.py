@@ -28,6 +28,14 @@ class Connection(Base, IdTimestampMixin):
     last_error: Mapped[str | None] = mapped_column(Text)
     last_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Venue identity, as reported by the provider. Never credential material.
+    provider_account_id: Mapped[str | None] = mapped_column(String(64))
+    provider_account_type: Mapped[str | None] = mapped_column(String(16))  # demo | real
+    provider_currency: Mapped[str | None] = mapped_column(String(16))
+    provider_meta: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
+    session_state: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
+    last_auth_error: Mapped[str | None] = mapped_column(Text)
+    last_auth_error_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ConnectionCredential(Base, IdTimestampMixin):
@@ -84,3 +92,27 @@ class LedgerTransaction(Base, IdTimestampMixin):
     external_id: Mapped[str | None] = mapped_column(String(160))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     meta: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
+
+
+class ProviderAuthEvent(Base, IdTimestampMixin):
+    """Authentication and session events for provider connections.
+
+    Admins need to see failed Deriv authentications without reading subscriber secrets; nothing
+    here stores a token, only the outcome and Deriv's own error code.
+    """
+
+    __tablename__ = "provider_auth_events"
+
+    org_id: Mapped[str | None] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    connection_id: Mapped[str | None] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("connections.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    event: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)  # ok | failed
+    code: Mapped[str | None] = mapped_column(String(64))
+    message: Mapped[str | None] = mapped_column(Text)
+    detail: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

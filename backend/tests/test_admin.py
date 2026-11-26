@@ -174,7 +174,10 @@ def test_feature_flags_are_admin_only(client, trader, admin):
     assert update.status_code == 200
     flags = client.get(f"{BASE}/admin/feature-flags", headers=admin["headers"]).json()["flags"]
     assert any(f["key"] == "live_trading_ui" and f["enabled"] for f in flags)
-    assert client.put(f"{BASE}/admin/feature-flags/x", json={"enabled": True}, headers=trader["headers"]).status_code == 404
+    assert (
+        client.put(f"{BASE}/admin/feature-flags/x", json={"enabled": True}, headers=trader["headers"]).status_code
+        == 404
+    )
 
 
 def test_support_ticket_workflow(client, trader, admin):
@@ -234,7 +237,12 @@ def test_system_health_and_fraud_signals(client, admin):
 def test_cost_model_round_trip(client, admin):
     updated = client.put(
         f"{BASE}/admin/costs",
-        json={"infra_monthly_usd": 120.0, "ai_monthly_usd": 0.0, "support_cost_per_ticket_usd": 6.0, "notes": "single VM"},
+        json={
+            "infra_monthly_usd": 120.0,
+            "ai_monthly_usd": 0.0,
+            "support_cost_per_ticket_usd": 6.0,
+            "notes": "single VM",
+        },
         headers=admin["headers"],
     )
     assert updated.status_code == 200

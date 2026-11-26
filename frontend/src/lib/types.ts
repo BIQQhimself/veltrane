@@ -146,6 +146,18 @@ export type Connection = {
   capabilities: Record<string, unknown>;
   is_sandbox: boolean;
   is_simulated?: boolean;
+  provider_account_id?: string | null;
+  provider_account_type?: string | null;
+  provider_currency?: string | null;
+  provider_meta?: {
+    accounts?: { account_id: string; account_type?: string; currency?: string; balance?: number; is_virtual?: boolean }[];
+    nickname?: string;
+    token_kind?: string;
+    is_virtual?: boolean | null;
+  };
+  session_state?: Record<string, unknown>;
+  last_auth_error?: string | null;
+  last_auth_error_at?: string | null;
   last_sync_at: string | null;
   last_error: string | null;
   created_at: string | null;

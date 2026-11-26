@@ -95,7 +95,9 @@ def create_order(
 
 
 @router.get("/orders")
-def list_orders(mode: str | None = None, limit: int = 100, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_orders(
+    mode: str | None = None, limit: int = 100, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     query = db.query(Order).filter(Order.org_id == user.org_id)
     if mode in ("paper", "live"):
         query = query.filter(Order.mode == mode)
@@ -226,9 +228,18 @@ def toggle_kill_switch(
             from app.core.errors import bad_request
 
             raise bad_request("target_required", "Provider target is required.")
-        switch = kill_switch.engage(db, scope=KillScope.PROVIDER, target=payload.target, actor=user, reason=payload.reason, notify_org=user.org_id)
+        switch = kill_switch.engage(
+            db,
+            scope=KillScope.PROVIDER,
+            target=payload.target,
+            actor=user,
+            reason=payload.reason,
+            notify_org=user.org_id,
+        )
     else:
-        switch = kill_switch.engage(db, scope=KillScope.USER, target=user.id, actor=user, reason=payload.reason, notify_org=user.org_id)
+        switch = kill_switch.engage(
+            db, scope=KillScope.USER, target=user.id, actor=user, reason=payload.reason, notify_org=user.org_id
+        )
 
     flattened = None
     if payload.flatten:

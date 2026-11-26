@@ -127,9 +127,7 @@ def test_mfa_enrolment_and_login(client, trader):
     bad = client.post(f"{BASE}/auth/mfa/verify", json={"mfa_token": mfa_token, "code": "000000"})
     assert bad.status_code == 400
 
-    good = client.post(
-        f"{BASE}/auth/mfa/verify", json={"mfa_token": mfa_token, "code": pyotp.TOTP(secret).now()}
-    )
+    good = client.post(f"{BASE}/auth/mfa/verify", json={"mfa_token": mfa_token, "code": pyotp.TOTP(secret).now()})
     assert good.status_code == 200
     assert good.json()["access_token"]
 
@@ -169,10 +167,6 @@ def test_logout_revokes_refresh(client, trader):
 def test_audit_log_redacts_secrets(client, trader, db):
     from app.db.models import AuditLog
 
-    entry = (
-        db.query(AuditLog)
-        .filter(AuditLog.action == "user.registered", AuditLog.org_id == trader["org_id"])
-        .first()
-    )
+    entry = db.query(AuditLog).filter(AuditLog.action == "user.registered", AuditLog.org_id == trader["org_id"]).first()
     assert entry is not None
     assert "password" not in json.dumps(entry.meta).lower()

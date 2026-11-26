@@ -119,7 +119,13 @@ def test_mfa_secret_encrypted_at_rest(client, trader, db):
 def test_weak_password_and_bad_email_rejected(client):
     weak = client.post(
         f"{BASE}/auth/register",
-        json={"email": "weak@example.com", "password": "password", "full_name": "Weak", "country": "GB", "accept_terms": True},
+        json={
+            "email": "weak@example.com",
+            "password": "password",
+            "full_name": "Weak",
+            "country": "GB",
+            "accept_terms": True,
+        },
     )
     assert weak.status_code == 422
 
@@ -131,7 +137,13 @@ def test_weak_password_and_bad_email_rejected(client):
 
     no_terms = client.post(
         f"{BASE}/auth/register",
-        json={"email": "terms@example.com", "password": PASSWORD, "full_name": "Terms", "country": "GB", "accept_terms": False},
+        json={
+            "email": "terms@example.com",
+            "password": PASSWORD,
+            "full_name": "Terms",
+            "country": "GB",
+            "accept_terms": False,
+        },
     )
     assert no_terms.status_code == 422
 

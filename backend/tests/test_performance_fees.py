@@ -65,7 +65,6 @@ def test_consent_requires_legal_review_then_records(client, elite_trader, admin)
     state = client.get(f"{BASE}/billing/performance-fee", headers=elite_trader["headers"]).json()
     assert state["consent"]["fee_rate"] == 0.2
 
-
     assert client.get(f"{BASE}/users/me/audit", headers=elite_trader["headers"]).json()["entries"]
 
 
@@ -95,9 +94,7 @@ def test_fee_computed_on_realised_pnl_above_high_water_mark(client, elite_trader
     from app.db.models import FeeConsent, Trade
 
     _enable_fees(client, admin)
-    client.post(
-        f"{BASE}/billing/performance-fee/consent", json={"accepted": True}, headers=elite_trader["headers"]
-    )
+    client.post(f"{BASE}/billing/performance-fee/consent", json={"accepted": True}, headers=elite_trader["headers"])
 
     # Generate realised P&L through the real paper-trading path.
     for _ in range(3):
@@ -122,7 +119,11 @@ def test_fee_computed_on_realised_pnl_above_high_water_mark(client, elite_trader
     period_end = datetime.now(UTC) + timedelta(days=1)
     computed = client.post(
         f"{BASE}/admin/performance-fees/compute",
-        json={"org_id": elite_trader["org_id"], "period_start": period_start.isoformat(), "period_end": period_end.isoformat()},
+        json={
+            "org_id": elite_trader["org_id"],
+            "period_start": period_start.isoformat(),
+            "period_end": period_end.isoformat(),
+        },
         headers=admin["headers"],
     )
     assert computed.status_code == 201, computed.text
@@ -145,21 +146,21 @@ def test_no_fee_below_high_water_mark(client, elite_trader, admin, db):
     from app.db.models import FeeConsent, HighWaterMark
 
     _enable_fees(client, admin)
-    client.post(
-        f"{BASE}/billing/performance-fee/consent", json={"accepted": True}, headers=elite_trader["headers"]
-    )
+    client.post(f"{BASE}/billing/performance-fee/consent", json={"accepted": True}, headers=elite_trader["headers"])
     consent = db.query(FeeConsent).filter(FeeConsent.org_id == elite_trader["org_id"]).one()
     consent.accepted_at = datetime.now(UTC) - timedelta(days=10)
-    hwm = HighWaterMark(
-        org_id=elite_trader["org_id"], scope="portfolio", value=1_000_000.0, as_of=datetime.now(UTC)
-    )
+    hwm = HighWaterMark(org_id=elite_trader["org_id"], scope="portfolio", value=1_000_000.0, as_of=datetime.now(UTC))
     db.add(hwm)
     db.commit()
 
     now = datetime.now(UTC)
     computed = client.post(
         f"{BASE}/admin/performance-fees/compute",
-        json={"org_id": elite_trader["org_id"], "period_start": (now - timedelta(days=1)).isoformat(), "period_end": now.isoformat()},
+        json={
+            "org_id": elite_trader["org_id"],
+            "period_start": (now - timedelta(days=1)).isoformat(),
+            "period_end": now.isoformat(),
+        },
         headers=admin["headers"],
     )
     assert computed.status_code == 201
@@ -171,7 +172,11 @@ def test_compute_requires_consent(client, elite_trader, admin):
     now = datetime.now(UTC)
     response = client.post(
         f"{BASE}/admin/performance-fees/compute",
-        json={"org_id": elite_trader["org_id"], "period_start": (now - timedelta(days=1)).isoformat(), "period_end": now.isoformat()},
+        json={
+            "org_id": elite_trader["org_id"],
+            "period_start": (now - timedelta(days=1)).isoformat(),
+            "period_end": now.isoformat(),
+        },
         headers=admin["headers"],
     )
     assert response.status_code == 400
@@ -182,7 +187,11 @@ def test_compute_blocked_when_disabled(client, elite_trader, admin):
     now = datetime.now(UTC)
     response = client.post(
         f"{BASE}/admin/performance-fees/compute",
-        json={"org_id": elite_trader["org_id"], "period_start": (now - timedelta(days=1)).isoformat(), "period_end": now.isoformat()},
+        json={
+            "org_id": elite_trader["org_id"],
+            "period_start": (now - timedelta(days=1)).isoformat(),
+            "period_end": now.isoformat(),
+        },
         headers=admin["headers"],
     )
     assert response.status_code == 400

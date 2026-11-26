@@ -6,6 +6,7 @@ Design rules enforced here:
 * Every webhook is idempotent on (provider, event_id).
 * Card data never touches this service; providers hand us tokens/ids only.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -459,9 +460,7 @@ def process_webhook(
         raise bad_request("invalid_payload", "Webhook payload is missing id/type.")
 
     existing = (
-        db.query(WebhookEvent)
-        .filter(WebhookEvent.provider == provider, WebhookEvent.event_id == event_id)
-        .first()
+        db.query(WebhookEvent).filter(WebhookEvent.provider == provider, WebhookEvent.event_id == event_id).first()
     )
     if existing and existing.status == "processed":
         return {"status": "already_processed", "event_id": event_id}
@@ -494,9 +493,7 @@ def process_webhook(
         raise bad_request("webhook_processing_failed", "The webhook could not be applied.") from exc
 
 
-def _apply_event(
-    db: Session, *, provider: str, event_type: str, obj: dict, org_id: str | None, event_id: str
-) -> dict:
+def _apply_event(db: Session, *, provider: str, event_type: str, obj: dict, org_id: str | None, event_id: str) -> dict:
     if event_type == "checkout.session.completed":
         if not org_id:
             raise bad_request("missing_org", "Checkout session is missing org metadata.")
@@ -668,12 +665,7 @@ def _apply_event(
 # User-facing operations
 # --------------------------------------------------------------------------- #
 def cancel_subscription(db: Session, *, org_id: str, user: User, immediate: bool = False) -> Subscription:
-    sub = (
-        db.query(Subscription)
-        .filter(Subscription.org_id == org_id)
-        .order_by(Subscription.created_at.desc())
-        .first()
-    )
+    sub = db.query(Subscription).filter(Subscription.org_id == org_id).order_by(Subscription.created_at.desc()).first()
     if sub is None:
         raise not_found("subscription_not_found", "No subscription found.")
     if sub.plan_code == PlanCode.FREE:
@@ -717,12 +709,7 @@ def change_plan(db: Session, *, org_id: str, user: User, new_plan_code: str) -> 
     plan = db.get(Plan, new_plan_code)
     if plan is None or not plan.is_active:
         raise not_found("plan_not_found", "That plan is not available.")
-    sub = (
-        db.query(Subscription)
-        .filter(Subscription.org_id == org_id)
-        .order_by(Subscription.created_at.desc())
-        .first()
-    )
+    sub = db.query(Subscription).filter(Subscription.org_id == org_id).order_by(Subscription.created_at.desc()).first()
     if sub is None:
         sub = ensure_free_subscription(db, org_id)
     if sub.plan_code == new_plan_code:

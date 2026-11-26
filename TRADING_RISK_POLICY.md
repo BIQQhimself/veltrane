@@ -38,12 +38,21 @@ version that evaluated them. Rule codes below are the ones emitted by `app/risk/
 | `exposure` | Account and portfolio exposure, leverage | 30 % / 50 % / 3× |
 | `max_open_positions` | Count of open positions | 5 |
 | `stop_loss` | Live entries must carry a stop inside the allowed band | required, ≤ 12 % |
-| `duplicate_order` | Same instrument and side inside the window | 60 s |
+| `duplicate_order` | An identical contract inside the window: same instrument, side, contract type, stake and duration | 60 s |
 | `daily_loss_limit` | Loss for the UTC day | 3 % of equity |
 | `drawdown_limit` | Peak-to-trough on the account | 15 % |
 | `strategy_approved` | Strategy version approved for the mode in use | on |
 | `connection_permission` | Connection allows trading for this mode | on |
-| `demo_execution_limit` | Free tier simulated executions | 5 / day (entitlement) |
+| `demo_execution_limit` | Simulated executions, counting paper fills and contracts on a venue demo account against one daily allowance | 5 / day (entitlement) |
+
+Two details are easy to get wrong and are pinned by tests:
+
+- **Notional is rounded before it is compared.** A stake of exactly the minimum arrives as
+  `9.999999999999998` after `stake / price * price`, so it would otherwise fail the minimum-notional
+  rule on a binary-search edge of floating point.
+- **A fixed-odds position carries its stake as its size.** Exposure is `quantity * mark_price`; for a
+  binary, `quantity` is `stake / price`, so the reported exposure equals the money at risk, not the
+  price of the underlying.
 
 Rejections are not silent: the order is stored with `status=rejected`, `rejection_reason` holds
 the human-readable summary, `risk_decisions.checks` holds every check with pass/fail and detail,

@@ -6,6 +6,7 @@ from app.api.v1 import (
     binary,
     connections,
     copilot,
+    deriv,
     health,
     markets,
     notifications,
@@ -24,6 +25,7 @@ api_router.include_router(markets.router)
 api_router.include_router(strategies.router)
 api_router.include_router(trading.router)
 api_router.include_router(binary.router)
+api_router.include_router(deriv.router)
 api_router.include_router(copilot.router)
 api_router.include_router(portfolio.router)
 api_router.include_router(analytics.router)

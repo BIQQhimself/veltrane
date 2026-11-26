@@ -12,6 +12,7 @@ Live execution requires ALL of the following, in order:
 Plus the process-wide ``VELTRANE_LIVE_TRADING_ENABLED`` env flag, which no API call
 can change.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -95,7 +96,9 @@ def start_authorization(
         raise bad_request("risk_ack_required", "You must acknowledge the risk disclosure.")
     missing = [key for key, label in CHECKLIST_ITEMS.items() if not checklist.get(key)]
     if missing:
-        raise bad_request("checklist_incomplete", "Every safety checklist item must be confirmed.", {"missing": missing})
+        raise bad_request(
+            "checklist_incomplete", "Every safety checklist item must be confirmed.", {"missing": missing}
+        )
 
     connection: Connection | None = None
     if connection_id:

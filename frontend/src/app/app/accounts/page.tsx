@@ -21,7 +21,12 @@ type ProviderInfo = {
   kind: string;
   status: string;
   requires_passphrase?: boolean;
-  markets?: string[];
+  requires_api_secret?: boolean;
+  requires_app_id?: boolean;
+  token_label?: string;
+  supports_oauth?: boolean;
+  auth_style?: string;
+  asset_classes?: string[];
   notes?: string;
 };
 
@@ -41,11 +46,18 @@ export default function AccountsPage() {
   const [apiKey, setApiKey] = React.useState("");
   const [apiSecret, setApiSecret] = React.useState("");
   const [passphrase, setPassphrase] = React.useState("");
+  const [appId, setAppId] = React.useState("");
+  const [accountId, setAccountId] = React.useState("");
   const [attestation, setAttestation] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
   const selectedProvider = providers.data?.providers.find((item) => item.key === provider);
   const needsKeys = provider !== "paper";
+  const needsSecret = needsKeys && (selectedProvider?.requires_api_secret ?? true);
+  const needsPassphrase = Boolean(selectedProvider?.requires_passphrase);
+  const needsAppId = Boolean(selectedProvider?.requires_app_id);
+  const tokenLabel = selectedProvider?.token_label ?? "API key";
+  const isDeriv = provider === "deriv";
   const rows = connections.data?.connections ?? [];
 
   async function createConnection(event?: React.FormEvent) {
@@ -61,14 +73,23 @@ export default function AccountsPage() {
           api_key: apiKey,
           api_secret: apiSecret,
           passphrase,
+          app_id: appId,
+          account_id: accountId,
           withdrawal_attestation: attestation,
         },
       });
-      toast.success("Account connected", "Credentials are encrypted at rest. Sync to pull balances.");
+      toast.success(
+        "Account connected",
+        isDeriv
+          ? "Deriv verified the token. Demo accounts can trade immediately; real accounts still need authorisation."
+          : "Credentials are encrypted at rest. Sync to pull balances.",
+      );
       setOpen(false);
       setApiKey("");
       setApiSecret("");
       setPassphrase("");
+      setAppId("");
+      setAccountId("");
       connections.refetch();
     } catch (error) {
       toast.error("Connection failed", errorMessage(error));
@@ -151,15 +172,38 @@ export default function AccountsPage() {
                     <p className="text-sm text-paper">{connection.label}</p>
                     <StatusBadge status={connection.status} />
                     <Badge tone="outline">{titleCase(connection.provider)}</Badge>
-                    <Badge tone={connection.environment === "read_only" ? "neutral" : "warn"}>
-                      {titleCase(connection.environment)}
-                    </Badge>
+                    {connection.provider_account_type?.toLowerCase() === "demo" ? (
+                      <Badge tone="info">demo account</Badge>
+                    ) : (
+                      <Badge tone={connection.environment === "read_only" ? "neutral" : "warn"}>
+                        {titleCase(connection.environment)}
+                      </Badge>
+                    )}
                     {connection.is_sandbox ? <Badge tone="info">sandbox</Badge> : null}
                   </div>
                   <p className="mt-1 text-2xs text-paper-faint">
                     Last sync {dateTime(connection.last_sync_at)}
                     {connection.last_error ? <span className="text-loss"> · {connection.last_error}</span> : null}
                   </p>
+                  {connection.provider === "deriv" ? (
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-2xs text-paper-faint">
+                      <span className="num">{connection.provider_account_id ?? "account pending"}</span>
+                      {connection.provider_currency ? <span>· {connection.provider_currency}</span> : null}
+                      {connection.provider_account_type ? (
+                        <Badge
+                          tone={connection.provider_account_type.toLowerCase() === "demo" ? "info" : "warn"}
+                        >
+                          {connection.provider_account_type.toLowerCase() === "demo" ? "demo" : "real funds"}
+                        </Badge>
+                      ) : null}
+                      {connection.provider_meta?.nickname ? (
+                        <span>· {connection.provider_meta.nickname}</span>
+                      ) : null}
+                      {connection.last_auth_error ? (
+                        <span className="text-loss">· {connection.last_auth_error}</span>
+                      ) : null}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -317,29 +361,66 @@ export default function AccountsPage() {
           {needsKeys ? (
             <>
               <Field
-                label="API key"
+                label={tokenLabel}
                 htmlFor="api_key"
-                hint="Create a key with read and trade permissions only. Never enable withdrawals."
+                hint={
+                  isDeriv
+                    ? "Deriv → Settings → API token. Grant read and trade scopes. Never grant withdrawal."
+                    : "Create a key with read and trade permissions only. Never enable withdrawals."
+                }
               >
                 <Input
                   id="api_key"
+                  type={isDeriv ? "password" : "text"}
                   value={apiKey}
                   onChange={(event) => setApiKey(event.target.value)}
                   autoComplete="off"
+                  spellCheck={false}
                   required
                 />
               </Field>
-              <Field label="API secret" htmlFor="api_secret">
-                <Input
-                  id="api_secret"
-                  type="password"
-                  value={apiSecret}
-                  onChange={(event) => setApiSecret(event.target.value)}
-                  autoComplete="new-password"
-                  required
-                />
-              </Field>
-              {selectedProvider?.requires_passphrase ? (
+              {needsSecret ? (
+                <Field label="API secret" htmlFor="api_secret">
+                  <Input
+                    id="api_secret"
+                    type="password"
+                    value={apiSecret}
+                    onChange={(event) => setApiSecret(event.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                </Field>
+              ) : null}
+              {needsAppId ? (
+                <Field
+                  label="App ID"
+                  htmlFor="app_id"
+                  hint="The Deriv application id this token was issued for. Stored with the connection, never returned."
+                >
+                  <Input
+                    id="app_id"
+                    value={appId}
+                    onChange={(event) => setAppId(event.target.value)}
+                    autoComplete="off"
+                    inputMode="numeric"
+                  />
+                </Field>
+              ) : null}
+              {isDeriv ? (
+                <Field
+                  label="Account ID (optional)"
+                  htmlFor="account_id"
+                  hint="Leave blank to use the token's default account. Demo accounts start with VRTC."
+                >
+                  <Input
+                    id="account_id"
+                    value={accountId}
+                    onChange={(event) => setAccountId(event.target.value)}
+                    autoComplete="off"
+                  />
+                </Field>
+              ) : null}
+              {needsPassphrase ? (
                 <Field label="Passphrase" htmlFor="passphrase">
                   <Input
                     id="passphrase"

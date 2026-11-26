@@ -11,9 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 class Notification(Base, IdTimestampMixin):
     __tablename__ = "notifications"
 
-    org_id: Mapped[str] = mapped_column(
-        Uuid(as_uuid=False), nullable=False, index=True
-    )
+    org_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     user_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), index=True)
     category: Mapped[str] = mapped_column(String(24), nullable=False)
     severity: Mapped[str] = mapped_column(String(16), default="info", nullable=False)
@@ -39,9 +37,7 @@ class EmailOutbox(Base, IdTimestampMixin):
 class SupportTicket(Base, IdTimestampMixin):
     __tablename__ = "support_tickets"
 
-    org_id: Mapped[str] = mapped_column(
-        Uuid(as_uuid=False), nullable=False, index=True
-    )
+    org_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
     subject: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)

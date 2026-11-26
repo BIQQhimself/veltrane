@@ -28,6 +28,12 @@ class ProviderInfo:
     docs_url: str = ""
     status: str = "scaffold"  # scaffold | implemented_unverified | read_only_verified | live_verified
     notes: str = ""
+    # What the connect form must ask for. ``api_secret`` is false for token-only venues
+    # such as Deriv, where a single Personal Access Token is the whole credential.
+    requires_api_secret: bool = True
+    requires_app_id: bool = False
+    token_label: str = "API key"
+    supports_oauth: bool = False
 
 
 @dataclass(frozen=True)

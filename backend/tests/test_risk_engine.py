@@ -42,7 +42,9 @@ def context(**overrides) -> RiskContext:
         equity=25_000.0,
         cash=25_000.0,
         peak_equity=25_000.0,
-        instrument=InstrumentView(symbol="BTC/USDT", asset_class="crypto", min_qty=0.0001, qty_step=0.0001, max_leverage=3),
+        instrument=InstrumentView(
+            symbol="BTC/USDT", asset_class="crypto", min_qty=0.0001, qty_step=0.0001, max_leverage=3
+        ),
         market=MarketView(price=60_000.0, bid=59_990.0, ask=60_010.0, age_seconds=1.0, spread_bps=3.0, source="demo"),
         market_open=True,
         daily_execution_limit=5,
@@ -130,9 +132,7 @@ def test_exposure_and_leverage_caps():
 
 
 def test_open_position_cap():
-    positions = [
-        PositionView(symbol=f"X{i}/USDT", side="long", quantity=1, notional=100) for i in range(5)
-    ]
+    positions = [PositionView(symbol=f"X{i}/USDT", side="long", quantity=1, notional=100) for i in range(5)]
     assessment = engine.evaluate(intent(), context(positions=positions, open_position_count=5))
     assert not assessment.approved
     assert "max_open_positions" in codes(assessment)
@@ -162,13 +162,17 @@ def test_consecutive_loss_breaker():
 
 
 def test_stale_market_data_rejected():
-    assessment = engine.evaluate(intent(), context(market=MarketView(price=60_000.0, age_seconds=120.0, spread_bps=3.0)))
+    assessment = engine.evaluate(
+        intent(), context(market=MarketView(price=60_000.0, age_seconds=120.0, spread_bps=3.0))
+    )
     assert not assessment.approved
     assert "market_data" in codes(assessment)
 
 
 def test_wide_spread_rejected():
-    assessment = engine.evaluate(intent(), context(market=MarketView(price=60_000.0, age_seconds=1.0, spread_bps=500.0)))
+    assessment = engine.evaluate(
+        intent(), context(market=MarketView(price=60_000.0, age_seconds=1.0, spread_bps=500.0))
+    )
     assert not assessment.approved
     assert "market_data" in codes(assessment)
 
@@ -197,14 +201,10 @@ def test_stop_loss_validation_for_live():
     missing = engine.evaluate(intent(mode="live", strategy_status="live"), live_ctx)
     assert "stop_loss" in codes(missing)
 
-    wrong_side = engine.evaluate(
-        intent(mode="live", strategy_status="live", stop_loss=61_000.0), live_ctx
-    )
+    wrong_side = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=61_000.0), live_ctx)
     assert "stop_loss" in codes(wrong_side)
 
-    too_wide = engine.evaluate(
-        intent(mode="live", strategy_status="live", stop_loss=45_000.0), live_ctx
-    )
+    too_wide = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=45_000.0), live_ctx)
     assert "stop_loss" in codes(too_wide)
 
     valid = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=57_000.0), live_ctx)
@@ -283,3 +283,14 @@ def test_risk_engine_does_not_import_strategy_or_execution_modules():
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     assert not alias.name.startswith(forbidden), f"{path.name} imports {alias.name}"
+
+
+def test_notional_at_the_minimum_is_not_rejected_by_float_error():
+    """A stake exactly at min_notional arrives as 9.999999999999998 after stake/price*price."""
+    price = 1230.60
+    quantity = 10.0 / price
+    assert quantity * price < 10.0  # the raw product really does fall short
+    market = MarketView(price=price, bid=price - 1, ask=price + 1, age_seconds=1.0, spread_bps=3.0, source="demo")
+    instrument = InstrumentView(symbol="R_100", asset_class="synthetic", min_qty=0.0, qty_step=0.0, max_leverage=1)
+    assessment = engine.evaluate(intent(quantity=quantity), context(market=market, instrument=instrument))
+    assert assessment.approved, [f.message for f in assessment.failed]

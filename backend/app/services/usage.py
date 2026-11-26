@@ -24,9 +24,7 @@ def get_usage(db: Session, org_id: str, metric: str, period: str | None = None) 
     return float(row.value) if row else 0.0
 
 
-def increment_usage(
-    db: Session, org_id: str, metric: str, amount: float = 1.0, meta: dict | None = None
-) -> float:
+def increment_usage(db: Session, org_id: str, metric: str, amount: float = 1.0, meta: dict | None = None) -> float:
     period = _today()
     row = (
         db.query(UsageMetric)

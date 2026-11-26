@@ -7,9 +7,7 @@ def test_orders_trades_positions_are_tenant_isolated(client, trader, trader2):
     buy = place_order(client, trader["headers"], quantity=0.01)
     order_id = buy["body"]["order"]["id"]
     position_id = client.get(f"{BASE}/positions", headers=trader["headers"]).json()["positions"][0]["id"]
-    closed = client.post(
-        f"{BASE}/positions/{position_id}/close", json={"reason": "test"}, headers=trader["headers"]
-    )
+    closed = client.post(f"{BASE}/positions/{position_id}/close", json={"reason": "test"}, headers=trader["headers"])
     trade_id = closed.json()["trade"]["id"]
 
     assert client.get(f"{BASE}/orders/{order_id}", headers=trader2["headers"]).status_code == 404

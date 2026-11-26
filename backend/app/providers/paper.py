@@ -4,6 +4,7 @@ Backs the ``paper`` provider so a user can add a sandbox account with no API key
 Balances are deterministic and clearly labelled simulated; nothing here can reach a
 real exchange.
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -3,6 +3,7 @@
 Every rule is a pure function of (intent, context, rules). No I/O, no randomness,
 no AI input. Rules are evaluated in order and all failures are reported.
 """
+
 from __future__ import annotations
 
 from app.risk.types import OrderIntent, RiskContext, RuleResult
@@ -42,6 +43,20 @@ def check_org_status(intent: OrderIntent, ctx: RiskContext, rules: dict) -> Rule
 def check_mode_authorization(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
     if intent.mode == "paper":
         return _r("mode_authorization", True, "Paper trading is always permitted.", {"mode": "paper"})
+    if ctx.venue_demo:
+        if not ctx.connection_trade_permission or ctx.connection_read_only:
+            return _r(
+                "mode_authorization",
+                False,
+                "This connection is read-only; enable trading on it before routing contracts.",
+                {"mode": "live", "venue_demo": True},
+            )
+        return _r(
+            "mode_authorization",
+            True,
+            "Venue demo account: execution permitted without live authorisation (no real funds).",
+            {"mode": "live", "venue_demo": True},
+        )
     missing = []
     if not ctx.global_live_enabled:
         missing.append("platform_live_trading_flag")
@@ -170,8 +185,18 @@ def check_duplicate(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleR
     return _r("duplicate_order", True, "No duplicate order detected.")
 
 
+def _notional(intent: OrderIntent, ctx: RiskContext) -> float:
+    """Trade notional, rounded to cents-scale precision.
+
+    ``quantity * price`` where the quantity was itself derived as ``stake / price`` loses the last
+    bits to binary floating point: a $10 stake comes back as 9.999999999999998 and would trip the
+    minimum-notional rule. Rounding to 6 decimals keeps the comparison honest.
+    """
+    return round(intent.quantity * ctx.market.price, 6)
+
+
 def check_position_size(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
-    notional = intent.quantity * ctx.market.price
+    notional = _notional(intent, ctx)
     min_notional = float(rules["min_notional"])
     if notional < min_notional:
         return _r(
@@ -203,7 +228,7 @@ def check_position_size(intent: OrderIntent, ctx: RiskContext, rules: dict) -> R
 
 
 def check_exposure(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
-    notional = intent.quantity * ctx.market.price
+    notional = _notional(intent, ctx)
     equity = max(ctx.equity, 0.0)
     if equity <= 0:
         return _r("exposure", False, "Account equity is zero or unavailable.")
@@ -229,7 +254,7 @@ def check_exposure(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleRe
 
 
 def check_leverage(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
-    notional = intent.quantity * ctx.market.price
+    notional = _notional(intent, ctx)
     equity = max(ctx.equity, 0.0)
     if equity <= 0:
         return _r("leverage", False, "Account equity is zero or unavailable.")
@@ -290,7 +315,9 @@ def check_drawdown(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleRe
             f"Drawdown {drawdown:.2f}% has reached the {cap:.2f}% circuit breaker. Trading is paused.",
             {"drawdown_pct": drawdown, "cap": cap},
         )
-    return _r("drawdown_limit", True, f"Drawdown {drawdown:.2f}% is within the {cap:.2f}% cap.", {"drawdown_pct": drawdown})
+    return _r(
+        "drawdown_limit", True, f"Drawdown {drawdown:.2f}% is within the {cap:.2f}% cap.", {"drawdown_pct": drawdown}
+    )
 
 
 def check_consecutive_losses(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
@@ -337,7 +364,10 @@ def check_trading_session(intent: OrderIntent, ctx: RiskContext, rules: dict) ->
 
 
 def check_demo_execution_limit(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
-    if intent.mode != "paper" or ctx.daily_execution_limit is None:
+    # A contract on a venue's demo account is simulated money too, so it shares the same cap as
+    # paper execution. Only a real-money account escapes it.
+    demo_scope = intent.mode == "paper" or ctx.venue_demo
+    if not demo_scope or ctx.daily_execution_limit is None:
         return _r("demo_execution_limit", True, "No demo execution cap applies.")
     if ctx.executions_today >= ctx.daily_execution_limit:
         return _r(

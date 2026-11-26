@@ -38,6 +38,7 @@ import {
   type DrawingTool,
 } from "@/components/charts/candles";
 import { RiskBudgetStrip } from "@/components/app/risk-budget";
+import { DerivTerminal } from "@/components/app/deriv-terminal";
 import type { RiskBudget } from "@/lib/risk-budget";
 import type {
   BinaryAsset,
@@ -46,6 +47,7 @@ import type {
   BinarySummary,
   CopilotRead,
   CfdPosition,
+  Connection,
 } from "@/lib/types";
 
 const DURATIONS = [
@@ -131,7 +133,7 @@ export default function TerminalPage() {
   const [tool, setTool] = React.useState<DrawingTool>("none");
   const [drawings, setDrawings] = React.useState<Drawing[]>([]);
   const [assetPickerOpen, setAssetPickerOpen] = React.useState(false);
-  const [ticketTab, setTicketTab] = React.useState<"fixed" | "cfd">("fixed");
+  const [ticketTab, setTicketTab] = React.useState<"fixed" | "cfd" | "deriv">("fixed");
   const [cfdSide, setCfdSide] = React.useState<"buy" | "sell">("buy");
   const [cfdQty, setCfdQty] = React.useState("0.01");
   const [cfdSl, setCfdSl] = React.useState("");
@@ -166,6 +168,8 @@ export default function TerminalPage() {
     [symbol, duration],
   );
   const riskBudget = useApi<RiskBudget>((signal) => api("/trading/risk-budget", { signal }));
+  const connections = useApi<{ connections: Connection[] }>((signal) => api("/connections", { signal }));
+  const connectionList = React.useMemo(() => connections.data?.connections ?? [], [connections.data]);
 
   const assetList = React.useMemo(() => assets.data?.assets ?? [], [assets.data]);
   // Crypto leads the list: it is the first market with live trading enabled.
@@ -695,19 +699,24 @@ export default function TerminalPage() {
           <div className="border-b border-line-soft px-4 py-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-paper">Trade ticket</h2>
-              <Badge tone="warn">Paper</Badge>
+              <Badge tone="warn">
+                {ticketTab === "deriv" ? "Venue" : ticketTab === "cfd" ? "Sim" : "Paper"}
+              </Badge>
             </div>
             <p className="mt-0.5 text-3xs text-paper-faint">
               {activeAsset?.name ?? symbol} ·{" "}
               {ticketTab === "fixed"
                 ? `${DURATIONS.find((d) => d.seconds === duration)?.label} expiry`
-                : "market execution, open-ended"}
+                : ticketTab === "deriv"
+                  ? "fixed-odds contract on your own Deriv account"
+                  : "market execution, open-ended"}
             </p>
-            <div className="mt-2.5 grid grid-cols-2 gap-1 rounded-lg border border-line-soft bg-obsidian-900/60 p-0.5">
+            <div className="mt-2.5 grid grid-cols-3 gap-1 rounded-lg border border-line-soft bg-obsidian-900/60 p-0.5">
               {(
                 [
                   ["fixed", "Fixed-time"],
                   ["cfd", "CFD"],
+                  ["deriv", "Deriv"],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -728,7 +737,9 @@ export default function TerminalPage() {
             </div>
           </div>
 
-          {ticketTab === "cfd" ? (
+          {ticketTab === "deriv" ? (
+            <DerivTerminal connections={connectionList} />
+          ) : ticketTab === "cfd" ? (
             <div className="space-y-4 p-4">
               <div>
                 <p className="label mb-1.5">Size ({activeAsset?.symbol.split("/")[0] ?? "units"})</p>

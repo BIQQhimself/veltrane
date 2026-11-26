@@ -13,6 +13,7 @@ Binaries reuse the same deterministic rule set as spot orders. The mapping is:
 
 The evaluator is pure, like the spot engine: no DB, no clock, no network.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

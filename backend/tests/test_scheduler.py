@@ -102,4 +102,13 @@ def test_a_broken_session_does_not_stop_the_runner(client, db, pro_trader):
 
 def test_scheduler_state_is_reportable(client, db, pro_trader):
     state = scheduler.scheduler_state()
-    assert set(state) == {"running", "interval_seconds", "last_run_at", "last_summary", "last_error"}
+    assert {
+        "running",
+        "interval_seconds",
+        "last_run_at",
+        "last_summary",
+        "last_error",
+        "deriv_last_run_at",
+        "deriv_last_summary",
+        "deriv_last_error",
+    } == set(state)

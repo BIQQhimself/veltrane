@@ -113,3 +113,27 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   Deleting `.next` under a live server leaves it serving `500` on every route with
   `ENOENT ... routes-manifest.json`.
 - After `npm run build`, the dev server must be restarted the same way; the two share `.next`.
+
+## Deriv wiring on the review instance
+
+- The API talks to `backend/scripts/deriv_sandbox.py` on `127.0.0.1:12003`, not to
+  `api.derivws.com`. Restart it with
+  `VELTRANE_DERIV_REST_BASE=http://127.0.0.1:12003`,
+  `VELTRANE_DERIV_PUBLIC_WS_URL=ws://127.0.0.1:12003/trading/v1/options/ws/public` and
+  `VELTRANE_DERIV_SANDBOX=true` in the environment. Forgetting those three makes every venue call
+  hit the real gateway and come back `401`, which looks like a broken PAT.
+- The sandbox accepts one PAT (`pat_test_token_0123456789abcdef`, app id `12345`) and two accounts:
+  `VRTC900001` (demo) and `CR700001`. Any other `account_id` fails verification, correctly.
+- `uvicorn` does not reload here. After changing API code, kill the PID and start it again with the
+  three variables above; otherwise you are testing the old process.
+- `/auth/login` is rate limited per address. Probe scripts must back off on `429` (about 15 s) or
+  everything after the first few calls fails for the wrong reason.
+
+## Two failure modes worth remembering
+
+- **Float boundaries in risk rules.** `stake / price * price` does not round-trip. Round notional
+  before comparing it to a limit (`_notional` in `app/risk/rules.py`), or a $10 stake fails the
+  $10 minimum intermittently depending on the price the feed happens to serve.
+- **Duplicates are terms, not symbols.** Two entries on the same underlying with different stakes
+  are different orders. Matching on symbol and side alone locks a user out of their own account for
+  the length of the window, and it hides real trades from the risk engine.

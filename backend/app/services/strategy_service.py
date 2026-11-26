@@ -24,11 +24,7 @@ def _utcnow() -> datetime:
 
 def seed_system_strategies(db: Session) -> None:
     for code, strategy in LIBRARY.items():
-        record = (
-            db.query(Strategy)
-            .filter(Strategy.org_id.is_(None), Strategy.code == code)
-            .first()
-        )
+        record = db.query(Strategy).filter(Strategy.org_id.is_(None), Strategy.code == code).first()
         if record is None:
             record = Strategy(
                 org_id=None,
@@ -149,9 +145,7 @@ def resolve_strategy(db: Session, org_id: str, code: str) -> tuple[Strategy, Str
     return impl, version, record
 
 
-def create_custom_version(
-    db: Session, *, user: User, code: str, params: dict, changelog: str
-) -> StrategyVersion:
+def create_custom_version(db: Session, *, user: User, code: str, params: dict, changelog: str) -> StrategyVersion:
     entitlements.require_feature(
         db, user.org_id, Entitlement.STRATEGY_CUSTOMIZATION, "Strategy customisation requires the Pro or Elite plan."
     )
@@ -334,7 +328,12 @@ def run_backtest(
         actor_user_id=user.id,
         target_type="backtest",
         target_id=record.id,
-        meta={"strategy": code, "symbol": symbol, "data_source": record.data_source, "is_demo": bool(meta.get("is_demo"))},
+        meta={
+            "strategy": code,
+            "symbol": symbol,
+            "data_source": record.data_source,
+            "is_demo": bool(meta.get("is_demo")),
+        },
     )
     return record
 
@@ -350,9 +349,7 @@ def start_paper_session(
     if market_data.instrument_spec(symbol) is None:
         raise not_found("instrument_not_found", "Instrument is not supported.")
     existing = (
-        db.query(PaperSession)
-        .filter(PaperSession.org_id == user.org_id, PaperSession.status == "running")
-        .first()
+        db.query(PaperSession).filter(PaperSession.org_id == user.org_id, PaperSession.status == "running").first()
     )
     if existing:
         raise bad_request("session_running", "A paper session is already running. Stop it first.")
@@ -398,16 +395,14 @@ def stop_paper_session(db: Session, *, user: User, session: PaperSession, close_
     if session.org_id != user.org_id:
         raise not_found("session_not_found", "Paper session not found.")
     if close_positions:
-        positions = (
-            db.query(Position)
-            .filter(Position.paper_session_id == session.id, Position.status == "open")
-            .all()
-        )
+        positions = db.query(Position).filter(Position.paper_session_id == session.id, Position.status == "open").all()
         for position in positions:
             try:
                 close_position(db, user=user, position=position, reason="Paper session stopped by user")
             except Exception as exc:  # noqa: BLE001
-                log.warning("paper_close_failed", extra={"extra_fields": {"position": position.id, "error": str(exc)[:200]}})
+                log.warning(
+                    "paper_close_failed", extra={"extra_fields": {"position": position.id, "error": str(exc)[:200]}}
+                )
     session.status = "stopped"
     session.stopped_at = _utcnow()
     db.flush()
@@ -445,7 +440,9 @@ def run_paper_tick(db: Session, *, user: User, session: PaperSession) -> dict:
     )
     params = (session.config or {}).get("params") or version.default_params or {}
     state = (
-        PositionState(side=position.side, quantity=float(position.quantity), entry_price=float(position.avg_entry_price))
+        PositionState(
+            side=position.side, quantity=float(position.quantity), entry_price=float(position.avg_entry_price)
+        )
         if position
         else None
     )

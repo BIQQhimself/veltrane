@@ -155,7 +155,9 @@ def authenticate(
     user = db.query(User).filter(User.email == email).first()
     generic = unauthorized("invalid_credentials", "Email or password is incorrect.")
     if user is None:
-        audit.record(db, action=AuditAction.USER_LOGIN_FAILED, actor_email=email, ip=ip, meta={"reason": "unknown_email"})
+        audit.record(
+            db, action=AuditAction.USER_LOGIN_FAILED, actor_email=email, ip=ip, meta={"reason": "unknown_email"}
+        )
         db.commit()  # audit must persist even though the request fails
         raise generic
     if user.locked_until and user.locked_until > _utcnow():
@@ -279,7 +281,9 @@ def logout_all(db: Session, user: User) -> int:
         .update({RefreshSession.revoked_at: _utcnow()})
     )
     db.flush()
-    audit.record(db, action=AuditAction.USER_LOGOUT, org_id=user.org_id, actor_user_id=user.id, meta={"sessions": count})
+    audit.record(
+        db, action=AuditAction.USER_LOGOUT, org_id=user.org_id, actor_user_id=user.id, meta={"sessions": count}
+    )
     return count
 
 
@@ -411,7 +415,9 @@ def reset_password(db: Session, *, token: str, new_password: str) -> None:
     record.used_at = _utcnow()
     db.flush()
     logout_all(db, user)
-    audit.record(db, action=AuditAction.PASSWORD_CHANGED, org_id=user.org_id, actor_user_id=user.id, meta={"via": "reset"})
+    audit.record(
+        db, action=AuditAction.PASSWORD_CHANGED, org_id=user.org_id, actor_user_id=user.id, meta={"via": "reset"}
+    )
     notifications.notify(
         db,
         org_id=user.org_id,

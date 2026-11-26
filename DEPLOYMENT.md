@@ -114,6 +114,36 @@ then retiring the old key.
 5. Write a post-incident note with timeline, blast radius and the code or configuration change that
    prevents recurrence.
 
+## Local review instance
+
+The shared review deployment runs the API against a local Deriv sandbox rather than the real
+gateway, so nothing leaves the machine and no venue account is touched. Three processes:
+
+```bash
+cd backend
+
+# 1. Deriv-shaped sandbox gateway (REST + public WebSocket) on :12003
+.venv/bin/python -m scripts.deriv_sandbox --port 12003
+
+# 2. API on :12001, pointed at the sandbox
+set -a; source ../.env; set +a
+VELTRANE_DERIV_REST_BASE=http://127.0.0.1:12003 \
+VELTRANE_DERIV_PUBLIC_WS_URL=ws://127.0.0.1:12003/trading/v1/options/ws/public \
+VELTRANE_DERIV_SANDBOX=true \
+  .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12001
+
+# 3. Frontend on :12000
+cd ../frontend && npm run dev -- --port 12000
+```
+
+The sandbox accepts one fixed PAT (`pat_test_token_0123456789abcdef`, app id `12345`) and exposes
+two accounts: `VRTC900001` (demo, $10,000) and `CR700001` (real, $250). It is test infrastructure:
+it prices, fills and settles synthetically and must never be described as a live venue. Leave
+`VELTRANE_DERIV_SANDBOX=true` so every response is labelled as sandbox data.
+
+Seed the accounts with `scripts.seed`, `scripts.seed_testers` and `scripts.seed_demo`; see
+`REVIEW_ACCESS.md` for the credentials and the tour.
+
 ## Development and production separation
 
 - Separate databases, separate Redis instances, separate secrets.

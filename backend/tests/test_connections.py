@@ -70,18 +70,27 @@ def test_crypto_credentials_encrypted_and_never_returned(client, trader, db):
     assert "SUPERSECRETVALUE0987654321" not in listing.text
 
 
-def test_scaffold_provider_is_rejected(client, trader):
+def test_unknown_provider_is_rejected(client, trader):
     response = create_connection(
         client,
         trader["headers"],
-        provider="deriv",
-        label="Deriv",
+        provider="not-a-venue",
+        label="Nope",
         environment="read_only",
         api_key="abc",
         api_secret="def",
     )
-    assert response.status_code == 400
-    assert response.json()["detail"]["code"] in ("provider_not_implemented", "provider_not_ready")
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "provider_not_found"
+
+
+def test_deriv_asks_for_a_token_and_an_app_id_not_a_secret(client):
+    catalog = client.get(f"{BASE}/connections/providers").json()
+    deriv = {p["key"]: p for p in catalog["providers"]}["deriv"]
+
+    assert deriv["requires_api_secret"] is False
+    assert deriv["requires_app_id"] is True
+    assert deriv["token_label"]
 
 
 def test_missing_credentials_rejected(client, trader):
@@ -111,7 +120,10 @@ def test_free_connection_limit_is_enforced_server_side(client, trader):
     assert listing["used"] == 2
 
 
-def test_provider_outage_does_not_break_connection(client, trader):
+def test_unreachable_venue_fails_at_connect_time(client, trader, stub_hosted_venues):
+    stub_hosted_venues.fail_code = "provider_error"
+    stub_hosted_venues.fail_message = "venue unreachable"
+
     created = create_connection(
         client,
         trader["headers"],
@@ -121,8 +133,30 @@ def test_provider_outage_does_not_break_connection(client, trader):
         api_key="invalid-key",
         api_secret="invalid-secret",
     )
-    assert created.status_code == 201
+    # Verification happens before anything is persisted, so the failure is a clean coded error.
+    assert created.status_code == 400
+    assert created.json()["detail"]["code"] == "provider_error"
+    assert "Traceback" not in created.text
+
+    listing = client.get(f"{BASE}/connections", headers=trader["headers"]).json()
+    assert listing["connections"] == []
+
+
+def test_outage_after_connect_marks_the_connection_errored(client, trader, db, stub_hosted_venues):
+    created = create_connection(
+        client,
+        trader["headers"],
+        provider="binance",
+        label="Flaky venue",
+        environment="read_only",
+        api_key="key-abcdef",
+        api_secret="secret-abcdef",
+    )
+    assert created.status_code == 201, created.text
+
+    stub_hosted_venues.fail_code = "provider_error"
     result = client.post(f"{BASE}/connections/{created.json()['id']}/test", headers=trader["headers"])
+
     # The failure is surfaced as a safe, coded error rather than a 500 or a stack trace.
     assert result.status_code == 400
     assert result.json()["detail"]["code"]

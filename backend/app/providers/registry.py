@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from app.providers.ccxt_provider import build_providers
-from app.providers.deriv import DerivProvider
+from app.providers.deriv import build_deriv_provider
 from app.providers.paper import PaperProvider
 
 
 def provider_registry() -> dict:
     registry: dict = build_providers()
-    deriv = DerivProvider()
+    deriv = build_deriv_provider()
     registry[deriv.info.key] = deriv
     paper = PaperProvider()
     registry[paper.info.key] = paper
@@ -33,6 +33,10 @@ def provider_catalog() -> list[dict]:
                 "kind": adapter.info.kind,
                 "asset_classes": adapter.info.asset_classes,
                 "requires_passphrase": adapter.info.requires_passphrase,
+                "requires_api_secret": adapter.info.requires_api_secret,
+                "requires_app_id": adapter.info.requires_app_id,
+                "token_label": adapter.info.token_label,
+                "supports_oauth": adapter.info.supports_oauth,
                 "auth_style": adapter.info.auth_style,
                 "docs_url": adapter.info.docs_url,
                 "status": adapter.info.status,

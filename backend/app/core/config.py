@@ -68,6 +68,25 @@ class Settings(BaseSettings):
     market_data_source: Literal["ccxt", "demo"] = "ccxt"
     market_data_cache_seconds: int = 20
 
+    # ---- Deriv (broker) -------------------------------------------------------------
+    # Endpoints from developers.deriv.com. Overridable so the test suite can point the
+    # adapter at a local server that speaks the documented protocol.
+    deriv_rest_base: str = "https://api.derivws.com"
+    deriv_public_ws_url: str = "wss://api.derivws.com/trading/v1/options/ws/public"
+    # App ID registered to VELTRANE. Deriv requires it in the Deriv-App-ID header for PAT auth.
+    deriv_app_id: str = ""
+    deriv_oauth_client_id: str = ""
+    deriv_oauth_redirect_uri: str = ""
+    deriv_oauth_auth_url: str = "https://auth.deriv.com/oauth2/auth"
+    deriv_oauth_token_url: str = "https://auth.deriv.com/oauth2/token"
+    deriv_session_max_failures: int = 5
+    deriv_autotrade_runner_enabled: bool = True
+    deriv_autotrade_interval_seconds: int = 120
+    # Labels Deriv responses as sandbox data. Only meaningful when the endpoints above point at
+    # the local protocol mock; it changes nothing about execution, it stops the UI calling a
+    # mock "live".
+    deriv_sandbox: bool = False
+
     log_level: str = "INFO"
     admin_email: str = "admin@veltrane.dev"
     admin_password: str = ""

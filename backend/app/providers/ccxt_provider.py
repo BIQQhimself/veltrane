@@ -4,6 +4,7 @@ Public market data needs no credentials and is used by the paper engine.
 Private calls are only made when the user supplies keys; withdrawal permission is
 never requested and is actively checked where the venue exposes it.
 """
+
 from __future__ import annotations
 
 import logging
@@ -84,7 +85,12 @@ class CcxtProvider(BaseAdapter):
             rows = exchange.fetch_ohlcv(symbol, timeframe=TIMEFRAME_MAP[timeframe], limit=min(limit, 1000))
         except ccxt.BaseError as exc:
             raise ProviderError("market_data_unavailable", f"{self.info.name} candles unavailable: {exc}") from exc
-        return [Candle(ts=int(r[0]), open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]), volume=float(r[5])) for r in rows]
+        return [
+            Candle(
+                ts=int(r[0]), open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]), volume=float(r[5])
+            )
+            for r in rows
+        ]
 
     # ---------------- private (read-only) ----------------
     def _private(self, credentials: CredentialBundle) -> ccxt.Exchange:
@@ -121,7 +127,12 @@ class CcxtProvider(BaseAdapter):
                 "verified": False,
                 "note": f"Permissions endpoint unavailable: {type(exc).__name__}.",
             }
-        return {"withdrawal_scope": "unknown", "verified": False, "raw": perms, "note": "Raw venue response recorded; withdrawal scope requires operator review."}
+        return {
+            "withdrawal_scope": "unknown",
+            "verified": False,
+            "raw": perms,
+            "note": "Raw venue response recorded; withdrawal scope requires operator review.",
+        }
 
     def test_connection(self, credentials: CredentialBundle) -> dict:
         exchange = self._private(credentials)

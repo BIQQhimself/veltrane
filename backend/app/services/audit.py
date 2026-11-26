@@ -1,4 +1,5 @@
 """Audit trail. Append-only by convention: nothing in the codebase updates or deletes rows."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

@@ -3,6 +3,7 @@
 All four strategies are deterministic, fully specified and cost-aware in backtest.
 None of them is claimed to be profitable; results depend on market regime and costs.
 """
+
 from __future__ import annotations
 
 from app.providers.base import Candle
@@ -162,7 +163,9 @@ class Breakout(Strategy):
     summary = "Donchian channel breakout with volatility-scaled stop and channel exit."
     supported_markets = ["crypto", "forex", "index"]
     timeframes = ["1h", "4h", "1d"]
-    entry_rules = "Buy when the close breaks above the prior N-bar high; short the prior N-bar low if shorts are enabled."
+    entry_rules = (
+        "Buy when the close breaks above the prior N-bar high; short the prior N-bar low if shorts are enabled."
+    )
     exit_rules = "Exit on the opposite channel touch, the ATR stop, or the time stop."
     data_requirements = "OHLCV candles; N + 20 bars minimum."
     backtest_methodology = "Bar-by-bar replay with next-bar-open fills and full cost model."
@@ -259,7 +262,7 @@ class MomentumRotation(Strategy):
         returns = [(window[j] / window[j - 1] - 1) * 100 for j in range(1, len(window)) if window[j - 1]]
         mean_ret = sum(returns) / len(returns) if returns else 0.0
         variance = sum((r - mean_ret) ** 2 for r in returns) / max(1, len(returns) - 1)
-        vol_pct = variance ** 0.5
+        vol_pct = variance**0.5
         if position is None:
             if roc[i] > float(p["roc_threshold_pct"]) and vol_pct < float(p["vol_cap_pct"]):
                 return Signal(
@@ -274,9 +277,7 @@ class MomentumRotation(Strategy):
         return Signal("hold", "Open position remains within momentum rules.")
 
 
-LIBRARY: dict[str, Strategy] = {
-    s.code: s for s in (TrendFollowing(), MeanReversion(), Breakout(), MomentumRotation())
-}
+LIBRARY: dict[str, Strategy] = {s.code: s for s in (TrendFollowing(), MeanReversion(), Breakout(), MomentumRotation())}
 
 
 def get_strategy(code: str) -> Strategy | None:

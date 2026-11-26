@@ -55,12 +55,16 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.get("/overview")
-def overview(days: int = Query(default=30, ge=1, le=365), staff: User = Depends(require_analyst), db: Session = Depends(get_db)):
+def overview(
+    days: int = Query(default=30, ge=1, le=365), staff: User = Depends(require_analyst), db: Session = Depends(get_db)
+):
     return analytics.overview(db, days=days)
 
 
 @router.get("/revenue")
-def revenue(days: int = Query(default=90, ge=7, le=365), staff: User = Depends(require_analyst), db: Session = Depends(get_db)):
+def revenue(
+    days: int = Query(default=90, ge=7, le=365), staff: User = Depends(require_analyst), db: Session = Depends(get_db)
+):
     return {
         "series": analytics.revenue_series(db, days=days),
         "breakdown": analytics.subscription_breakdown(db),
@@ -236,7 +240,9 @@ def admin_plans(staff: User = Depends(require_analyst), db: Session = Depends(ge
 
 
 @router.patch("/plans/{code}")
-def update_plan(code: str, payload: PlanUpdateRequest, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+def update_plan(
+    code: str, payload: PlanUpdateRequest, staff: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     plan = db.get(Plan, code)
     if plan is None:
         raise not_found("plan_not_found", "Plan not found.")
@@ -279,7 +285,9 @@ def org_entitlements(org_id: str, staff: User = Depends(require_analyst), db: Se
 
 
 @router.post("/entitlements/override", status_code=201)
-def create_override(payload: EntitlementOverrideRequest, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+def create_override(
+    payload: EntitlementOverrideRequest, staff: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     org = db.get(Organization, payload.org_id)
     if org is None:
         raise not_found("org_not_found", "Organization not found.")
@@ -447,9 +455,7 @@ def kill_switches(staff: User = Depends(require_analyst), db: Session = Depends(
 @router.post("/kill-switches/engage")
 def engage_kill(payload: RiskPolicyUpdate, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Engage the global halt. Uses the same durable switch the risk engine reads."""
-    switch = kill_switch.engage(
-        db, scope="global", target="all", actor=staff, reason=payload.reason
-    )
+    switch = kill_switch.engage(db, scope="global", target="all", actor=staff, reason=payload.reason)
     db.commit()
     return {"status": "engaged", "scope": switch.scope, "engaged_at": serializers.iso(switch.engaged_at)}
 
@@ -466,17 +472,27 @@ def feature_flags(staff: User = Depends(require_analyst), db: Session = Depends(
     rows = db.query(FeatureFlag).order_by(FeatureFlag.key).all()
     return {
         "flags": [
-            {"key": f.key, "enabled": f.enabled, "description": f.description, "rollout": f.rollout, "updated_at": serializers.iso(f.updated_at)}
+            {
+                "key": f.key,
+                "enabled": f.enabled,
+                "description": f.description,
+                "rollout": f.rollout,
+                "updated_at": serializers.iso(f.updated_at),
+            }
             for f in rows
         ]
     }
 
 
 @router.put("/feature-flags/{key}")
-def upsert_flag(key: str, payload: FeatureFlagUpdate, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+def upsert_flag(
+    key: str, payload: FeatureFlagUpdate, staff: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     flag = db.get(FeatureFlag, key)
     if flag is None:
-        flag = FeatureFlag(key=key, enabled=payload.enabled, description=payload.description or "", rollout=payload.rollout or {})
+        flag = FeatureFlag(
+            key=key, enabled=payload.enabled, description=payload.description or "", rollout=payload.rollout or {}
+        )
         db.add(flag)
     else:
         flag.enabled = payload.enabled
@@ -538,7 +554,13 @@ def system_health(staff: User = Depends(require_analyst), db: Session = Depends(
     except Exception:  # noqa: BLE001
         db_ok = False
     redis_ok = get_redis() is not None
-    queued_email = db.query(func.count()).select_from(__import__("app.db.models", fromlist=["EmailOutbox"]).EmailOutbox).filter_by(status="queued").scalar() or 0
+    queued_email = (
+        db.query(func.count())
+        .select_from(__import__("app.db.models", fromlist=["EmailOutbox"]).EmailOutbox)
+        .filter_by(status="queued")
+        .scalar()
+        or 0
+    )
     return {
         "database": {"ok": db_ok},
         "redis": {"ok": redis_ok, "note": "Rate limiting and caching degrade gracefully when Redis is unavailable."},
@@ -555,14 +577,10 @@ def system_health(staff: User = Depends(require_analyst), db: Session = Depends(
 
 @router.get("/usage")
 def usage_metrics(staff: User = Depends(require_analyst), db: Session = Depends(get_db)):
-    rows = (
-        db.query(UsageMetric.metric, func.sum(UsageMetric.value))
-        .group_by(UsageMetric.metric)
-        .all()
-    )
-    ai = (
-        db.query(func.coalesce(func.sum(AiUsage.cost_usd), 0), func.coalesce(func.sum(AiUsage.tokens_in + AiUsage.tokens_out), 0)).first()
-    )
+    rows = db.query(UsageMetric.metric, func.sum(UsageMetric.value)).group_by(UsageMetric.metric).all()
+    ai = db.query(
+        func.coalesce(func.sum(AiUsage.cost_usd), 0), func.coalesce(func.sum(AiUsage.tokens_in + AiUsage.tokens_out), 0)
+    ).first()
     return {
         "metrics": {metric: float(total) for metric, total in rows},
         "ai_cost_usd": float(ai[0] or 0),
@@ -618,14 +636,18 @@ def get_perf_fees(staff: User = Depends(require_analyst), db: Session = Depends(
 
 
 @router.put("/performance-fees/settings")
-def update_perf_settings(payload: PerformanceFeeSettings, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+def update_perf_settings(
+    payload: PerformanceFeeSettings, staff: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     value = performance_fees.update_settings(db, value=payload.model_dump(), actor=staff)
     db.commit()
     return {"settings": value}
 
 
 @router.post("/performance-fees/compute", status_code=201)
-def compute_perf_fee(payload: PerformanceFeeComputeRequest, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+def compute_perf_fee(
+    payload: PerformanceFeeComputeRequest, staff: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     record = performance_fees.compute_fee(
         db, org_id=payload.org_id, period_start=payload.period_start, period_end=payload.period_end, actor=staff
     )
@@ -649,7 +671,9 @@ def invoice_perf_fee(record_id: str, staff: User = Depends(require_admin), db: S
 
 
 @router.post("/strategies/{version_id}/promote-live")
-def promote_strategy(version_id: str, payload: RiskPolicyUpdate, staff: User = Depends(require_admin), db: Session = Depends(get_db)):
+def promote_strategy(
+    version_id: str, payload: RiskPolicyUpdate, staff: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     version = strategy_service.promote_to_live(db, actor=staff, version_id=version_id, reason=payload.reason)
     db.commit()
     return {"status": version.status, "version_id": version.id}
@@ -678,7 +702,9 @@ def support_tickets(status: str | None = None, staff: User = Depends(require_sup
 
 
 @router.post("/support/tickets/{ticket_id}/reply")
-def reply_ticket(ticket_id: str, payload: TicketReply, staff: User = Depends(require_support), db: Session = Depends(get_db)):
+def reply_ticket(
+    ticket_id: str, payload: TicketReply, staff: User = Depends(require_support), db: Session = Depends(get_db)
+):
     ticket = get_or_404(db, SupportTicket, ticket_id)
     if ticket is None:
         raise not_found("ticket_not_found", "Ticket not found.")
@@ -722,9 +748,7 @@ def fraud_signals(staff: User = Depends(require_analyst), db: Session = Depends(
         .scalar()
         or 0
     )
-    refunds = (
-        db.query(func.count(Refund.id)).filter(Refund.created_at >= since).scalar() or 0
-    )
+    refunds = db.query(func.count(Refund.id)).filter(Refund.created_at >= since).scalar() or 0
     return {
         "failed_login_ips": [{"ip": ip, "attempts": count} for ip, count in failed_logins],
         "webhook_signature_rejections": int(webhook_rejects),

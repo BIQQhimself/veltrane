@@ -70,7 +70,9 @@ def get_subscription(user: User = Depends(get_current_user), db: Session = Depen
 
 
 @router.post("/billing/checkout")
-def checkout(payload: CheckoutRequest, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def checkout(
+    payload: CheckoutRequest, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     enforce(request, "checkout", limit=10, window=600)
     result = billing.create_checkout(db, org=user.org_id, plan_code=payload.plan_code, user=user)
     db.commit()

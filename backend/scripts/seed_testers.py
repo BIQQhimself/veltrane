@@ -30,10 +30,6 @@ SPECS: list[tuple[str, str, str, str | None]] = [
     ("basic@veltrane.dev", "Bram Basic", PlanCode.BASIC, None),
     ("pro@veltrane.dev", "Priya Pro", PlanCode.PRO, None),
     ("elite@veltrane.dev", "Elias Elite", PlanCode.ELITE, None),
-    ("trader@veltrane.dev", "Tessa Trader", PlanCode.PRO, None),
-    # Reserved domains such as .local are rejected by the login validator, so the
-    # operator account uses a routable address rather than settings.admin_email.
-    ("owner@veltrane.dev", "VELTRANE Operator", PlanCode.ELITE, "owner"),
     ("analyst@veltrane.dev", "Ada Analyst", PlanCode.ELITE, "analyst"),
 ]
 
@@ -117,4 +113,4 @@ if __name__ == "__main__":
         main()
     except AppError as exc:  # pragma: no cover
         print(f"Seeding failed: {exc.detail}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from exc

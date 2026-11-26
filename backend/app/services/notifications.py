@@ -68,9 +68,7 @@ def notify(
         else:
             recipients = [
                 email_addr
-                for (email_addr,) in db.query(User.email)
-                .filter(User.org_id == org_id, User.status == "active")
-                .all()
+                for (email_addr,) in db.query(User.email).filter(User.org_id == org_id, User.status == "active").all()
             ]
         for address in recipients:
             queue_email(db, to_email=address, subject=title, body=body, category=category)
@@ -78,8 +76,4 @@ def notify(
 
 
 def unread_count(db: Session, org_id: str) -> int:
-    return (
-        db.query(Notification)
-        .filter(Notification.org_id == org_id, Notification.read_at.is_(None))
-        .count()
-    )
+    return db.query(Notification).filter(Notification.org_id == org_id, Notification.read_at.is_(None)).count()

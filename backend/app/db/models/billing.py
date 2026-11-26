@@ -148,9 +148,7 @@ class PerformanceFeeRecord(Base, IdTimestampMixin):
 
 class HighWaterMark(Base, IdTimestampMixin):
     __tablename__ = "high_water_marks"
-    __table_args__ = (
-        UniqueConstraint("org_id", "scope", "strategy_version_id", name="uq_hwm_org_scope_strategy"),
-    )
+    __table_args__ = (UniqueConstraint("org_id", "scope", "strategy_version_id", name="uq_hwm_org_scope_strategy"),)
 
     org_id: Mapped[str] = mapped_column(
         Uuid(as_uuid=False), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True

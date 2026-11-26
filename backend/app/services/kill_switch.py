@@ -11,6 +11,7 @@ stale deployment:
 Engaging any carrier halts new orders. Exits/closes are still permitted by the risk
 engine so users can reduce risk during a halt.
 """
+
 from __future__ import annotations
 
 import logging
@@ -47,11 +48,7 @@ def _mirror(scope: str, target: str, engaged: bool) -> None:
 
 
 def get_switch(db: Session, scope: str, target: str) -> KillSwitch | None:
-    return (
-        db.query(KillSwitch)
-        .filter(KillSwitch.scope == scope, KillSwitch.target == target)
-        .first()
-    )
+    return db.query(KillSwitch).filter(KillSwitch.scope == scope, KillSwitch.target == target).first()
 
 
 def is_engaged(db: Session, scope: str, target: str) -> bool:

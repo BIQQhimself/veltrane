@@ -5,6 +5,7 @@ Guarantees:
 * Every rule runs; all failures are returned, not just the first.
 * A rejected assessment is a hard stop for the execution gateway.
 """
+
 from __future__ import annotations
 
 from app.risk.rules import RULES

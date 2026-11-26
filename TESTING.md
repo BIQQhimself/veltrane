@@ -5,7 +5,7 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 169 tests, ~55 s
+.venv/bin/python -m pytest                  # 233 tests, ~80 s
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
@@ -36,6 +36,15 @@ code as Stripe.
 | `test_performance_fees.py` | HWM accounting, loss recovery, legal-review gate, consent, invoicing |
 | `test_portfolio_and_notifications.py` | Portfolio overview and performance (equity curve seeded with starting balance, drawdown measured on equity), notification feed, order and trade notifications, support tickets, settings |
 | `test_security.py` | Headers, password hashing, login rate limit, token tampering, CSRF, MFA secret at rest, error hygiene, session revocation |
+| `test_deriv_integration.py` | Deriv end to end against a protocol-faithful mock gateway: PAT auth, OTP session lifecycle, proposals, contract open/close, execution gate, risk engine, persistence, serialisation |
+| `test_deriv_strategy.py` | The baseline autotrade strategy's signal logic on synthetic series: entry timing, RSI filter, and that it stays silent without a confirmed cross |
+| `test_deriv_provider.py` | The adapter in isolation: PAT auth, identity, pricing, execution and reconnection against the mock gateway |
+| `test_deriv_live_market_data.py` | Public Deriv market data end to end. Skipped unless `VELTRANE_DERIV_LIVE_TESTS=1`, because it needs the real public socket |
+| `test_deriv_autotrade.py` | The scheduled runner: deterministic EMA-cross series, approval-mode signals, autonomous execution on a demo account, kill-switch refusal, and a risk rejection that is recorded as rejected rather than executed |
+| `test_binary.py` | Fixed-odds contracts: quote, open, settle, payout, expiry, and that a paper binary never touches live equity |
+| `test_paper_session.py` | Paper session provisioning, per-session isolation, stop, and balance accounting |
+| `test_market_data.py` | The demo feed's shape and continuity, instrument specs, market open/closed behaviour |
+| `test_migrations.py` | `alembic upgrade head` produces the same schema the ORM declares |
 
 ## Safety invariants asserted by tests
 
@@ -44,7 +53,9 @@ These are not aspirations; each is checked.
 1. A Free account cannot place a live order, whatever it sends (`test_trading.py`).
 2. Live execution is refused while `VELTRANE_LIVE_TRADING_ENABLED=false`, even for an authorised
    Elite account with a verified connection.
-3. The fifth simulated execution succeeds and the sixth is rejected on the Free tier.
+3. The fifth simulated execution succeeds and the sixth is rejected on the Free tier — and a
+   contract on a venue *demo* account counts against that same allowance, because it is simulated
+   money too (`test_deriv_integration.py`, `test_trading.py`).
 4. Every order — accepted or rejected — has a `risk_decisions` row and an audit entry.
 5. A repeated idempotency key returns the original order and does not create a second fill.
 6. Engaging the kill switch at any scope blocks the next order; releasing it restores trading.
@@ -54,6 +65,13 @@ These are not aspirations; each is checked.
 10. A non-staff account gets 404 on every admin route.
 11. Performance fees cannot be enabled without a recorded legal review.
 12. Paper trades are marked `is_demo: true` and excluded from live equity.
+13. A signal the risk engine refuses is stored as `rejected`, never as `executed`, and no venue
+    contract id is attached to it (`test_deriv_autotrade.py`).
+14. Duplicate prevention blocks an *identical* submission only: the same underlying with a
+    different stake, contract type or duration is a new order and is priced on its own merits
+    (`test_deriv_integration.py`).
+15. A fixed-odds position reports its stake as exposure, not the underlying price, so a handful of
+    small contracts cannot exhaust the account exposure limit (`test_deriv_integration.py`).
 
 ## Linting and static checks
 
@@ -149,7 +167,10 @@ explicit `grid-cols-1`, collapsing secondary table columns) rather than hiding t
 
 ## Test hygiene rules for contributors
 
-- Never call a real exchange. Use the demo feed or a fake provider.
+- Never call a real exchange. Use the demo feed, the fake venue (`tests/support/fake_venue.py`,
+  installed automatically for every test) or the Deriv mock gateway (`tests/support/deriv_mock.py`).
+  The fake venue replaces only the network surface of hosted crypto adapters, so encryption,
+  entitlements, audit and error mapping still run for real.
 - Never set `VELTRANE_LIVE_TRADING_ENABLED=true` in a test.
 - Assert on behaviour, not on log text.
 - If a test needs a subscription tier, use the `pro_trader` / `elite_trader` fixtures rather than

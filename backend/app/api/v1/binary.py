@@ -33,9 +33,7 @@ def contract_dict(contract: BinaryContract) -> dict:
         "expires_at": contract.expires_at,
         "settled_at": contract.settled_at,
         "seconds_remaining": (
-            max(0, int((contract.expires_at - datetime.now(UTC)).total_seconds()))
-            if contract.status == "open"
-            else 0
+            max(0, int((contract.expires_at - datetime.now(UTC)).total_seconds())) if contract.status == "open" else 0
         ),
         "source": contract.source,
         "entry_reason": contract.entry_reason,

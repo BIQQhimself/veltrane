@@ -4,11 +4,12 @@ Usage:
     python -m scripts.seed                # plans, strategies, flags, risk policy
     VELTRANE_ADMIN_PASSWORD=... python -m scripts.seed   # also create/refresh the staff owner
 """
+
 from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.core.errors import AppError
@@ -72,7 +73,7 @@ def seed() -> None:
             if user is None:
                 org = Organization(
                     name="VELTRANE Operations",
-                    slug=f"veltrane-ops-{datetime.now(timezone.utc).strftime('%Y%m%d')}",
+                    slug=f"veltrane-ops-{datetime.now(UTC).strftime('%Y%m%d')}",
                     timezone="UTC",
                 )
                 db.add(org)
@@ -83,10 +84,10 @@ def seed() -> None:
                     password_hash=auth.hash_password(admin_password),
                     full_name="VELTRANE Operator",
                     status="active",
-                    email_verified_at=datetime.now(timezone.utc),
+                    email_verified_at=datetime.now(UTC),
                     is_staff=True,
                     staff_role="owner",
-                    terms_accepted_at=datetime.now(timezone.utc),
+                    terms_accepted_at=datetime.now(UTC),
                     terms_version="terms-2026-01",
                 )
                 db.add(user)
@@ -96,7 +97,10 @@ def seed() -> None:
             else:
                 user.is_staff = True
                 user.staff_role = user.staff_role or "owner"
-                print(f"Staff owner already exists: {admin_email}")
+                # Re-seeding must leave a working login. Without this a rotated
+                # VELTRANE_ADMIN_PASSWORD silently stops matching the stored hash.
+                user.password_hash = auth.hash_password(admin_password)
+                print(f"Staff owner already exists: {admin_email} (password reset from env)")
 
         db.commit()
         print("Seed complete: plans, strategies, flags, risk policy, settings.")
@@ -112,4 +116,4 @@ if __name__ == "__main__":
         seed()
     except AppError as exc:  # pragma: no cover
         print(f"Seed failed: {exc.detail}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from exc

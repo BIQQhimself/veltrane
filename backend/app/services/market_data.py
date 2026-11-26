@@ -7,6 +7,7 @@ Rules:
   ``is_demo=True``. The UI must render a DEMO badge; nothing may present it as market truth.
 * Synthetic candles are reproducible: same symbol/timeframe/limit ⇒ same series.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -28,27 +29,147 @@ log = logging.getLogger(__name__)
 TIMEFRAME_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "1d": 86400}
 
 CRYPTO_SYMBOLS = {
-    "BTC/USDT": {"base": "BTC", "quote": "USDT", "price": 64000.0, "vol": 0.018, "min_qty": 0.0001, "step": 0.0001, "venue": "binance"},
-    "ETH/USDT": {"base": "ETH", "quote": "USDT", "price": 3200.0, "vol": 0.022, "min_qty": 0.001, "step": 0.001, "venue": "binance"},
-    "SOL/USDT": {"base": "SOL", "quote": "USDT", "price": 150.0, "vol": 0.035, "min_qty": 0.01, "step": 0.01, "venue": "binance"},
-    "BNB/USDT": {"base": "BNB", "quote": "USDT", "price": 580.0, "vol": 0.02, "min_qty": 0.01, "step": 0.01, "venue": "binance"},
-    "XRP/USDT": {"base": "XRP", "quote": "USDT", "price": 0.62, "vol": 0.03, "min_qty": 1.0, "step": 1.0, "venue": "binance"},
-    "ADA/USDT": {"base": "ADA", "quote": "USDT", "price": 0.45, "vol": 0.032, "min_qty": 1.0, "step": 1.0, "venue": "binance"},
+    "BTC/USDT": {
+        "base": "BTC",
+        "quote": "USDT",
+        "price": 64000.0,
+        "vol": 0.018,
+        "min_qty": 0.0001,
+        "step": 0.0001,
+        "venue": "binance",
+    },
+    "ETH/USDT": {
+        "base": "ETH",
+        "quote": "USDT",
+        "price": 3200.0,
+        "vol": 0.022,
+        "min_qty": 0.001,
+        "step": 0.001,
+        "venue": "binance",
+    },
+    "SOL/USDT": {
+        "base": "SOL",
+        "quote": "USDT",
+        "price": 150.0,
+        "vol": 0.035,
+        "min_qty": 0.01,
+        "step": 0.01,
+        "venue": "binance",
+    },
+    "BNB/USDT": {
+        "base": "BNB",
+        "quote": "USDT",
+        "price": 580.0,
+        "vol": 0.02,
+        "min_qty": 0.01,
+        "step": 0.01,
+        "venue": "binance",
+    },
+    "XRP/USDT": {
+        "base": "XRP",
+        "quote": "USDT",
+        "price": 0.62,
+        "vol": 0.03,
+        "min_qty": 1.0,
+        "step": 1.0,
+        "venue": "binance",
+    },
+    "ADA/USDT": {
+        "base": "ADA",
+        "quote": "USDT",
+        "price": 0.45,
+        "vol": 0.032,
+        "min_qty": 1.0,
+        "step": 1.0,
+        "venue": "binance",
+    },
 }
 
 STOCK_SYMBOLS = {
-    "AAPL/USD": {"base": "AAPL", "quote": "USD", "price": 228.0, "vol": 0.011, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
-    "NVDA/USD": {"base": "NVDA", "quote": "USD", "price": 132.0, "vol": 0.021, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
-    "TSLA/USD": {"base": "TSLA", "quote": "USD", "price": 248.0, "vol": 0.024, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
-    "MSFT/USD": {"base": "MSFT", "quote": "USD", "price": 425.0, "vol": 0.010, "min_qty": 1.0, "step": 0.01, "asset_class": "stock"},
+    "AAPL/USD": {
+        "base": "AAPL",
+        "quote": "USD",
+        "price": 228.0,
+        "vol": 0.011,
+        "min_qty": 1.0,
+        "step": 0.01,
+        "asset_class": "stock",
+    },
+    "NVDA/USD": {
+        "base": "NVDA",
+        "quote": "USD",
+        "price": 132.0,
+        "vol": 0.021,
+        "min_qty": 1.0,
+        "step": 0.01,
+        "asset_class": "stock",
+    },
+    "TSLA/USD": {
+        "base": "TSLA",
+        "quote": "USD",
+        "price": 248.0,
+        "vol": 0.024,
+        "min_qty": 1.0,
+        "step": 0.01,
+        "asset_class": "stock",
+    },
+    "MSFT/USD": {
+        "base": "MSFT",
+        "quote": "USD",
+        "price": 425.0,
+        "vol": 0.010,
+        "min_qty": 1.0,
+        "step": 0.01,
+        "asset_class": "stock",
+    },
 }
 
 TRADFI_SYMBOLS = {
-    "EUR/USD": {"base": "EUR", "quote": "USD", "price": 1.085, "vol": 0.004, "min_qty": 1000.0, "step": 1000.0, "asset_class": "forex"},
-    "GBP/USD": {"base": "GBP", "quote": "USD", "price": 1.27, "vol": 0.005, "min_qty": 1000.0, "step": 1000.0, "asset_class": "forex"},
-    "USD/JPY": {"base": "USD", "quote": "JPY", "price": 151.2, "vol": 0.005, "min_qty": 1000.0, "step": 1000.0, "asset_class": "forex"},
-    "XAU/USD": {"base": "XAU", "quote": "USD", "price": 2320.0, "vol": 0.008, "min_qty": 1.0, "step": 0.1, "asset_class": "commodity"},
-    "US30": {"base": "US30", "quote": "USD", "price": 39500.0, "vol": 0.007, "min_qty": 1.0, "step": 1.0, "asset_class": "index"},
+    "EUR/USD": {
+        "base": "EUR",
+        "quote": "USD",
+        "price": 1.085,
+        "vol": 0.004,
+        "min_qty": 1000.0,
+        "step": 1000.0,
+        "asset_class": "forex",
+    },
+    "GBP/USD": {
+        "base": "GBP",
+        "quote": "USD",
+        "price": 1.27,
+        "vol": 0.005,
+        "min_qty": 1000.0,
+        "step": 1000.0,
+        "asset_class": "forex",
+    },
+    "USD/JPY": {
+        "base": "USD",
+        "quote": "JPY",
+        "price": 151.2,
+        "vol": 0.005,
+        "min_qty": 1000.0,
+        "step": 1000.0,
+        "asset_class": "forex",
+    },
+    "XAU/USD": {
+        "base": "XAU",
+        "quote": "USD",
+        "price": 2320.0,
+        "vol": 0.008,
+        "min_qty": 1.0,
+        "step": 0.1,
+        "asset_class": "commodity",
+    },
+    "US30": {
+        "base": "US30",
+        "quote": "USD",
+        "price": 39500.0,
+        "vol": 0.007,
+        "min_qty": 1.0,
+        "step": 1.0,
+        "asset_class": "index",
+    },
 }
 
 
@@ -155,11 +276,11 @@ def _demo_price(symbol: str, ts: int, spec: dict) -> float:
     amp2 = 0.18 + 0.18 * rng.random()
     period2 = period1 / rng.choice([3, 4, 6])
     phase2 = rng.random() * 2 * math.pi
-    trend = amp1 * math.sin(2 * math.pi * ts / period1 + phase1) + amp2 * math.sin(
-        2 * math.pi * ts / period2 + phase2
-    )
-    texture = 0.55 * _value_noise(seed, ts, 900) + 0.25 * _value_noise(seed + 1, ts, 180) + 0.1 * _value_noise(
-        seed + 2, ts, 45
+    trend = amp1 * math.sin(2 * math.pi * ts / period1 + phase1) + amp2 * math.sin(2 * math.pi * ts / period2 + phase2)
+    texture = (
+        0.55 * _value_noise(seed, ts, 900)
+        + 0.25 * _value_noise(seed + 1, ts, 180)
+        + 0.1 * _value_noise(seed + 2, ts, 45)
     )
     return spec["price"] * math.exp(spec["vol"] * 0.7 * (trend + texture))
 
@@ -246,7 +367,11 @@ def get_candles(symbol: str, timeframe: str = "1h", limit: int = 200) -> tuple[l
             provider = get_provider(spec["venue"])
             candles = provider.fetch_ohlcv(symbol, timeframe, limit)
             meta = {"source": f"ccxt:{spec['venue']}", "is_demo": False, "fetched_at": int(time.time())}
-            cache_set(_cache_key("candles", symbol, timeframe, limit), json.dumps({"rows": [asdict(c) for c in candles], "meta": meta}), settings.market_data_cache_seconds)
+            cache_set(
+                _cache_key("candles", symbol, timeframe, limit),
+                json.dumps({"rows": [asdict(c) for c in candles], "meta": meta}),
+                settings.market_data_cache_seconds,
+            )
             return candles, meta
         except (ProviderError, Exception) as exc:  # noqa: BLE001 - fall through to demo feed
             log.warning("market_data_fallback", extra={"extra_fields": {"symbol": symbol, "error": str(exc)[:200]}})

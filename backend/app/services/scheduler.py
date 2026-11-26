@@ -1,13 +1,16 @@
-"""Paper-session scheduler.
+"""Paper-session and Deriv automation scheduler.
 
-Autonomous paper trading: running paper sessions are ticked on a fixed cadence so a
-strategy keeps evaluating new candles without a human pressing a button.
+Two independent loops share one daemon thread:
 
-There is no path from this module to live execution. It only calls ``run_paper_tick``,
-which submits ``mode="paper"`` orders, and those still pass the deterministic risk
-engine exactly like an order typed by hand. A session started without a strategy
-version has nothing to evaluate and is never ticked.
+1. Paper sessions — running sessions are ticked on a fixed cadence so a strategy keeps
+   evaluating new candles without a human pressing a button. There is no path from this
+   part to live execution.
+2. Deriv automation — enabled ``AutoTradeConfig`` rows are evaluated on their own cadence.
+   Every entry goes through ``deriv_execution.open_contract``, which runs the execution gate
+   and the deterministic risk engine. Autonomous mode therefore has no bypass: the same
+   checks that guard a hand-typed order guard an AI-generated one.
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,6 +30,9 @@ _state: dict[str, object] = {
     "last_run_at": None,
     "last_summary": None,
     "last_error": None,
+    "deriv_last_run_at": None,
+    "deriv_last_summary": None,
+    "deriv_last_error": None,
 }
 
 # Sessions already reported as failing, so a broken row does not log every minute.
@@ -60,9 +66,7 @@ def due_sessions(
     return [s for s in rows if s.last_tick_at is None or _as_utc(s.last_tick_at) <= cutoff]
 
 
-def tick_due_sessions(
-    db: Session, *, now: datetime | None = None, interval_seconds: int | None = None
-) -> dict:
+def tick_due_sessions(db: Session, *, now: datetime | None = None, interval_seconds: int | None = None) -> dict:
     """Tick every due session once. One failing session never stops the others."""
     from app.services import strategy_service
 
@@ -122,8 +126,35 @@ class SessionScheduler:
         log.info("scheduler_stopped")
 
     def _loop(self) -> None:
+        deriv_interval = max(30, int(settings.deriv_autotrade_interval_seconds))
+        elapsed = 0
         while not self._stop.wait(self.interval_seconds):
             self.run_once()
+            elapsed += self.interval_seconds
+            if elapsed >= deriv_interval:
+                elapsed = 0
+                self.run_deriv_once()
+
+    def run_deriv_once(self) -> dict:
+        if not settings.deriv_autotrade_runner_enabled:
+            return {"skipped": "disabled"}
+        from app.services import autotrade
+
+        db = SessionLocal()
+        try:
+            summary = autotrade.run_once(db)
+            db.commit()
+            _state.update(deriv_last_run_at=_utcnow().isoformat(), deriv_last_summary=summary, deriv_last_error=None)
+            if summary.get("configs"):
+                log.info("deriv_autotrade_tick", extra={"extra_fields": summary})
+            return summary
+        except Exception as exc:  # noqa: BLE001 - the loop must survive a bad pass
+            db.rollback()
+            _state["deriv_last_error"] = type(exc).__name__
+            log.exception("deriv_autotrade_tick_failed")
+            return {"error": type(exc).__name__}
+        finally:
+            db.close()
 
     def run_once(self) -> dict:
         db = SessionLocal()

@@ -4,6 +4,7 @@ Tests run against a real PostgreSQL database (``veltrane_test``) with the demo m
 data feed, so the code paths exercised are the production code paths. Redis is used
 for rate limiting and is flushed between tests.
 """
+
 from __future__ import annotations
 
 import base64
@@ -175,6 +176,35 @@ def make_user(client):
     return _make
 
 
+@pytest.fixture(scope="session")
+def mock_deriv():
+    """One protocol-faithful Deriv server for the whole session; each test resets its state."""
+    from tests.support.deriv_mock import MockDerivServer
+
+    server = MockDerivServer().start()
+    try:
+        yield server
+    finally:
+        server.stop()
+
+
+@pytest.fixture()
+def deriv_env(mock_deriv, monkeypatch):
+    """Point the settings at the local Deriv server. No test ever reaches the real venue."""
+    from app.core.config import settings
+    from app.services import deriv_sessions
+
+    mock_deriv.state.reset()
+    monkeypatch.setattr(settings, "deriv_rest_base", mock_deriv.base_url)
+    monkeypatch.setattr(settings, "deriv_public_ws_url", mock_deriv.public_ws_url)
+    monkeypatch.setattr(settings, "deriv_app_id", mock_deriv.state.app_id)
+    monkeypatch.setattr(settings, "deriv_session_max_failures", 3)
+    deriv_sessions.close_all()
+    yield mock_deriv
+    mock_deriv.state.reset()
+    deriv_sessions.close_all()
+
+
 @pytest.fixture
 def trader(make_user):
     return make_user("trader")
@@ -238,6 +268,15 @@ def admin(client, make_user, db):
     user.staff_role = "admin"
     db.commit()
     return account
+
+
+@pytest.fixture(autouse=True)
+def stub_hosted_venues(monkeypatch):
+    """Hosted crypto venues never leave the process during tests; see tests/support/fake_venue.py."""
+    from tests.support import fake_venue
+
+    with fake_venue.activate(monkeypatch) as state:
+        yield state
 
 
 def mark_connection_connected(db, connection_id: str) -> None:

@@ -28,11 +28,7 @@ def deliver_queued(db: Session, limit: int = 50) -> int:
     would be a false operational statement.
     """
     pending = (
-        db.query(EmailOutbox)
-        .filter(EmailOutbox.status == "queued")
-        .order_by(EmailOutbox.created_at)
-        .limit(limit)
-        .all()
+        db.query(EmailOutbox).filter(EmailOutbox.status == "queued").order_by(EmailOutbox.created_at).limit(limit).all()
     )
     if pending:
         log.info("email_outbox_pending", extra={"extra_fields": {"count": len(pending)}})

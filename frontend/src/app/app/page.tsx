@@ -40,9 +40,8 @@ type Performance = {
     profit_factor: number | null;
     net_pnl: number;
     max_drawdown_pct: number;
-    paper_trades: number;
-    live_trades: number;
   };
+  trade_counts: { paper: number; demo: number; live: number };
 };
 
 type Briefing = { rows: Array<{ symbol: string; asset_class: string; price: number; bias: string; confidence: number; is_demo: boolean }> };
@@ -100,6 +99,7 @@ export default function OverviewPage() {
 
   const equity = portfolio.data?.equity;
   const stats = performance.data?.stats;
+  const counts = performance.data?.trade_counts ?? { paper: 0, demo: 0, live: 0 };
   const curve = (performance.data?.curve ?? []).map((point) => point.cumulative);
   const openContracts = (binary.data?.contracts ?? []).filter((c) => c.status === "open");
   const killEngaged = Boolean((state.data?.kill_switches as Record<string, { engaged?: boolean }> | undefined)?.org?.engaged);
@@ -254,7 +254,13 @@ export default function OverviewPage() {
             {[
               ["Net P&L", stats ? signedMoney(stats.net_pnl) : "—", (stats?.net_pnl ?? 0) >= 0],
               ["Max drawdown", stats ? `${stats.max_drawdown_pct.toFixed(2)}%` : "—", null],
-              ["Trades", stats ? `${stats.paper_trades} paper · ${stats.live_trades} live` : "—", null],
+              [
+                "Trades",
+                stats
+                  ? `${counts.paper} paper · ${counts.demo} demo · ${counts.live} live`
+                  : "—",
+                null,
+              ],
             ].map(([label, value, positive]) => (
               <div key={label as string} className="px-4 py-2.5">
                 <p className="text-3xs uppercase tracking-label text-paper-faint">{label}</p>

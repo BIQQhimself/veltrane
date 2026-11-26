@@ -48,16 +48,47 @@ Shared implementation: `app/providers/ccxt_provider.py`.
 - Read-only enforcement: an adapter is constructed with `allow_trading=False` unless the caller
   holds the live-trading entitlement, a verified connection and an active authorisation.
 
-## Forex and indices — Deriv
+## Forex, indices and synthetics — Deriv
 
 `app/providers/deriv.py`, status `implemented_unverified`.
 
-Deriv's retail API is WebSocket-based and token-authenticated rather than REST. The adapter is
-scaffolded with the same interface and reports `trade=False` until the socket flow is implemented
-and tested; the API will therefore refuse to route a live order to it. This is deliberate: an
-adapter that silently half-works is worse than one that refuses.
+Deriv is a broker, not an exchange: retail instruments are fixed-odds and multiplier contracts
+rather than a central order book, and the API is REST plus WebSocket rather than plain REST.
+The adapter is built against Deriv's current API (`api.derivws.com`):
 
-Recommended alternative if Deriv integration proves slow: OANDA v20 (REST, well documented) —
+| Concern | Endpoint | Authentication |
+| --- | --- | --- |
+| Tradable symbols, candles, ticks | public gateway WebSocket | none |
+| Contract pricing (`proposal`) | trading socket | OTP |
+| Buy / sell / portfolio / statement | trading socket | OTP |
+| Account list, OTP issuance | `POST /trading/v1/options/accounts/{id}/otp` | Personal Access Token or OAuth 2.0 |
+
+**Authentication.** A single Personal Access Token (or an OAuth 2.0 access token) is the whole
+credential. Deriv has no API secret, and asking users for one was a defect in the original
+scaffold. `provider_catalog()` therefore publishes `requires_api_secret: false` and
+`requires_app_id: true`, and the connect form renders fields from that metadata instead of
+hardcoding key/secret inputs. Tokens are requested with read and trade scopes only; withdrawal
+scope is never requested and the adapter has no withdrawal code path.
+
+**Trading sockets.** Anything that touches an account needs an OTP-authenticated socket. The
+session manager (`app/services/deriv_sessions.py`) requests an OTP per account, opens
+`wss://.../ws/{demo|real}?otp=...`, and re-authenticates on expiry. Sessions are per connection,
+never shared across tenants, and closed explicitly or on process shutdown. Failures are recorded
+as auth events and surfaced on the connection.
+
+**Execution.** `app/trading/deriv_execution.py` runs every contract through the same independent
+risk engine as any other venue, then through the execution gate (platform switch, live
+authorisation, connection permission, session state). Fixed-odds contracts have no traded price,
+so the underlying spot is stored as the reference price and the fee is the contract's own spread
+(payout below stake). Duplicate submission is prevented with an idempotency key.
+
+**Verification status.** Public market data and contract pricing are verified against the live
+gateway. Account authorisation, proposal, buy/sell, close and reconciliation are verified against
+a protocol-faithful test server (`tests/support/deriv_mock.py`) with 21 passing integration tests.
+They have **not** been verified against a funded Deriv account, so the status stays
+`implemented_unverified` and live execution remains behind the platform switch.
+
+If Deriv proves unreliable in production, OANDA v20 (REST, well documented) is the fallback —
 not implemented.
 
 ## Simulation venue — `paper`

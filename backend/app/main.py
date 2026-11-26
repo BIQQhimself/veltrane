@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import StatementError
+from sqlalchemy.exc import DataError
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app import __version__
@@ -40,7 +40,11 @@ async def lifespan(app: FastAPI):
     if settings.live_trading_enabled:
         log.warning(
             "LIVE_TRADING_ENABLED",
-            extra={"extra_fields": {"message": "Platform live execution is enabled. Every order still passes the risk engine."}},
+            extra={
+                "extra_fields": {
+                    "message": "Platform live execution is enabled. Every order still passes the risk engine."
+                }
+            },
         )
     scheduler = None
     if settings.scheduler_enabled and settings.env != "test":
@@ -60,7 +64,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-        response.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/api/") else response.headers.get("Cache-Control", "no-cache")
+        response.headers["Cache-Control"] = (
+            "no-store" if request.url.path.startswith("/api/") else response.headers.get("Cache-Control", "no-cache")
+        )
         if settings.is_production:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
@@ -91,7 +97,15 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Request-ID", "Stripe-Signature", "X-Mock-Signature", "X-Mock-Timestamp"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-Request-ID",
+        "Stripe-Signature",
+        "X-Mock-Signature",
+        "X-Mock-Timestamp",
+    ],
     expose_headers=["X-Request-ID"],
     max_age=600,
 )
@@ -128,12 +142,18 @@ async def validation_handler(request: Request, exc: RequestValidationError):
     )
 
 
-@app.exception_handler(StatementError)
-async def bad_identifier_handler(request: Request, exc: StatementError):
+@app.exception_handler(DataError)
+async def bad_identifier_handler(request: Request, exc: DataError):
     log.warning("invalid_identifier", extra={"extra_fields": {"path": request.url.path}})
     return JSONResponse(
         status_code=400,
-        content={"detail": {"code": "invalid_identifier", "message": "The request contained an invalid identifier.", "details": {}}},
+        content={
+            "detail": {
+                "code": "invalid_identifier",
+                "message": "The request contained an invalid identifier.",
+                "details": {},
+            }
+        },
     )
 
 
@@ -142,7 +162,12 @@ async def unhandled_handler(request: Request, exc: Exception):
     log.exception("unhandled_error", extra={"extra_fields": {"path": request.url.path}})
     return JSONResponse(
         status_code=500,
-        content={"detail": {"code": "internal_error", "message": "An unexpected error occurred. No sensitive details are exposed."}},
+        content={
+            "detail": {
+                "code": "internal_error",
+                "message": "An unexpected error occurred. No sensitive details are exposed.",
+            }
+        },
     )
 
 

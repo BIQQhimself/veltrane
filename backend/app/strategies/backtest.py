@@ -9,6 +9,7 @@ Deliberate design choices:
 * No parameter optimisation happens here; walk-forward output is out-of-sample
   consistency, not a search for the best curve fit.
 """
+
 from __future__ import annotations
 
 import math
@@ -104,9 +105,22 @@ def run_backtest(
         return price * (1 + adverse) if side == "buy" else price * (1 - adverse)
 
     def close_position(exit_raw: float, index: int, reason: str, exit_side: str) -> None:
-        nonlocal cash, equity, position, total_fees, total_funding, gross_profit, gross_loss, consecutive_losses, max_consecutive_losses
+        nonlocal \
+            cash, \
+            equity, \
+            position, \
+            total_fees, \
+            total_funding, \
+            gross_profit, \
+            gross_loss, \
+            consecutive_losses, \
+            max_consecutive_losses
         assert position is not None
-        exit_price = slip(exit_raw, exit_side) - half_spread(exit_raw) if exit_side == "sell" else slip(exit_raw, exit_side) + half_spread(exit_raw)
+        exit_price = (
+            slip(exit_raw, exit_side) - half_spread(exit_raw)
+            if exit_side == "sell"
+            else slip(exit_raw, exit_side) + half_spread(exit_raw)
+        )
         notional = exit_price * position.quantity
         fee = notional * costs.fee_bps / 10_000
         total_fees += fee
@@ -233,7 +247,9 @@ def run_backtest(
     # Close any open position at the final close so reported P&L is realised.
     if position is not None:
         exit_side = "sell" if position.side == "long" else "buy"
-        close_position(candles[last_index].close, last_index, "Backtest ended; position closed at final close.", exit_side)
+        close_position(
+            candles[last_index].close, last_index, "Backtest ended; position closed at final close.", exit_side
+        )
         equity = cash
         curve.append({"ts": candles[last_index].ts, "equity": _round(equity, 2)})
 

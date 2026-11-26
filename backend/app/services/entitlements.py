@@ -125,7 +125,12 @@ PLAN_CATALOG: list[dict] = [
             Entitlement.MAX_OPEN_POSITIONS: 50,
             Entitlement.MAX_DAILY_DEMO_EXECUTIONS: 1000,
             Entitlement.MAX_BACKTESTS_PER_DAY: 200,
-            Entitlement.STRATEGY_LIBRARY: ["trend_following_v1", "mean_reversion_v1", "breakout_v1", "momentum_rotation_v1"],
+            Entitlement.STRATEGY_LIBRARY: [
+                "trend_following_v1",
+                "mean_reversion_v1",
+                "breakout_v1",
+                "momentum_rotation_v1",
+            ],
             Entitlement.BACKTESTING: True,
             Entitlement.STRATEGY_CUSTOMIZATION: True,
             Entitlement.ADVANCED_ANALYTICS: True,
@@ -169,12 +174,7 @@ def _utcnow() -> datetime:
 
 
 def active_subscription(db: Session, org_id: str) -> Subscription | None:
-    return (
-        db.query(Subscription)
-        .filter(Subscription.org_id == org_id)
-        .order_by(Subscription.created_at.desc())
-        .first()
-    )
+    return db.query(Subscription).filter(Subscription.org_id == org_id).order_by(Subscription.created_at.desc()).first()
 
 
 def effective_plan_code(db: Session, org_id: str) -> str:

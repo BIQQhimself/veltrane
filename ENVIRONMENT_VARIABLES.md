@@ -51,6 +51,16 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 | `VELTRANE_PAPER_SPREAD_BPS` | `4.0` | Half-spread applied against the trade |
 | `VELTRANE_PAPER_SLIPPAGE_BPS` | `3.0` | |
 | `VELTRANE_PAPER_STARTING_BALANCE` | `25000` | Paper session default |
+| `VELTRANE_DERIV_REST_BASE` | `https://api.derivws.com` | Deriv REST base. Overridable so tests can point at a local gateway |
+| `VELTRANE_DERIV_PUBLIC_WS_URL` | `wss://api.derivws.com/trading/v1/options/ws/public` | Unauthenticated market-data and pricing socket |
+| `VELTRANE_DERIV_APP_ID` | *(empty)* | Deriv application id sent as `Deriv-App-ID` for Personal Access Token auth. Required for token connections; OAuth tokens carry the app themselves |
+| `VELTRANE_DERIV_OAUTH_CLIENT_ID` | *(empty)* | Enables the OAuth 2.0 authorization-code flow when set with the redirect URI |
+| `VELTRANE_DERIV_OAUTH_REDIRECT_URI` | *(empty)* | Must match the redirect registered with Deriv |
+| `VELTRANE_DERIV_OAUTH_AUTH_URL` | `https://auth.deriv.com/oauth2/auth` | Authorization endpoint |
+| `VELTRANE_DERIV_OAUTH_TOKEN_URL` | `https://auth.deriv.com/oauth2/token` | Token endpoint |
+| `VELTRANE_DERIV_SESSION_MAX_FAILURES` | `5` | Consecutive socket/auth failures before a connection is marked errored and needs a manual reconnect |
+| `VELTRANE_DERIV_AUTOTRADE_RUNNER_ENABLED` | `true` | Runs the autotrade signal generator in the scheduler. It proposes only; the risk engine still decides |
+| `VELTRANE_DERIV_AUTOTRADE_INTERVAL_SECONDS` | `120` | How often the autotrade runner evaluates each enabled config |
 
 ## Billing
 

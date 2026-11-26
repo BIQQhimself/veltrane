@@ -15,6 +15,7 @@ What it creates:
 Everything it writes is simulated. The account cannot reach live trading: the
 platform-wide flag stays off and live authorization is a separate user action.
 """
+
 from __future__ import annotations
 
 import os
@@ -26,7 +27,7 @@ from app.core.errors import AppError
 from app.db.models import BinaryContract, Organization, Position, User
 from app.db.session import SessionLocal
 from app.services import auth, billing, strategy_service
-from app.trading import binary as binary_engine
+
 from scripts.seed import seed
 
 DEMO_EMAIL = os.environ.get("VELTRANE_DEMO_EMAIL", "demo@veltrane.ai")
@@ -91,9 +92,7 @@ def _ensure_session(db, user: User) -> None:
     from app.db.models import PaperSession
 
     running = (
-        db.query(PaperSession)
-        .filter(PaperSession.org_id == user.org_id, PaperSession.status == "running")
-        .count()
+        db.query(PaperSession).filter(PaperSession.org_id == user.org_id, PaperSession.status == "running").count()
     )
     if running:
         return
@@ -230,11 +229,7 @@ def _ensure_contracts(db, user: User) -> None:
 
 
 def _ensure_position(db, user: User) -> None:
-    open_position = (
-        db.query(Position)
-        .filter(Position.org_id == user.org_id, Position.status == "open")
-        .count()
-    )
+    open_position = db.query(Position).filter(Position.org_id == user.org_id, Position.status == "open").count()
     if open_position:
         return
     from app.trading import engine as trading_engine
@@ -286,11 +281,13 @@ def main() -> None:
         _ensure_contracts(db, user)
         _ensure_position(db, user)
         print(f"Demo account ready: {DEMO_EMAIL}")
-        print(f"  plan=pro  live_trading={'on' if settings.live_trading_enabled else 'off'}  market_data={settings.market_data_source}")
+        print(
+            f"  plan=pro  live_trading={'on' if settings.live_trading_enabled else 'off'}  market_data={settings.market_data_source}"
+        )
     except AppError as exc:
         db.rollback()
         print(f"Demo seed failed: {exc.detail}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     finally:
         db.close()
 

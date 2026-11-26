@@ -79,7 +79,9 @@ def test_notifications_for_entry_and_exit(client, trader):
 def test_notification_never_claims_execution_on_rejection(client, trader):
     rejected = place_order(client, trader["headers"], quantity=100)
     assert rejected["body"]["order"]["status"] == "rejected"
-    titles = [n["title"] for n in client.get(f"{BASE}/notifications", headers=trader["headers"]).json()["notifications"]]
+    titles = [
+        n["title"] for n in client.get(f"{BASE}/notifications", headers=trader["headers"]).json()["notifications"]
+    ]
     assert not any("fill" in t.lower() and "rejected" not in t.lower() for t in titles)
     assert any("rejected" in t.lower() for t in titles)
 
@@ -111,14 +113,18 @@ def test_market_data_is_labelled(client):
 
 
 def test_onboarding_progress_is_monotonic_and_tenant_scoped(client, trader):
-    first = client.post(f"{BASE}/users/me/onboarding", json={"step": 4, "data": {"plan_seen": True}}, headers=trader["headers"])
+    first = client.post(
+        f"{BASE}/users/me/onboarding", json={"step": 4, "data": {"plan_seen": True}}, headers=trader["headers"]
+    )
     assert first.status_code == 200
     assert first.json()["onboarding_step"] == 4
 
     back = client.post(f"{BASE}/users/me/onboarding", json={"step": 2}, headers=trader["headers"])
     assert back.json()["onboarding_step"] == 4
 
-    forward = client.post(f"{BASE}/users/me/onboarding", json={"step": 9, "data": {"risk_policy_read": True}}, headers=trader["headers"])
+    forward = client.post(
+        f"{BASE}/users/me/onboarding", json={"step": 9, "data": {"risk_policy_read": True}}, headers=trader["headers"]
+    )
     body = forward.json()
     assert body["onboarding_step"] == 9
     assert body["onboarding"]["plan_seen"] is True

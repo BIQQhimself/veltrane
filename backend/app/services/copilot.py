@@ -9,6 +9,7 @@ carries its data provenance so a demo feed can never be mistaken for live data.
 The design is deliberate: a small, auditable model that always produces the same
 answer for the same candles beats an opaque text generator on a trading platform.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -58,9 +59,7 @@ def analyse(symbol: str, timeframe: str = "15m", duration_seconds: int | None = 
     if ema_fast and ema_slow:
         gap = (ema_fast - ema_slow) / ema_slow * 100
         score += 2 if gap > 0.15 else (-2 if gap < -0.15 else 0)
-        rationale.append(
-            f"EMA12 is {gap:+.2f}% versus EMA48, so the short-term trend is {trend}."
-        )
+        rationale.append(f"EMA12 is {gap:+.2f}% versus EMA48, so the short-term trend is {trend}.")
     if rsi_value is not None:
         if rsi_value > 70:
             score -= 1
@@ -84,9 +83,7 @@ def analyse(symbol: str, timeframe: str = "15m", duration_seconds: int | None = 
 
     if duration_seconds is not None and duration_seconds <= 300:
         score = int(round(score * 0.5))
-        rationale.append(
-            f"A {duration_seconds}s expiry is noise-dominated; the signal weight is halved on purpose."
-        )
+        rationale.append(f"A {duration_seconds}s expiry is noise-dominated; the signal weight is halved on purpose.")
 
     if atr_pct > 1.2:
         rationale.append(

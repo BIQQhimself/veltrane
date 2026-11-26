@@ -114,7 +114,9 @@ def approve_version(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    version = strategy_service.approve_version(db, user=user, version_id=version_id, acknowledge_risk=payload.acknowledge_risk)
+    version = strategy_service.approve_version(
+        db, user=user, version_id=version_id, acknowledge_risk=payload.acknowledge_risk
+    )
     db.commit()
     return {"status": version.status, "version_id": version.id, "approved_at": serializers.iso(version.approved_at)}
 
@@ -139,11 +141,7 @@ def create_backtest(payload: BacktestRequest, user: User = Depends(get_current_u
 @router.get("/backtests")
 def list_backtests(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     rows = (
-        db.query(Backtest)
-        .filter(Backtest.org_id == user.org_id)
-        .order_by(Backtest.created_at.desc())
-        .limit(100)
-        .all()
+        db.query(Backtest).filter(Backtest.org_id == user.org_id).order_by(Backtest.created_at.desc()).limit(100).all()
     )
     return {"backtests": [serializers.backtest_dict(b) for b in rows]}
 
@@ -207,11 +205,7 @@ def session_detail(session_id: str, user: User = Depends(get_current_user), db: 
         raise not_found("session_not_found", "Paper session not found.")
     positions = db.query(Position).filter(Position.paper_session_id == session.id).all()
     trades = (
-        db.query(Trade)
-        .filter(Trade.paper_session_id == session.id)
-        .order_by(Trade.closed_at.desc())
-        .limit(100)
-        .all()
+        db.query(Trade).filter(Trade.paper_session_id == session.id).order_by(Trade.closed_at.desc()).limit(100).all()
     )
     return {
         "session": serializers.session_dict(session),

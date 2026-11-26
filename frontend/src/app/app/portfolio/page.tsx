@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { useApi } from "@/lib/hooks";
 import { bps, dateTime, money, percent, signedMoney } from "@/lib/format";
 import { Donut } from "@/components/charts";
@@ -23,10 +24,22 @@ type Performance = {
     net_pnl: number;
     fees: number;
     max_drawdown_pct: number;
-    paper_trades: number;
-    live_trades: number;
   };
+  trade_counts: { paper: number; demo: number; live: number };
+  by_scope: Record<Scope, PeriodStats>;
   note: string;
+};
+
+type Scope = "paper" | "demo" | "live";
+
+type PeriodStats = {
+  trades: number;
+  win_rate_pct: number;
+  profit_factor: number | null;
+  avg_win: number;
+  avg_loss: number;
+  net_pnl: number;
+  fees: number;
 };
 
 const ALLOC_COLORS = ["#c8a96a", "#6a9bd8", "#3fb27f", "#c6cedb", "#a8894f", "#e0606f", "#7f8fa6"];
@@ -171,12 +184,35 @@ export default function PortfolioPage() {
                     { label: "Net P&L", value: signedMoney(performance.data.stats.net_pnl), mono: true },
                   ]}
                 />
-                <div className="flex items-center gap-2">
-                  <Badge tone="info">paper {performance.data.stats.paper_trades}</Badge>
-                  <Badge tone={performance.data.stats.live_trades ? "warn" : "neutral"}>
-                    live {performance.data.stats.live_trades}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="info">paper {performance.data.trade_counts.paper}</Badge>
+                  <Badge tone="neutral">demo {performance.data.trade_counts.demo}</Badge>
+                  <Badge tone={performance.data.trade_counts.live ? "warn" : "neutral"}>
+                    live {performance.data.trade_counts.live}
                   </Badge>
                 </div>
+                <dl className="grid grid-cols-3 gap-2 rounded-lg border border-line-soft bg-obsidian-900/40 px-3 py-2 text-2xs">
+                  {(["paper", "demo", "live"] as const).map((scope) => {
+                    const scopedNet = performance.data?.by_scope[scope]?.net_pnl;
+                    return (
+                    <div key={scope}>
+                      <dt className="text-3xs uppercase tracking-label text-paper-faint">{scope} net</dt>
+                      <dd
+                        className={cn(
+                          "num mt-0.5",
+                          scopedNet === 0
+                            ? "text-paper-muted"
+                            : (scopedNet ?? 0) > 0
+                              ? "text-gain"
+                              : "text-loss",
+                        )}
+                      >
+                        {signedMoney(scopedNet ?? 0)}
+                      </dd>
+                    </div>
+                    );
+                  })}
+                </dl>
                 <p className="text-2xs leading-relaxed text-paper-faint">{performance.data.note}</p>
               </div>
             ) : null}

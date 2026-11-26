@@ -7,6 +7,7 @@ requires re-wrapping DEKs, never re-encrypting payloads.
 Every ciphertext is bound to an AAD string (``org:<id>|connection:<id>``) so a
 row copied from one tenant to another fails to decrypt.
 """
+
 from __future__ import annotations
 
 import base64
@@ -71,9 +72,7 @@ def encrypt_json(payload: dict, *, aad: str) -> Envelope:
     nonce = os.urandom(NONCE_BYTES)
     ciphertext = AESGCM(dek).encrypt(nonce, json.dumps(payload).encode(), aad.encode())
     dek_nonce = os.urandom(NONCE_BYTES)
-    wrapped = _kek().encrypt(
-        dek_nonce, dek, _kek_aad(settings.kek_version) + b"|" + aad.encode()
-    )
+    wrapped = _kek().encrypt(dek_nonce, dek, _kek_aad(settings.kek_version) + b"|" + aad.encode())
     return Envelope(
         kek_version=settings.kek_version,
         wrapped_dek=_b64(wrapped),

@@ -7,6 +7,7 @@ This module is the only place that turns an intent into an execution. It:
 4. persists the decision (approved or rejected) for audit,
 5. executes only when approved — paper always, live only when every gate passes.
 """
+
 from __future__ import annotations
 
 import logging
@@ -137,7 +138,9 @@ def _paper_session_for(db: Session, user: User, session_id: str | None) -> Paper
     return session
 
 
-def _equity_and_positions(db: Session, user: User, mode: str, session: PaperSession | None) -> tuple[float, float, list[Position], float]:
+def _equity_and_positions(
+    db: Session, user: User, mode: str, session: PaperSession | None
+) -> tuple[float, float, list[Position], float]:
     query = db.query(Position).filter(Position.org_id == user.org_id, Position.status == "open")
     if mode == TradeMode.PAPER:
         if session is not None:
@@ -158,11 +161,7 @@ def _equity_and_positions(db: Session, user: User, mode: str, session: PaperSess
         from app.db.models import Balance
         from sqlalchemy import func
 
-        total = (
-            db.query(func.coalesce(func.sum(Balance.usd_value), 0))
-            .filter(Balance.org_id == user.org_id)
-            .scalar()
-        )
+        total = db.query(func.coalesce(func.sum(Balance.usd_value), 0)).filter(Balance.org_id == user.org_id).scalar()
         equity = float(total or 0.0)
     return equity, exposure, positions, unrealised
 
@@ -266,6 +265,9 @@ def build_context(
     connection: Connection | None,
     session: PaperSession | None,
     snapshot: market_data.MarketSnapshot,
+    venue_demo: bool = False,
+    venue_instrument: dict | None = None,
+    market_open: bool | None = None,
 ) -> RiskContext:
     policy = active_policy(db, user.org_id)
     rules = merged_rules(policy.rules if policy else None)
@@ -358,6 +360,7 @@ def build_context(
             or connection.environment == ConnectionEnvironment.READ_ONLY
             or not bool(connection.permissions.get("trade"))
         ),
+        venue_demo=venue_demo,
         equity=equity,
         cash=float(session.cash_balance) if session else equity,
         peak_equity=peak,
@@ -378,13 +381,16 @@ def build_context(
         account_exposure=exposure,
         portfolio_exposure=exposure,
         open_position_count=len(positions),
+        # A venue connection prices instruments the platform's own registry does not list.
+        # The venue's symbol catalogue is then the authority on tradability; the platform's
+        # symbol specs remain authoritative for every non-venue order.
         instrument=InstrumentView(
             symbol=intent.symbol,
-            asset_class=spec.get("asset_class", "crypto"),
-            min_qty=float(spec.get("min_qty", 0) or 0),
-            qty_step=float(spec.get("step", 0) or 0),
+            asset_class=(venue_instrument or spec).get("asset_class", "crypto"),
+            min_qty=float((venue_instrument or spec).get("min_qty", 0) or 0),
+            qty_step=float((venue_instrument or spec).get("qty_step", spec.get("step", 0)) or 0),
             max_leverage=float(rules.get("max_leverage", 1)),
-            is_active=spec != {},
+            is_active=bool(venue_instrument) or spec != {},
         ),
         market=MarketView(
             price=snapshot.price,
@@ -398,7 +404,9 @@ def build_context(
         duplicate_exists=duplicate,
         executions_today=executions_today,
         daily_execution_limit=demo_limit,
-        market_open=market_data.is_market_open(intent.symbol),
+        # Venue connections report the session themselves; the platform's calendar only
+        # covers instruments in its own registry.
+        market_open=(market_data.is_market_open(intent.symbol) if market_open is None else bool(market_open)),
         is_demo_feed=snapshot.is_demo,
     )
 
@@ -417,11 +425,7 @@ def submit_order(db: Session, *, user: User, request: OrderRequest, source: str 
 
     # Idempotency: replaying the same key returns the original order, never a second fill.
     idempotency_key = request.idempotency_key or f"auto:{user.org_id}:{uuid.uuid4().hex}"
-    existing = (
-        db.query(Order)
-        .filter(Order.org_id == user.org_id, Order.idempotency_key == idempotency_key)
-        .first()
-    )
+    existing = db.query(Order).filter(Order.org_id == user.org_id, Order.idempotency_key == idempotency_key).first()
     if existing:
         decision = db.get(RiskDecision, existing.risk_decision_id) if existing.risk_decision_id else None
         return {
@@ -495,7 +499,9 @@ def submit_order(db: Session, *, user: User, request: OrderRequest, source: str 
         strategy_version_id=request.strategy_version_id,
         correlation_id=uuid.uuid4().hex,
         rejection_reason=None if assessment.approved else "; ".join(f.message for f in assessment.failed),
-        slippage_est_bps=settings.paper_slippage_bps + settings.paper_spread_bps / 2 if request.mode == TradeMode.PAPER else 0,
+        slippage_est_bps=settings.paper_slippage_bps + settings.paper_spread_bps / 2
+        if request.mode == TradeMode.PAPER
+        else 0,
         is_demo=request.mode == TradeMode.PAPER,
     )
     db.add(order)
@@ -637,7 +643,13 @@ def submit_order(db: Session, *, user: User, request: OrderRequest, source: str 
                 data={"trade_id": trade.id, "is_demo": True},
             )
         db.commit()
-        return {"idempotent_replay": False, "order": order, "decision": decision, "fill": fill, "trade": fill.closed_trade}
+        return {
+            "idempotent_replay": False,
+            "order": order,
+            "decision": decision,
+            "fill": fill,
+            "trade": fill.closed_trade,
+        }
 
     # ------------------------- live path -------------------------
     # Re-check the process-wide switch immediately before any venue call (defence in depth).
@@ -780,7 +792,9 @@ def cancel_order(db: Session, *, user: User, order: Order) -> Order:
         if connection:
             provider = get_provider(connection.provider)
             try:
-                provider.cancel_order(load_credentials(db, connection), order.provider_order_id, order.instrument_symbol)
+                provider.cancel_order(
+                    load_credentials(db, connection), order.provider_order_id, order.instrument_symbol
+                )
             except ProviderError as exc:
                 raise bad_request(exc.code, exc.message) from exc
     order.status = OrderStatus.CANCELED

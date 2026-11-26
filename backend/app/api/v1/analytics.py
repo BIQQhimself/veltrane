@@ -58,7 +58,14 @@ def analytics(user: User = Depends(get_current_user), db: Session = Depends(get_
     return {
         "advanced_unlocked": advanced,
         "symbols": [
-            {"symbol": k, **{**v, "net_pnl": round(v["net_pnl"], 2), "win_rate_pct": round(v["wins"] / v["trades"] * 100, 2) if v["trades"] else 0}}
+            {
+                "symbol": k,
+                **{
+                    **v,
+                    "net_pnl": round(v["net_pnl"], 2),
+                    "win_rate_pct": round(v["wins"] / v["trades"] * 100, 2) if v["trades"] else 0,
+                },
+            }
             for k, v in sorted(by_symbol.items(), key=lambda kv: kv[1]["net_pnl"], reverse=True)
         ],
         "strategies": sorted(strategy_rows, key=lambda r: r["net_pnl"], reverse=True),

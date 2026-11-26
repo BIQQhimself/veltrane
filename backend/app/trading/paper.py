@@ -9,6 +9,7 @@ Fills are simulated with a transparent, configurable cost model:
 The engine is deterministic given (market price, cost model, order) so results are
 reproducible. Every fill writes a trade/position/order/fee/ledger/audit trail.
 """
+
 from __future__ import annotations
 
 import logging
@@ -92,7 +93,9 @@ def execute_market_order(
     realized = 0.0
     opened = False
 
-    if position is not None and ((position.side == "long" and side == "sell") or (position.side == "short" and side == "buy")):
+    if position is not None and (
+        (position.side == "long" and side == "sell") or (position.side == "short" and side == "buy")
+    ):
         # Reduce or close the existing position.
         close_qty = min(quantity, float(position.quantity))
         gross = (
@@ -203,11 +206,7 @@ def execute_market_order(
     db.flush()
 
     # Session equity = cash + mark-to-market of open positions.
-    open_positions = (
-        db.query(Position)
-        .filter(Position.paper_session_id == session.id, Position.status == "open")
-        .all()
-    )
+    open_positions = db.query(Position).filter(Position.paper_session_id == session.id, Position.status == "open").all()
     equity = float(session.cash_balance)
     for pos in open_positions:
         mark = _mark_price(db, session.id, pos.instrument_symbol, float(pos.mark_price or 0))

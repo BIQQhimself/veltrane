@@ -124,13 +124,17 @@ class ConnectionCreateRequest(BaseModel):
     api_secret: str = Field(default="", max_length=400)
     passphrase: str = Field(default="", max_length=400)
     account_id: str = Field(default="", max_length=200)
+    # Deriv requires its own App ID header for API-token (PAT) authentication.
+    app_id: str = Field(default="", max_length=64)
     withdrawal_attestation: bool = False
 
 
 class ConnectionRotateRequest(BaseModel):
     api_key: str = Field(min_length=4, max_length=400)
-    api_secret: str = Field(min_length=4, max_length=400)
+    api_secret: str = Field(default="", max_length=400)
     passphrase: str = Field(default="", max_length=400)
+    account_id: str = Field(default="", max_length=200)
+    app_id: str = Field(default="", max_length=64)
 
 
 # ----------------------------- trading -----------------------------

@@ -1,4 +1,5 @@
 """Domain constants shared by services, API schemas and tests."""
+
 from __future__ import annotations
 
 
@@ -134,6 +135,7 @@ class AuditAction:
     ORDER_SUBMITTED = "order.submitted"
     ORDER_FILLED = "order.filled"
     ORDER_FAILED = "order.failed"
+    ORDER_CANCELLED = "order.cancelled"
     TRADE_CLOSED = "trade.closed"
     POSITION_CLOSED = "position.closed"
     RISK_POLICY_UPDATED = "risk.policy_updated"
@@ -145,6 +147,7 @@ class AuditAction:
     STRATEGY_VERSION_APPROVED = "strategy.version_approved"
     ADMIN_ACTION = "admin.action"
     FEATURE_FLAG_CHANGED = "feature_flag.changed"
+    AUTOTRADE_UPDATED = "autotrade.updated"
     BACKTEST_COMPLETED = "backtest.completed"
 
 

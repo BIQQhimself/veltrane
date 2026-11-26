@@ -3,6 +3,7 @@
 All figures are derived from persisted records. Cost-per-subscriber inputs are
 operator-provided settings, not invented numbers.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -93,12 +94,7 @@ def overview(db: Session, *, days: int = 30) -> dict:
         .scalar()
         or 0
     )
-    canceled = (
-        db.query(func.count(Subscription.id))
-        .filter(Subscription.canceled_at >= since)
-        .scalar()
-        or 0
-    )
+    canceled = db.query(func.count(Subscription.id)).filter(Subscription.canceled_at >= since).scalar() or 0
     churn_rate = (canceled / paid_orgs * 100) if paid_orgs else 0.0
     conversion = (paid_orgs / total_orgs * 100) if total_orgs else 0.0
 
@@ -109,23 +105,16 @@ def overview(db: Session, *, days: int = 30) -> dict:
         or 0.0
     )
     failed_payments = (
-        db.query(func.count(Payment.id))
-        .filter(Payment.status == "failed", Payment.created_at >= since)
-        .scalar()
-        or 0
+        db.query(func.count(Payment.id)).filter(Payment.status == "failed", Payment.created_at >= since).scalar() or 0
     )
-    refunded = (
-        db.query(func.coalesce(func.sum(Refund.amount), 0)).filter(Refund.created_at >= since).scalar() or 0.0
-    )
+    refunded = db.query(func.coalesce(func.sum(Refund.amount), 0)).filter(Refund.created_at >= since).scalar() or 0.0
     perf_fee_revenue = (
         db.query(func.coalesce(func.sum(PerformanceFeeRecord.fee_amount), 0))
         .filter(PerformanceFeeRecord.status == "invoiced", PerformanceFeeRecord.created_at >= since)
         .scalar()
         or 0.0
     )
-    ai_cost = (
-        db.query(func.coalesce(func.sum(AiUsage.cost_usd), 0)).filter(AiUsage.created_at >= since).scalar() or 0.0
-    )
+    ai_cost = db.query(func.coalesce(func.sum(AiUsage.cost_usd), 0)).filter(AiUsage.created_at >= since).scalar() or 0.0
     costs = cost_model(db)
     monthly_infra = float(costs["infra_monthly_usd"])
     open_tickets = db.query(func.count(SupportTicket.id)).filter(SupportTicket.status == "open").scalar() or 0
@@ -139,12 +128,7 @@ def overview(db: Session, *, days: int = 30) -> dict:
         .scalar()
         or 0
     )
-    live_orders = (
-        db.query(func.count(Trade.id))
-        .filter(Trade.mode == "live", Trade.created_at >= since)
-        .scalar()
-        or 0
-    )
+    live_orders = db.query(func.count(Trade.id)).filter(Trade.mode == "live", Trade.created_at >= since).scalar() or 0
 
     return {
         "window_days": days,

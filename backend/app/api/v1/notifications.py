@@ -70,7 +70,9 @@ def mark_all_read(user: User = Depends(get_current_user), db: Session = Depends(
 
 
 @router.get("/users/me/audit")
-def my_audit(limit: int = Query(default=50, le=200), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def my_audit(
+    limit: int = Query(default=50, le=200), user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     rows = (
         db.query(AuditLog)
         .filter(AuditLog.org_id == user.org_id)
@@ -124,7 +126,9 @@ def update_onboarding(payload: OnboardingUpdate, user: User = Depends(get_curren
 
 
 @router.put("/users/me/risk-profile")
-def update_risk_profile(payload: RiskProfileUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_risk_profile(
+    payload: RiskProfileUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     user.risk_profile = payload.model_dump()
     db.commit()
     return {"risk_profile": user.risk_profile}

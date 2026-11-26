@@ -6,6 +6,7 @@ Safety properties:
 * A high-water mark means no fee until prior losses are recovered.
 * Every computation is stored with its full breakdown; nothing is auto-charged.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -141,11 +142,7 @@ def record_consent(
 
 
 def get_hwm(db: Session, org_id: str) -> HighWaterMark:
-    hwm = (
-        db.query(HighWaterMark)
-        .filter(HighWaterMark.org_id == org_id, HighWaterMark.scope == "org")
-        .first()
-    )
+    hwm = db.query(HighWaterMark).filter(HighWaterMark.org_id == org_id, HighWaterMark.scope == "org").first()
     if hwm is None:
         hwm = HighWaterMark(org_id=org_id, scope="org", value=0.0, as_of=_utcnow())
         db.add(hwm)
@@ -153,7 +150,9 @@ def get_hwm(db: Session, org_id: str) -> HighWaterMark:
     return hwm
 
 
-def compute_fee(db: Session, *, org_id: str, period_start: datetime, period_end: datetime, actor: User | None = None) -> PerformanceFeeRecord:
+def compute_fee(
+    db: Session, *, org_id: str, period_start: datetime, period_end: datetime, actor: User | None = None
+) -> PerformanceFeeRecord:
     settings = settings_for(db)
     if not settings.get("enabled"):
         raise bad_request("performance_fees_disabled", "Performance fees are disabled by the operator.")

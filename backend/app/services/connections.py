@@ -91,6 +91,7 @@ def create_connection(
     api_secret: str = "",
     passphrase: str = "",
     account_id: str = "",
+    app_id: str = "",
     withdrawal_attestation: bool = False,
 ) -> Connection:
     provider = get_provider(provider_key)
@@ -106,19 +107,52 @@ def create_connection(
             "provider_not_implemented",
             f"{provider.info.name} is a documented scaffold. It cannot be connected yet.",
         )
-    if environment != ConnectionEnvironment.PAPER and (not api_key or not api_secret):
-        raise bad_request("missing_credentials", "API key and secret are required for a real connection.")
+    # Credential shape comes from the provider, not from a hardcoded key/secret assumption.
+    # Deriv authenticates with a single Personal Access Token: there is no API secret to ask for.
+    if environment != ConnectionEnvironment.PAPER:
+        if not api_key.strip():
+            raise bad_request(
+                "missing_credentials",
+                f"{provider.info.token_label} is required for a {provider.info.name} connection.",
+            )
+        if provider.info.requires_api_secret and not api_secret.strip():
+            raise bad_request("missing_credentials", "API secret is required for this provider.")
     if environment == ConnectionEnvironment.PAPER and provider_key != "paper":
         # A paper environment is local simulation; no venue keys needed.
         environment = ConnectionEnvironment.PAPER
 
-    duplicate = (
-        db.query(Connection)
-        .filter(Connection.org_id == user.org_id, Connection.label == label)
-        .first()
-    )
+    duplicate = db.query(Connection).filter(Connection.org_id == user.org_id, Connection.label == label).first()
     if duplicate:
         raise conflict("label_in_use", "You already have a connection with that label.")
+
+    # Verify before persisting anything: a bad token must fail at connect time with a precise
+    # message, not leave a half-configured connection behind.
+    identity: dict = {}
+    if environment != ConnectionEnvironment.PAPER and api_key:
+        bundle = CredentialBundle(
+            api_key=api_key.strip(),
+            api_secret=api_secret.strip(),
+            passphrase=passphrase,
+            account_id=account_id,
+            app_id=app_id.strip(),
+        )
+        try:
+            identity = provider.test_connection(bundle)
+        except ProviderError as exc:
+            if provider_key == "deriv":
+                from app.services import deriv_sessions
+
+                deriv_sessions.record_auth_event(
+                    db,
+                    connection=None,
+                    org_id=user.org_id,
+                    event="connect_failed",
+                    outcome="failed",
+                    code=exc.code,
+                    message=exc.message,
+                )
+                db.commit()
+            raise bad_request(exc.code, exc.message) from exc
 
     connection = Connection(
         org_id=user.org_id,
@@ -139,8 +173,28 @@ def create_connection(
     db.add(connection)
     db.flush()
 
-    if api_key and api_secret:
-        store_credentials(db, connection, CredentialBundle(api_key=api_key, api_secret=api_secret, passphrase=passphrase, account_id=account_id))
+    if identity:
+        apply_identity(connection, identity, requested_account_id=account_id)
+
+    if api_key:
+        store_credentials(
+            db,
+            connection,
+            CredentialBundle(
+                api_key=api_key.strip(),
+                api_secret=api_secret.strip(),
+                passphrase=passphrase,
+                account_id=identity.get("account_id") or account_id,
+                app_id=app_id.strip(),
+            ),
+        )
+        connection.status = ConnectionStatus.CONNECTED
+        connection.permissions = {
+            **connection.permissions,
+            "withdrawal_scope": (identity.get("permissions") or {}).get("withdrawal_scope", "not_requested"),
+            "withdrawal_verified": bool((identity.get("permissions") or {}).get("verified")),
+            "balance_currencies": identity.get("balance_currencies", []),
+        }
     else:
         connection.status = ConnectionStatus.CONNECTED
         connection.permissions = {**connection.permissions, "simulated": True}
@@ -158,6 +212,30 @@ def create_connection(
     return connection
 
 
+def apply_identity(connection: Connection, identity: dict, *, requested_account_id: str = "") -> None:
+    """Persist the venue-reported identity. Never credential material."""
+    accounts = identity.get("accounts") or []
+    chosen_id = identity.get("account_id") or requested_account_id
+    chosen = next((a for a in accounts if a.get("account_id") == chosen_id), None)
+    if chosen is None and requested_account_id:
+        raise bad_request(
+            "account_not_found",
+            f"The token does not expose the account '{requested_account_id}'.",
+        )
+    if chosen is not None:
+        connection.provider_account_id = chosen.get("account_id")
+        connection.provider_account_type = chosen.get("account_type")
+        connection.provider_currency = chosen.get("currency")
+    connection.provider_meta = {
+        "accounts": accounts,
+        "nickname": identity.get("nickname", ""),
+        "app_id": identity.get("app_id", ""),
+        "token_kind": identity.get("token_kind", ""),
+        "balance": identity.get("balance"),
+        "is_virtual": identity.get("is_virtual"),
+    }
+
+
 def test_connection(db: Session, connection: Connection) -> dict:
     if connection.environment == ConnectionEnvironment.PAPER or connection.provider == "paper":
         connection.status = ConnectionStatus.CONNECTED
@@ -172,6 +250,20 @@ def test_connection(db: Session, connection: Connection) -> dict:
         connection.status = ConnectionStatus.ERROR
         connection.last_error = exc.message[:1000]
         connection.last_error_at = utcnow()
+        connection.last_auth_error = exc.message[:1000]
+        connection.last_auth_error_at = utcnow()
+        if connection.provider == "deriv":
+            from app.services import deriv_sessions
+
+            deriv_sessions.record_auth_event(
+                db,
+                connection=connection,
+                org_id=connection.org_id,
+                event="auth_test",
+                outcome="failed",
+                code=exc.code,
+                message=exc.message,
+            )
         db.flush()
         notifications.notify(
             db,
@@ -186,6 +278,8 @@ def test_connection(db: Session, connection: Connection) -> dict:
         raise bad_request(exc.code, exc.message) from exc
     connection.status = ConnectionStatus.CONNECTED
     connection.last_error = None
+    connection.last_auth_error = None
+    connection.last_auth_error_at = None
     permissions = result.get("permissions") or {}
     connection.permissions = {
         **connection.permissions,
@@ -193,6 +287,19 @@ def test_connection(db: Session, connection: Connection) -> dict:
         "withdrawal_verified": bool(permissions.get("verified", False)),
         "balance_currencies": result.get("balance_currencies", []),
     }
+    if result.get("accounts"):
+        apply_identity(connection, result, requested_account_id=connection.provider_account_id or "")
+    if connection.provider == "deriv":
+        from app.services import deriv_sessions
+
+        deriv_sessions.record_auth_event(
+            db,
+            connection=connection,
+            org_id=connection.org_id,
+            event="auth_test",
+            outcome="ok",
+            detail={"account_id": connection.provider_account_id, "accounts": len(result.get("accounts") or [])},
+        )
     db.flush()
     audit.record(
         db,
@@ -205,6 +312,65 @@ def test_connection(db: Session, connection: Connection) -> dict:
     return {"ok": True, **result}
 
 
+def scoped_balances(connection: Connection, rows: list[dict]) -> list[dict]:
+    """Keep only the balances of the account this connection is bound to.
+
+    A Deriv token sees every account its owner holds, demo included. Counting a sibling account's
+    balance would mix simulated funds into a real equity figure (or the reverse).
+    """
+    account_id = connection.provider_account_id
+    if not account_id:
+        return rows
+    scoped = [row for row in rows if account_id in str(row.get("asset", ""))]
+    return scoped or rows
+
+
+def _reconcile_positions(db: Session, connection: Connection, rows: list[dict], now) -> int:
+    """Upsert venue positions and close the ones the venue no longer reports.
+
+    Replacing every open position on each sync destroyed the local record of anything closed
+    between syncs, so position history and its realised result were lost.
+    """
+    existing = {
+        p.instrument_symbol: p
+        for p in db.query(Position)
+        .filter(Position.connection_id == connection.id, Position.mode == "live", Position.status == "open")
+        .all()
+    }
+    seen: set[str] = set()
+    for row in rows:
+        symbol = row["symbol"]
+        position = existing.get(symbol)
+        if position is None:
+            position = Position(
+                org_id=connection.org_id,
+                mode="live",
+                connection_id=connection.id,
+                instrument_symbol=symbol,
+                side=row.get("side") or "long",
+                quantity=row.get("quantity", 0),
+                avg_entry_price=row.get("entry_price", 0),
+                mark_price=row.get("mark_price", 0),
+                unrealized_pnl=row.get("unrealized_pnl", 0),
+                leverage=row.get("leverage", 1),
+                status="open",
+                opened_at=now,
+            )
+            db.add(position)
+        else:
+            position.quantity = row.get("quantity", position.quantity)
+            position.mark_price = row.get("mark_price", position.mark_price)
+            position.unrealized_pnl = row.get("unrealized_pnl", position.unrealized_pnl)
+        seen.add(symbol)
+    for symbol, position in existing.items():
+        if symbol not in seen:
+            # This provider reports no settlement for a vanished position, so realised P&L stays
+            # at zero rather than copying a last mark that was never actually realised.
+            position.status = "closed"
+            position.closed_at = now
+    return len(rows)
+
+
 def sync_connection(db: Session, connection: Connection) -> dict:
     if connection.status == ConnectionStatus.REVOKED:
         raise bad_request("connection_revoked", "This connection has been revoked.")
@@ -213,7 +379,8 @@ def sync_connection(db: Session, connection: Connection) -> dict:
     try:
         credentials = CredentialBundle() if simulated else load_credentials(db, connection)
         balances = provider.fetch_balances(credentials)
-        positions = provider.fetch_positions(credentials)
+        balances = scoped_balances(connection, balances)
+        positions = [] if connection.provider == "deriv" else provider.fetch_positions(credentials)
     except ProviderError as exc:
         connection.status = ConnectionStatus.ERROR
         connection.last_error = exc.message[:1000]
@@ -246,26 +413,15 @@ def sync_connection(db: Session, connection: Connection) -> dict:
                 as_of=now,
             )
         )
-    db.query(Position).filter(
-        Position.connection_id == connection.id, Position.mode == "live", Position.status == "open"
-    ).delete()
-    for row in positions:
-        db.add(
-            Position(
-                org_id=connection.org_id,
-                mode="live",
-                connection_id=connection.id,
-                instrument_symbol=row["symbol"],
-                side=row.get("side") or "long",
-                quantity=row.get("quantity", 0),
-                avg_entry_price=row.get("entry_price", 0),
-                mark_price=row.get("mark_price", 0),
-                unrealized_pnl=row.get("unrealized_pnl", 0),
-                leverage=row.get("leverage", 1),
-                status="open",
-                opened_at=now,
-            )
-        )
+    if connection.provider == "deriv":
+        from app.trading import deriv_execution
+
+        # Deriv contracts are reconciled by contract id against the venue ledger, which also
+        # settles the ones that expired and writes their trades.
+        venue = deriv_execution.sync_positions(db, connection=connection)
+        position_count = venue["open_contracts"]
+    else:
+        position_count = _reconcile_positions(db, connection, positions, now)
     connection.last_sync_at = now
     connection.status = ConnectionStatus.CONNECTED
     connection.last_error = None
@@ -278,9 +434,9 @@ def sync_connection(db: Session, connection: Connection) -> dict:
         org_id=connection.org_id,
         target_type="connection",
         target_id=connection.id,
-        meta={"balances": len(balances), "positions": len(positions)},
+        meta={"balances": len(balances), "positions": position_count},
     )
-    return {"balances": len(balances), "positions": len(positions), "synced_at": now}
+    return {"balances": len(balances), "positions": position_count, "synced_at": now}
 
 
 def revoke_connection(db: Session, connection: Connection, actor: User, reason: str = "user_request") -> Connection:
@@ -328,6 +484,14 @@ def serialise(connection: Connection, credential: ConnectionCredential | None = 
         "permissions": connection.permissions,
         "capabilities": connection.capabilities,
         "is_sandbox": connection.is_sandbox,
+        # Venue identity. Account ids are public identifiers, never credentials.
+        "provider_account_id": connection.provider_account_id,
+        "provider_account_type": connection.provider_account_type,
+        "provider_currency": connection.provider_currency,
+        "provider_meta": connection.provider_meta or {},
+        "session_state": connection.session_state or {},
+        "last_auth_error": connection.last_auth_error,
+        "last_auth_error_at": connection.last_auth_error_at,
         "last_sync_at": connection.last_sync_at,
         "last_error": connection.last_error,
         "last_error_at": connection.last_error_at,

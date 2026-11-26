@@ -191,7 +191,9 @@ def test_invoice_numbers_survive_a_deleted_invoice(client, trader, db):
     db.commit()
 
     assert send_event(client, checkout_event(trader["org_id"], "elite", 14900)).status_code == 200
-    numbers = [row["number"] for row in client.get(f"{BASE}/billing/invoices", headers=trader["headers"]).json()["invoices"]]
+    numbers = [
+        row["number"] for row in client.get(f"{BASE}/billing/invoices", headers=trader["headers"]).json()["invoices"]
+    ]
     assert first not in numbers
     assert numbers[0] > first
 

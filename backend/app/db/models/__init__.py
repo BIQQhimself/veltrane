@@ -1,4 +1,5 @@
 from app.db.base import Base
+from app.db.models.autotrade import AutoTradeConfig, AutoTradeSignal
 from app.db.models.billing import (
     EntitlementOverride,
     FeeConsent,
@@ -11,7 +12,13 @@ from app.db.models.billing import (
     Subscription,
     WebhookEvent,
 )
-from app.db.models.connections import Balance, Connection, ConnectionCredential, LedgerTransaction
+from app.db.models.connections import (
+    Balance,
+    Connection,
+    ConnectionCredential,
+    LedgerTransaction,
+    ProviderAuthEvent,
+)
 from app.db.models.identity import OneTimeToken, Organization, RefreshSession, StaffInvite, User
 from app.db.models.ops import (
     AiUsage,
@@ -42,12 +49,50 @@ from app.db.models.trading import (
 )
 
 __all__ = [
-    "Base", "AiUsage", "AuditLog", "Backtest", "Balance", "BinaryContract", "Connection", "ConnectionCredential",
+    "Base",
+    "AiUsage",
+    "AuditLog",
+    "AutoTradeConfig",
+    "AutoTradeSignal",
+    "Backtest",
+    "Balance",
+    "BinaryContract",
+    "Connection",
+    "ConnectionCredential",
+    "ProviderAuthEvent",
     "Counter",
-    "EmailOutbox", "EntitlementOverride", "Fee", "FeeConsent", "FeatureFlag", "HighWaterMark",
-    "Instrument", "Invoice", "KillSwitch", "LedgerTransaction", "Notification", "OneTimeToken",
-    "Order", "Organization", "PaperSession", "Payment", "PerformanceFeeRecord", "Plan", "Position",
-    "Refund", "RefreshSession", "RiskDecision", "RiskPolicy", "StaffInvite", "Strategy",
-    "StrategyVersion", "Subscription", "SupportTicket", "SystemSetting", "Trade",
-    "TradingPermission", "UsageMetric", "User", "WebhookEvent",
+    "EmailOutbox",
+    "EntitlementOverride",
+    "Fee",
+    "FeeConsent",
+    "FeatureFlag",
+    "HighWaterMark",
+    "Instrument",
+    "Invoice",
+    "KillSwitch",
+    "LedgerTransaction",
+    "Notification",
+    "OneTimeToken",
+    "Order",
+    "Organization",
+    "PaperSession",
+    "Payment",
+    "PerformanceFeeRecord",
+    "Plan",
+    "Position",
+    "Refund",
+    "RefreshSession",
+    "RiskDecision",
+    "RiskPolicy",
+    "StaffInvite",
+    "Strategy",
+    "StrategyVersion",
+    "Subscription",
+    "SupportTicket",
+    "SystemSetting",
+    "Trade",
+    "TradingPermission",
+    "UsageMetric",
+    "User",
+    "WebhookEvent",
 ]

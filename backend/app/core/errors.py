@@ -19,8 +19,8 @@ def unauthorized(code: str = "unauthorized", message: str = "Authentication requ
     return AppError(status.HTTP_401_UNAUTHORIZED, code, message)
 
 
-def forbidden(code: str, message: str) -> AppError:
-    return AppError(status.HTTP_403_FORBIDDEN, code, message)
+def forbidden(code: str, message: str, details: dict | None = None) -> AppError:
+    return AppError(status.HTTP_403_FORBIDDEN, code, message, details)
 
 
 def not_found(code: str = "not_found", message: str = "Resource not found") -> AppError:

@@ -108,6 +108,10 @@ class RiskContext:
 
     connection_trade_permission: bool = False
     connection_read_only: bool = True
+    # True when the venue account is the venue's own demo account: no real funds move, so the
+    # platform live flag and the subscriber's live authorisation do not apply. Kill switches,
+    # connection permission and every other rule still do.
+    venue_demo: bool = False
 
     equity: float = 0.0
     cash: float = 0.0

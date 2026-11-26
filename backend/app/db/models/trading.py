@@ -94,9 +94,7 @@ class PaperSession(Base, IdTimestampMixin):
     org_id: Mapped[str] = mapped_column(
         Uuid(as_uuid=False), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    strategy_version_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
-    )
+    strategy_version_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("strategy_versions.id"))
     connection_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=False), ForeignKey("connections.id", ondelete="SET NULL")
     )
@@ -134,9 +132,7 @@ class Position(Base, IdTimestampMixin):
     leverage: Mapped[float] = mapped_column(MoneyType, default=1, nullable=False)
     stop_loss: Mapped[float | None] = mapped_column(MoneyType)
     take_profit: Mapped[float | None] = mapped_column(MoneyType)
-    strategy_version_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
-    )
+    strategy_version_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("strategy_versions.id"))
     status: Mapped[str] = mapped_column(String(16), default="open", nullable=False)
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -169,9 +165,7 @@ class Order(Base, IdTimestampMixin):
     status: Mapped[str] = mapped_column(String(24), default="intent", nullable=False)
     client_order_id: Mapped[str] = mapped_column(String(64), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(120), nullable=False)
-    strategy_version_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
-    )
+    strategy_version_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("strategy_versions.id"))
     risk_decision_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False))
     correlation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     rejection_reason: Mapped[str | None] = mapped_column(Text)
@@ -185,6 +179,8 @@ class Order(Base, IdTimestampMixin):
     slippage_actual_bps: Mapped[float | None] = mapped_column(MoneyType)
     provider_order_id: Mapped[str | None] = mapped_column(String(160))
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Venue-specific contract facts (contract id, payout, duration, quote) for the detail view.
+    meta: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
 
 
 class Trade(Base, IdTimestampMixin):
@@ -217,9 +213,7 @@ class Trade(Base, IdTimestampMixin):
     net_pnl: Mapped[float] = mapped_column(MoneyType, default=0, nullable=False)
     entry_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     exit_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    strategy_version_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
-    )
+    strategy_version_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("strategy_versions.id"))
     risk_snapshot: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     human_intervention: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -318,9 +312,7 @@ class BinaryContract(Base, IdTimestampMixin):
     """
 
     __tablename__ = "binary_contracts"
-    __table_args__ = (
-        UniqueConstraint("org_id", "idempotency_key", name="uq_binary_org_idempotency"),
-    )
+    __table_args__ = (UniqueConstraint("org_id", "idempotency_key", name="uq_binary_org_idempotency"),)
 
     org_id: Mapped[str] = mapped_column(
         Uuid(as_uuid=False), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
@@ -351,9 +343,7 @@ class BinaryContract(Base, IdTimestampMixin):
     trade_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=False), ForeignKey("trades.id", ondelete="SET NULL"), index=True
     )
-    strategy_version_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=False), ForeignKey("strategy_versions.id")
-    )
+    strategy_version_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("strategy_versions.id"))
     source: Mapped[str] = mapped_column(String(24), default="human", nullable=False)
     entry_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     rejection_reason: Mapped[str | None] = mapped_column(Text)

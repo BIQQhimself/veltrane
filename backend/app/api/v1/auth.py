@@ -157,7 +157,11 @@ def verify_mfa_login(payload: MfaLoginRequest, request: Request, response: Respo
     if user is None:
         raise unauthorized("invalid_token", "MFA session expired. Sign in again.")
     issued = auth_service.verify_mfa_login(
-        db, user=user, code=payload.code, ip=request.client.host if request.client else None, user_agent=request.headers.get("user-agent")
+        db,
+        user=user,
+        code=payload.code,
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
     db.commit()
     return _issue(response, issued, user)
@@ -174,7 +178,10 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
         raise unauthorized("csrf_failed", "CSRF validation failed.")
     issued = auth_service.rotate_refresh(
-        db, refresh_token=token, ip=request.client.host if request.client else None, user_agent=request.headers.get("user-agent")
+        db,
+        refresh_token=token,
+        ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
     user = db.get(User, decode_token(issued["access_token"], expected_type="access")["sub"])
     db.commit()
@@ -244,7 +251,12 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
 
 
 @router.post("/change-password")
-def change_password(payload: ChangePasswordRequest, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def change_password(
+    payload: ChangePasswordRequest,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     auth_service.change_password(db, user=user, current=payload.current_password, new=payload.new_password)
     db.commit()
     _clear_cookies(response)

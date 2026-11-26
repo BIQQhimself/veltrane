@@ -45,18 +45,18 @@ def list_connections(user: User = Depends(get_current_user), db: Session = Depen
 
 
 @router.post("", status_code=201)
-def create_connection(payload: ConnectionCreateRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_connection(
+    payload: ConnectionCreateRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     limit = entitlements.numeric_limit(db, user.org_id, Entitlement.MAX_CONNECTIONS)
-    used = (
-        db.query(Connection)
-        .filter(Connection.org_id == user.org_id, Connection.status != "revoked")
-        .count()
-    )
+    used = db.query(Connection).filter(Connection.org_id == user.org_id, Connection.status != "revoked").count()
     if limit is not None and used >= limit:
         entitlements.notify_limit_reached(
             db, user.org_id, "Connection limit reached", f"Your plan allows {limit} connected accounts."
         )
-        raise forbidden("connection_limit_reached", f"Your plan allows {limit} connected accounts. Upgrade to add more.")
+        raise forbidden(
+            "connection_limit_reached", f"Your plan allows {limit} connected accounts. Upgrade to add more."
+        )
     connection = connection_service.create_connection(
         db,
         user=user,
@@ -67,6 +67,7 @@ def create_connection(payload: ConnectionCreateRequest, user: User = Depends(get
         api_secret=payload.api_secret,
         passphrase=payload.passphrase,
         account_id=payload.account_id,
+        app_id=payload.app_id,
         withdrawal_attestation=payload.withdrawal_attestation,
     )
     db.commit()
@@ -110,8 +111,18 @@ def rotate_credentials(
     store_credentials(
         db,
         connection,
-        CredentialBundle(api_key=payload.api_key, api_secret=payload.api_secret, passphrase=payload.passphrase),
+        CredentialBundle(
+            api_key=payload.api_key,
+            api_secret=payload.api_secret,
+            passphrase=payload.passphrase,
+            account_id=payload.account_id or connection.provider_account_id or "",
+            app_id=payload.app_id,
+        ),
     )
+    # Rotating a token invalidates any live session bound to the previous one.
+    from app.services import deriv_sessions
+
+    deriv_sessions.close_session(connection.id)
     db.commit()
     from app.services import audit
 
@@ -125,7 +136,10 @@ def rotate_credentials(
     )
     db.commit()
     credential = db.query(ConnectionCredential).filter(ConnectionCredential.connection_id == connection.id).first()
-    return {"status": "rotated", "credential": {"key_hint": credential.key_hint, "rotated_at": serializers.iso(credential.rotated_at)}}
+    return {
+        "status": "rotated",
+        "credential": {"key_hint": credential.key_hint, "rotated_at": serializers.iso(credential.rotated_at)},
+    }
 
 
 @router.delete("/{connection_id}")
