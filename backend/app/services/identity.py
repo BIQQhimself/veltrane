@@ -12,14 +12,14 @@ import re
 from app.db.models import User
 
 AVATAR_COLORS = [
-    "#2E7BFF",
-    "#12B981",
     "#C8A96A",
-    "#8B5CF6",
-    "#EF4444",
-    "#0EA5E9",
-    "#F59E0B",
-    "#14B8A6",
+    "#7F9F8C",
+    "#8C7BB0",
+    "#B06A6A",
+    "#6E8CA8",
+    "#A98F6B",
+    "#7E9E9C",
+    "#9B8AA6",
 ]
 DEFAULT_AVATAR_COLOR = AVATAR_COLORS[0]
 DISPLAY_NAME_MAX = 40
@@ -75,5 +75,5 @@ def clean_display_name(value: str) -> str:
 
 def clean_avatar_color(value: str) -> str:
     if not _HEX.match(value or ""):
-        raise ValueError("Avatar colour must be a six-digit hex value such as #2E7BFF.")
+        raise ValueError("Avatar colour must be a six-digit hex value such as #C8A96A.")
     return value.lower()

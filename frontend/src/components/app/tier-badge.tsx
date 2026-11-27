@@ -5,7 +5,7 @@ import { capLabel, TIERS, tierFor, type Tier } from "@/lib/membership";
 
 const ringTone: Record<Tier["accent"], string> = {
   neutral: "border-line-strong bg-obsidian-750 text-paper-muted",
-  info: "border-champagne-400/40 bg-electric-500/12 text-electric-200",
+  info: "border-champagne-400/40 bg-champagne-500/12 text-champagne-200",
   gold: "border-gold-400/45 bg-gold-500/12 text-gold-300",
 };
 
@@ -73,7 +73,7 @@ export function IdentityAvatar({
         <span
           className="flex h-full w-full items-center justify-center rounded-full font-medium text-obsidian-950"
           style={{
-            background: `linear-gradient(150deg, ${color ?? "#2E7BFF"}, ${color ?? "#2E7BFF"}cc)`,
+            background: `linear-gradient(150deg, ${color ?? "#C8A96A"}, ${color ?? "#C8A96A"}cc)`,
             fontSize: Math.max(10, Math.round(size * 0.34)),
           }}
           aria-hidden

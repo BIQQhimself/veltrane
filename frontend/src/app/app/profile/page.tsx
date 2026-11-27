@@ -16,7 +16,7 @@ import { useToast } from "@/components/ui/toast";
 import { IdentityAvatar, TierBadge } from "@/components/app/tier-badge";
 import { cn } from "@/lib/cn";
 
-const COLORS = ["#2E7BFF", "#12B981", "#C8A96A", "#8B5CF6", "#EF4444", "#0EA5E9", "#F59E0B", "#14B8A6"] as const;
+const COLORS = ["#C8A96A", "#7F9F8C", "#8C7BB0", "#B06A6A", "#6E8CA8", "#A98F6B", "#7E9E9C", "#9B8AA6"] as const;
 const DEFAULT_COLOR: string = COLORS[0];
 
 export default function ProfilePage() {

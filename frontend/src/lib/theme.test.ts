@@ -30,7 +30,7 @@ describe("theme derivation", () => {
       expect(vars[name]).toMatch(/^\d{1,3} \d{1,3} \d{1,3}$/);
     }
     // The base stop is the administrator's colour, untouched.
-    expect(vars["vt-primary-500"]).toBe("46 123 255");
+    expect(vars["vt-primary-500"]).toBe("203 182 145");
   });
 
   it("re-derives the whole scale from a changed base colour", () => {

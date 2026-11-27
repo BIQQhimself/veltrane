@@ -165,7 +165,7 @@ def test_reset_returns_the_shipped_palette(client, admin):
     response = client.put(f"{BASE}/admin/theme", headers=admin["headers"], json={"reset": True})
     assert response.status_code == 200
     assert response.json()["theme"]["source"] == "default"
-    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == "#2e7bff"
+    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == "#cbb691"
 
 
 def test_theme_changes_are_audited(client, admin, db):
@@ -185,4 +185,4 @@ def test_theme_changes_are_audited(client, admin, db):
 def test_subscribers_cannot_change_the_theme(client, trader):
     response = client.put(f"{BASE}/admin/theme", headers=_auth(trader), json={"colors": {"primary": "#abcdef"}})
     assert response.status_code in (403, 404)
-    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == "#2e7bff"
+    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == "#cbb691"
