@@ -179,7 +179,7 @@ export default function BillingPage() {
                   <Button variant="secondary" size="sm" onClick={() => cancel(false)} disabled={busy || current === "free"}>
                     Cancel at period end
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => cancel(true)} disabled={busy || current === "free"}>
+                  <Button variant="danger" size="sm" onClick={() => cancel(true)} disabled={busy || current === "free"}>
                     Cancel immediately
                   </Button>
                 </div>

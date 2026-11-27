@@ -30,11 +30,11 @@
   --vt-primary-600: 27 95 224;
   --vt-primary-700: 22 71 168;
   --vt-primary-900: 12 36 80;
-  --vt-secondary-200: 220 232 255;
-  --vt-secondary-300: 178 205 255;
-  --vt-secondary-400: 138 178 255;
-  --vt-secondary-500: 92 155 255;
-  --vt-secondary-600: 74 132 230;
+  --vt-secondary-200: 240 231 213;
+  --vt-secondary-300: 232 219 194;
+  --vt-secondary-400: 220 203 172;
+  --vt-secondary-500: 203 182 145;
+  --vt-secondary-600: 172 148 110;
   --vt-accent-300: 240 220 180;
   --vt-accent-400: 220 192 138;
   --vt-accent-500: 195 160 104;
@@ -198,6 +198,85 @@ body {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       0 40px 120px -60px rgba(46, 123, 255, 0.55);
+  }
+}
+
+@layer components {
+  /* Cards. `tile` is the base surface for every dashboard block; `tile-hover` adds the
+     lift used by anything that links somewhere. */
+  .tile {
+    @apply relative min-w-0 overflow-hidden rounded-2xl border border-line-soft bg-obsidian-850/80;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 24px 60px -44px rgba(0, 0, 0, 0.9);
+  }
+  .tile-sheen::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  }
+  .tile-hover {
+    @apply transition duration-200;
+  }
+  .tile-hover:hover {
+    @apply border-line-strong;
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 30px 70px -44px rgba(0, 0, 0, 0.95);
+  }
+  .tile-pad {
+    @apply px-5 py-4;
+  }
+
+  /* Account identity: the avatar carries the tier ring, so the badge is visible everywhere
+     the trader's name appears. */
+  .identity-ring {
+    padding: 2px;
+    border-radius: 9999px;
+    background-image: conic-gradient(from 210deg, rgb(var(--vt-line-strong)), rgb(var(--vt-line-soft)), rgb(var(--vt-line-strong)));
+  }
+  .identity-ring[data-tier="basic"] {
+    background-image: conic-gradient(from 210deg, rgb(var(--vt-primary-400)), rgb(var(--vt-primary-700)), rgb(var(--vt-primary-400)));
+  }
+  .identity-ring[data-tier="pro"] {
+    background-image: conic-gradient(from 210deg, rgb(var(--vt-secondary-300)), rgb(var(--vt-primary-500)), rgb(var(--vt-secondary-300)));
+  }
+  .identity-ring[data-tier="elite"] {
+    background-image: conic-gradient(from 210deg, rgb(var(--vt-accent-300)), rgb(var(--vt-accent-500)), rgb(var(--vt-accent-300)));
+  }
+  .tier-glow[data-tier="elite"] {
+    box-shadow: 0 0 0 1px rgba(200, 169, 106, 0.35), 0 18px 44px -30px rgba(200, 169, 106, 0.55);
+  }
+  .tier-glow[data-tier="pro"] {
+    box-shadow: 0 0 0 1px rgba(92, 155, 255, 0.3), 0 18px 44px -30px rgba(46, 123, 255, 0.45);
+  }
+
+  /* Segmented control used by filters and mode switches. */
+  .segmented {
+    @apply inline-flex items-center gap-1 rounded-full border border-line-soft bg-obsidian-900/70 p-1;
+  }
+  .segmented > button {
+    @apply rounded-full px-3 py-1 text-2xs transition;
+  }
+  .segmented > button[data-active="true"] {
+    @apply bg-obsidian-750 text-paper;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  .segmented > button[data-active="false"] {
+    @apply text-paper-faint hover:text-paper-muted;
+  }
+
+  .metric {
+    @apply font-mono text-[26px] font-medium leading-none tabular-nums tracking-tight text-paper;
+  }
+  .metric-label {
+    @apply text-2xs uppercase tracking-label text-paper-faint;
+  }
+  .hairline-x {
+    @apply border-l border-line-soft;
   }
 }
 

@@ -4,7 +4,13 @@ from datetime import UTC, datetime
 
 from app.api import serializers
 from app.api.deps import get_current_user, get_or_404
-from app.api.schemas import OnboardingUpdate, ProfileUpdate, RiskProfileUpdate, SupportTicketCreate
+from app.api.schemas import (
+    OnboardingUpdate,
+    ProfileUpdate,
+    RiskProfileUpdate,
+    SupportMessageCreate,
+    SupportTicketCreate,
+)
 from app.core.errors import not_found
 from app.db.models import AuditLog, Notification, Organization, SupportTicket, User
 from app.db.session import get_db
@@ -148,6 +154,35 @@ def create_ticket(payload: SupportTicketCreate, user: User = Depends(get_current
     db.add(ticket)
     db.commit()
     return {"id": ticket.id, "status": ticket.status, "priority": ticket.priority}
+
+
+@router.post("/support/tickets/{ticket_id}/messages", status_code=201)
+def add_ticket_message(
+    ticket_id: str,
+    payload: SupportMessageCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ticket = db.get(SupportTicket, ticket_id)
+    if ticket is None or ticket.org_id != user.org_id:
+        raise not_found("ticket_not_found", "Ticket not found.")
+    ticket.messages = [
+        *(ticket.messages or []),
+        {
+            "role": "user",
+            "message": payload.message,
+            "at": datetime.now(UTC).isoformat(),
+            "email": user.email,
+        },
+    ]
+    if ticket.status == "resolved":
+        ticket.status = "open"
+    db.commit()
+    return {
+        "id": ticket.id,
+        "status": ticket.status,
+        "messages": ticket.messages,
+    }
 
 
 @router.get("/support/tickets")

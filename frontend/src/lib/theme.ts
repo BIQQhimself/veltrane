@@ -34,7 +34,7 @@ export const DEFAULT_COLORS: ThemeColors = {
   text_muted: "#98a6b8",
   primary: "#2e7bff",
   primary_hover: "#1b5fe0",
-  secondary: "#5c9bff",
+  secondary: "#d6c39a",
   accent: "#dcc08a",
   button_text: "#ffffff",
   chart_up: "#00e07a",

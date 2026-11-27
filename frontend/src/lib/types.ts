@@ -47,6 +47,96 @@ export type Entitlements = {
   } | null;
 };
 
+export type Identity = {
+  display_name: string;
+  full_name: string | null;
+  avatar_color: string;
+  public_id: string;
+  email: string;
+};
+
+export type AutomationMode = "none" | "session" | "background";
+
+export type AutomationState = {
+  mode: AutomationMode;
+  label: string;
+  runs_in_background: boolean;
+  session_online: boolean;
+  session_ttl_seconds: number;
+  daily_cap: number | null;
+  used_today: number;
+  remaining_today: number | null;
+  allowed: boolean;
+  blockers: string[];
+};
+
+export type WalletAsset = {
+  asset: string;
+  free: number;
+  locked: number;
+  total: number;
+  usd_value: number;
+};
+
+export type WalletAccount = {
+  connection_id: string;
+  label: string;
+  provider: string;
+  kind: string;
+  environment: string;
+  status: string;
+  is_simulated: boolean;
+  account_id: string | null;
+  currency: string;
+  balance_usd: number;
+  assets: WalletAsset[];
+  last_sync_at: string | null;
+  stale: boolean;
+  cashier: string;
+};
+
+export type WalletTransaction = {
+  id: string;
+  type: string;
+  asset: string;
+  amount: number;
+  fee: number;
+  occurred_at: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  connection_label: string | null;
+  simulated: boolean;
+  meta: Record<string, unknown>;
+};
+
+export type WalletResponse = {
+  identity: Identity;
+  totals: {
+    live_usd: number;
+    demo_usd: number;
+    paper_equity_usd: number | null;
+    currency: string;
+  };
+  accounts: WalletAccount[];
+  transactions: WalletTransaction[];
+  funding: {
+    veltrane_holds_funds: boolean;
+    method: string;
+    note: string;
+    providers: string[];
+  };
+  entitlements: { plan_code: string };
+};
+
+export type SupportTicket = {
+  id: string;
+  subject: string;
+  status: string;
+  priority: string;
+  messages: { role: string; message: string; at?: string; email?: string }[];
+  created_at: string | null;
+};
+
 export type Order = {
   id: string;
   mode: "paper" | "live" | string;

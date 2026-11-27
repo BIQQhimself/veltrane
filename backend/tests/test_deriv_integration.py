@@ -346,29 +346,29 @@ def _any_connection_id(db, org_id: str) -> str:
 
 
 # ------------------------------------------------------------------ automation
-def test_automation_config_round_trip(client, trader, deriv_env):
-    connection_id = _connect(client, trader).json()["id"]
+def test_automation_config_round_trip(client, automation_trader, deriv_env):
+    connection_id = _connect(client, automation_trader).json()["id"]
 
     put = client.put(
         f"{BASE}/deriv/connections/{connection_id}/automation",
         json={"enabled": True, "mode": "approval", "symbol": "R_100", "stake": 5},
-        headers=trader["headers"],
+        headers=automation_trader["headers"],
     )
     assert put.status_code == 200, put.text
     assert put.json()["automation"]["mode"] == "approval"
 
-    get = client.get(f"{BASE}/deriv/connections/{connection_id}/automation", headers=trader["headers"])
+    get = client.get(f"{BASE}/deriv/connections/{connection_id}/automation", headers=automation_trader["headers"])
     assert get.json()["automation"]["enabled"] is True
     assert get.json()["automation"]["stake"] == 5.0
 
 
-def test_autonomous_mode_requires_a_passable_gate(client, trader, deriv_env):
-    connection_id = _connect(client, trader, environment="read_only").json()["id"]
+def test_autonomous_mode_requires_a_passable_gate(client, automation_trader, deriv_env):
+    connection_id = _connect(client, automation_trader, environment="read_only").json()["id"]
 
     response = client.put(
         f"{BASE}/deriv/connections/{connection_id}/automation",
         json={"enabled": True, "mode": "autonomous"},
-        headers=trader["headers"],
+        headers=automation_trader["headers"],
     )
     assert response.status_code == 403
     assert response.json()["detail"]["code"] == "autonomous_mode_blocked"

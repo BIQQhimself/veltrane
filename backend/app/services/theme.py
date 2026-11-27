@@ -35,7 +35,7 @@ PALETTE: dict[str, tuple[str, str, str]] = {
     "text_muted": ("Secondary text", "Typography", "#98a6b8"),
     "primary": ("Primary action", "Brand", "#2e7bff"),
     "primary_hover": ("Primary hover", "Brand", "#1b5fe0"),
-    "secondary": ("Secondary accent", "Brand", "#5c9bff"),
+    "secondary": ("Secondary accent", "Brand", "#d6c39a"),
     "accent": ("Accent / highlight", "Brand", "#dcc08a"),
     "button_text": ("Button label", "Brand", "#ffffff"),
     "chart_up": ("Chart up candle", "Charts", "#00e07a"),

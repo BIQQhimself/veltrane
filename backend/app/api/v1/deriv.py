@@ -17,7 +17,7 @@ from app.core.errors import bad_request, forbidden, not_found
 from app.db.constants import AuditAction
 from app.db.models import Connection, User
 from app.db.session import get_db
-from app.services import audit, deriv_oauth, deriv_sessions, execution_gate, referrals
+from app.services import audit, automation_limits, deriv_oauth, deriv_sessions, execution_gate, referrals
 from app.services.connections import get_connection, load_credentials
 from app.trading import deriv_execution
 from fastapi import APIRouter, Depends, Query, Request
@@ -502,6 +502,8 @@ def put_automation(
     from app.db.models import AutoTradeConfig
 
     connection = _deriv_connection(db, user.org_id, connection_id)
+    if payload.enabled:
+        automation_limits.require_plan(db, user.org_id)
     if payload.enabled and payload.mode == "autonomous":
         gate = execution_gate.evaluate(db, user=user, connection=connection)
         if not gate.allowed:

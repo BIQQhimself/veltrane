@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from app.core.errors import bad_request, forbidden
 from app.db.constants import AuditAction
 from app.db.models import AutoTradeConfig, AutoTradeSignal, Connection, Order, User
-from app.services import audit, deriv_sessions, execution_gate, kill_switch
+from app.services import audit, automation_limits, deriv_sessions, execution_gate, kill_switch
 from app.trading import deriv_execution
 from app.trading.deriv_strategy import evaluate_entry
 from sqlalchemy import func
@@ -105,6 +105,11 @@ def run_config(db: Session, config: AutoTradeConfig, *, actor: User | None = Non
 
     config.last_run_at = _utcnow()
     gate = execution_gate.evaluate(db, user=owner, connection=connection)
+    plan_halt = automation_limits.blocking_reason(db, config.org_id)
+    if plan_halt:
+        config.halt_reason = plan_halt
+        db.flush()
+        return {"skipped": plan_halt}
     reason = _halt_reason(db, config, connection, gate)
     if reason:
         config.halt_reason = reason
@@ -263,6 +268,7 @@ def run_once(db: Session) -> dict:
 
 
 def enable(db: Session, *, user: User, connection: Connection, config: AutoTradeConfig) -> None:
+    automation_limits.require_plan(db, user.org_id)
     gate = execution_gate.evaluate(db, user=user, connection=connection)
     if not gate.allowed:
         raise forbidden("execution_blocked", gate.blocking_message)

@@ -46,6 +46,12 @@ def cross_candles() -> list[dict]:
 
 
 @pytest.fixture
+def trader(automation_trader):
+    """Every runner test needs a plan that includes automation; the account is otherwise unused."""
+    return automation_trader
+
+
+@pytest.fixture
 def deriv_env(mock_deriv, monkeypatch):
     mock_deriv.state.reset()
     monkeypatch.setattr(settings, "deriv_rest_base", mock_deriv.base_url)

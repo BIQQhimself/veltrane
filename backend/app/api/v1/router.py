@@ -12,10 +12,12 @@ from app.api.v1 import (
     markets,
     notifications,
     portfolio,
+    presence,
     referrals,
     strategies,
     theme,
     trading,
+    wallet,
 )
 from fastapi import APIRouter
 
@@ -32,8 +34,10 @@ api_router.include_router(binary.router)
 api_router.include_router(deriv.router)
 api_router.include_router(copilot.router)
 api_router.include_router(portfolio.router)
+api_router.include_router(wallet.router)
 api_router.include_router(analytics.router)
 api_router.include_router(notifications.router)
+api_router.include_router(presence.router)
 api_router.include_router(email.router)
 api_router.include_router(referrals.router)
 api_router.include_router(admin.router)

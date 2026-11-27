@@ -250,6 +250,17 @@ def elite_trader(client, make_user):
 
 
 @pytest.fixture
+def automation_trader(elite_trader):
+    """Elite subscriber: background automation with no VELTRANE trade cap.
+
+    Automation is a paid capability, so a Free account cannot enable it (see
+    tests/test_automation_plans.py). Runner tests use this fixture and keep asserting the
+    runner's own behaviour.
+    """
+    return elite_trader
+
+
+@pytest.fixture
 def staff(client, make_user, db):
     account = make_user("staff")
     user = db.get(User, account["user_id"])

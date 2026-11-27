@@ -164,6 +164,8 @@ class Entitlement:
     STRATEGY_CUSTOMIZATION = "strategy_customization"
     ADVANCED_ANALYTICS = "advanced_analytics"
     AUTOMATION = "automation"
+    AUTOMATION_MODE = "automation_mode"
+    MAX_AUTOMATED_TRADES_PER_DAY = "max_automated_trades_per_day"
     PORTFOLIO_OPTIMIZATION = "portfolio_optimization"
     PRIORITY_SUPPORT = "priority_support"
     PERFORMANCE_FEES = "performance_fees"

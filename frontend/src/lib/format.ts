@@ -43,8 +43,10 @@ export function price(value: number | null | undefined, digits?: number): string
 export function signedMoney(value: number | null | undefined, currency = "USD", maximumFractionDigits = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   const formatted = money(Math.abs(value), currency, maximumFractionDigits);
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `-${formatted}`;
+  // Decide the sign from the rounded value so a loss of -0.004 reads "$0.00", never "-$0.00".
+  const rounded = Number(value.toFixed(maximumFractionDigits));
+  if (rounded > 0) return `+${formatted}`;
+  if (rounded < 0) return `-${formatted}`;
   return formatted;
 }
 
@@ -55,8 +57,9 @@ export function percent(value: number | null | undefined, digits = 2): string {
 
 export function signedPercent(value: number | null | undefined, digits = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(digits)}%`;
+  const rounded = Number(value.toFixed(digits));
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${(rounded === 0 ? 0 : rounded).toFixed(digits)}%`;
 }
 
 export function number(value: number | null | undefined, digits = 2): string {

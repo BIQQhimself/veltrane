@@ -13,6 +13,7 @@ from app.api.schemas import (
     MfaEnableRequest,
     MfaLoginRequest,
     PasswordResetRequest,
+    ProfileUpdateRequest,
     RegisterRequest,
     VerifyEmailRequest,
 )
@@ -23,7 +24,7 @@ from app.core.security import create_token, decode_token, new_csrf_token
 from app.db.models import User
 from app.db.session import get_db
 from app.services import auth as auth_service
-from app.services import entitlements, platform_switch, referrals
+from app.services import automation_limits, entitlements, identity, platform_switch, referrals
 from app.services.live_authorization import live_state
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -247,8 +248,10 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     sub = active_subscription(db, user.org_id)
     return {
         "user": serializers.user_dict(user),
+        "identity": identity.identity(user),
         "organization": serializers.org_dict(org) if org else None,
         "entitlements": ent,
+        "automation": automation_limits.state(db, user.org_id),
         "subscription": {
             "plan_code": sub.plan_code if sub else "free",
             "status": sub.status if sub else "active",
@@ -267,6 +270,26 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
             "env": settings.env,
         },
     }
+
+
+@router.patch("/profile")
+def update_profile(
+    payload: ProfileUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Presentation only: the display name and avatar colour never grant a capability."""
+    prefs = dict(user.preferences or {})
+    try:
+        if payload.display_name is not None:
+            prefs["display_name"] = identity.clean_display_name(payload.display_name)
+        if payload.avatar_color is not None:
+            prefs["avatar_color"] = identity.clean_avatar_color(payload.avatar_color)
+    except ValueError as exc:
+        raise bad_request("invalid_profile", str(exc)) from exc
+    user.preferences = prefs
+    db.commit()
+    return {"identity": identity.identity(user)}
 
 
 @router.post("/change-password")

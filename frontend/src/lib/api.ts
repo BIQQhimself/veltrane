@@ -135,6 +135,8 @@ type RequestOptions = {
   query?: Record<string, string | number | boolean | null | undefined>;
   retryOnAuth?: boolean;
   signal?: AbortSignal;
+  /** Lets a request finish while the page unloads; used for the presence goodbye. */
+  keepalive?: boolean;
 };
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -160,6 +162,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
         credentials: "include",
         body: body === undefined ? undefined : JSON.stringify(body),
         signal,
+        keepalive: options.keepalive,
       },
       true,
     );

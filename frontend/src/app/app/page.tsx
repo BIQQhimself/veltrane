@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { RiskBudgetRows } from "@/components/app/risk-budget";
 import { AccountHero } from "@/components/app/account-hero";
+import { AutomationStrip } from "@/components/app/automation-strip";
+import { TierBadge } from "@/components/app/tier-badge";
 import { contractReturn, contractStake } from "@/lib/contracts";
 import { budgetLabel, budgetTone, type RiskBudget } from "@/lib/risk-budget";
 import { TradeDetailDialog } from "@/components/app/trade-detail";
@@ -142,7 +144,7 @@ export default function OverviewPage() {
             {firstName}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge tone="info">{plan}</Badge>
+            <TierBadge planCode={plan} size="xs" />
             <Badge tone={killEngaged ? "loss" : "gain"}>
               {killEngaged ? "Kill switch engaged" : "Kill switch released"}
             </Badge>
@@ -169,6 +171,8 @@ export default function OverviewPage() {
           </Link>
         </div>
       </div>
+
+      <AutomationStrip />
 
       <AccountHero
         planCode={plan}

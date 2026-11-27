@@ -26,6 +26,7 @@ PLAN_CATALOG: list[dict] = [
             "Simulated AI trading",
             "5 demo executions per day",
             "No real-money execution — read-only and simulation only",
+            "No automated trading",
         ],
         "limits": {
             Entitlement.MAX_CONNECTIONS: 2,
@@ -37,6 +38,8 @@ PLAN_CATALOG: list[dict] = [
             Entitlement.STRATEGY_CUSTOMIZATION: False,
             Entitlement.ADVANCED_ANALYTICS: False,
             Entitlement.AUTOMATION: False,
+            Entitlement.AUTOMATION_MODE: "none",
+            Entitlement.MAX_AUTOMATED_TRADES_PER_DAY: 0,
             Entitlement.PORTFOLIO_OPTIMIZATION: False,
             Entitlement.PRIORITY_SUPPORT: False,
             Entitlement.PERFORMANCE_FEES: False,
@@ -53,7 +56,8 @@ PLAN_CATALOG: list[dict] = [
         "trial_days": 7,
         "features": [
             "Core AI strategy library",
-            "Paper automation with guardrails",
+            "Manual trading, demo or live after authorisation",
+            "Automation while the platform is open (session mode)",
             "Essential analytics",
             "50 demo executions per day",
         ],
@@ -67,10 +71,12 @@ PLAN_CATALOG: list[dict] = [
             Entitlement.STRATEGY_CUSTOMIZATION: False,
             Entitlement.ADVANCED_ANALYTICS: False,
             Entitlement.AUTOMATION: True,
+            Entitlement.AUTOMATION_MODE: "session",
+            Entitlement.MAX_AUTOMATED_TRADES_PER_DAY: 40,
             Entitlement.PORTFOLIO_OPTIMIZATION: False,
             Entitlement.PRIORITY_SUPPORT: False,
             Entitlement.PERFORMANCE_FEES: False,
-            Entitlement.LIVE_TRADING: False,
+            Entitlement.LIVE_TRADING: True,
             Entitlement.API_ACCESS: False,
         },
     },
@@ -86,6 +92,7 @@ PLAN_CATALOG: list[dict] = [
             "Backtesting & walk-forward testing",
             "Strategy customisation",
             "Advanced analytics",
+            "Autonomous trading that continues when you close the platform",
             "Eligible for live trading after explicit authorisation",
         ],
         "limits": {
@@ -98,6 +105,8 @@ PLAN_CATALOG: list[dict] = [
             Entitlement.STRATEGY_CUSTOMIZATION: True,
             Entitlement.ADVANCED_ANALYTICS: True,
             Entitlement.AUTOMATION: True,
+            Entitlement.AUTOMATION_MODE: "background",
+            Entitlement.MAX_AUTOMATED_TRADES_PER_DAY: 250,
             Entitlement.PORTFOLIO_OPTIMIZATION: False,
             Entitlement.PRIORITY_SUPPORT: False,
             Entitlement.PERFORMANCE_FEES: False,
@@ -116,6 +125,7 @@ PLAN_CATALOG: list[dict] = [
             "Full eligible strategy library",
             "Advanced AI customisation",
             "Portfolio optimisation",
+            "Background autonomous trading with no VELTRANE trade cap",
             "Highest configurable trading limits",
             "Priority support",
             "Optional performance fee agreement (requires separate consent)",
@@ -135,6 +145,8 @@ PLAN_CATALOG: list[dict] = [
             Entitlement.STRATEGY_CUSTOMIZATION: True,
             Entitlement.ADVANCED_ANALYTICS: True,
             Entitlement.AUTOMATION: True,
+            Entitlement.AUTOMATION_MODE: "background",
+            Entitlement.MAX_AUTOMATED_TRADES_PER_DAY: 0,
             Entitlement.PORTFOLIO_OPTIMIZATION: True,
             Entitlement.PRIORITY_SUPPORT: True,
             Entitlement.PERFORMANCE_FEES: True,
@@ -196,10 +208,16 @@ def effective_plan_code(db: Session, org_id: str) -> str:
 
 
 def resolve_entitlements(db: Session, org_id: str) -> dict:
-    """Effective entitlements = plan limits overlaid with unexpired admin overrides."""
+    """Effective entitlements = plan limits overlaid with unexpired admin overrides.
+
+    A plan row written before a new limit existed would otherwise answer ``None`` for it and
+    silently switch the feature off. Catalogue defaults for that plan code fill the gaps; a
+    value an administrator actually stored still wins.
+    """
     plan_code = effective_plan_code(db, org_id)
     plan = db.get(Plan, plan_code)
-    limits = dict(plan.limits) if plan else {}
+    defaults = next((spec["limits"] for spec in PLAN_CATALOG if spec["code"] == plan_code), {})
+    limits = {**defaults, **(plan.limits or {})} if plan else dict(defaults)
     now = _utcnow()
     overrides = (
         db.query(EntitlementOverride)

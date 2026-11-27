@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, errorMessage, refreshSession, tokenStore } from "@/lib/api";
-import type { Entitlements, User } from "@/lib/types";
+import type { AutomationState, Entitlements, Identity, User } from "@/lib/types";
 
 type LiveState = {
   status: string;
@@ -18,6 +18,8 @@ type Platform = {
 
 type MeResponse = {
   user: User;
+  identity: Identity;
+  automation: AutomationState;
   organization: { id: string; name: string; slug: string } | null;
   entitlements: Entitlements;
   subscription: {
@@ -34,6 +36,8 @@ type MeResponse = {
 
 type AuthContextValue = {
   user: User | null;
+  identity: Identity | null;
+  automation: AutomationState | null;
   organization: MeResponse["organization"];
   entitlements: Entitlements | null;
   subscription: MeResponse["subscription"] | null;
@@ -47,6 +51,7 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<{ email: string; debugToken?: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  updateProfile: (input: { display_name?: string; avatar_color?: string }) => Promise<void>;
   hasFeature: (key: string) => boolean;
   limit: (key: string) => number | null;
 };
@@ -168,9 +173,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMe(null);
   }, []);
 
+  const updateProfile = useCallback(
+    async (input: { display_name?: string; avatar_color?: string }) => {
+      await api("/auth/profile", { method: "PATCH", body: input });
+      await load();
+    },
+    [load],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: me?.user ?? null,
+      identity: me?.identity ?? null,
+      automation: me?.automation ?? null,
       organization: me?.organization ?? null,
       entitlements: me?.entitlements ?? null,
       subscription: me?.subscription ?? null,
@@ -184,13 +199,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       refresh: load,
+      updateProfile,
       hasFeature: (key: string) => Boolean(me?.entitlements.features?.[key]),
       limit: (key: string) => {
         const value = me?.entitlements.limits?.[key];
         return typeof value === "number" ? value : null;
       },
     }),
-    [me, loading, error, login, verifyMfa, register, logout, load],
+    [me, loading, error, login, verifyMfa, register, logout, load, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

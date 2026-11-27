@@ -59,6 +59,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=12, max_length=128)
 
 
+class ProfileUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=60)
+    avatar_color: str | None = Field(default=None, max_length=7)
+
+
 class MfaEnableRequest(BaseModel):
     code: str = Field(min_length=6, max_length=8)
 
@@ -277,6 +282,10 @@ class SupportTicketCreate(BaseModel):
     subject: str = Field(min_length=3, max_length=200)
     body: str = Field(min_length=5, max_length=4000)
     priority: Literal["low", "normal", "high", "urgent"] = "normal"
+
+
+class SupportMessageCreate(BaseModel):
+    message: str = Field(min_length=2, max_length=4000)
 
 
 # ------------------------------ appearance ------------------------------

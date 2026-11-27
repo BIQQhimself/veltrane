@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { PresenceProvider } from "@/lib/presence";
 import { AppShell } from "@/components/app/shell";
 import { Skeleton } from "@/components/ui/data";
 
@@ -46,7 +47,11 @@ function Gate({ children, admin }: { children: React.ReactNode; admin?: boolean 
     );
   }
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <PresenceProvider>
+      <AppShell>{children}</AppShell>
+    </PresenceProvider>
+  );
 }
 
 export function AppGate({ children }: { children: React.ReactNode }) {
