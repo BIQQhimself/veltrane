@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.core.redis_client import get_json, set_json
+from app.db.constants import TradingRule
 from app.providers.base import CredentialBundle, ProviderError
 
 log = logging.getLogger(__name__)
@@ -104,8 +105,33 @@ def parse_term(text: str | None) -> tuple[int, str] | None:
 
 def term_seconds(value: int, unit: str) -> int | None:
     """Wall-clock seconds for a term, or None when the venue defines the length (ticks)."""
-    multiplier = UNIT_SECONDS.get(unit)
-    return value * multiplier if multiplier else None
+    return TradingRule.term_seconds(value, unit)
+
+
+def tradeable_terms(terms: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    """The venue's terms narrowed to what the platform may actually trade.
+
+    Deriv prices tick contracts and 15-second contracts; the platform's one-minute floor
+    refuses both. Filtering here rather than only at execution time means the selector, the
+    agent and the order path all read one menu, and a term the platform would reject is never
+    offered in the first place.
+    """
+    kept: list[str] = []
+    for raw in terms:
+        parsed = parse_term(raw)
+        if parsed is None or TradingRule.below_floor(*parsed):
+            continue
+        kept.append(f"{parsed[0]}{parsed[1]}")
+    return tuple(kept)
+
+
+def tradeable_catalogue(catalogue: dict[str, Any]) -> dict[str, Any]:
+    """The catalogue as the platform exposes it, with untradeable terms removed."""
+    contracts = {
+        name: {**entry, "terms": list(tradeable_terms(entry.get("terms") or ()))}
+        for name, entry in (catalogue.get("contracts") or {}).items()
+    }
+    return {**catalogue, "contracts": contracts, "min_duration_seconds": TradingRule.MIN_DURATION_SECONDS}
 
 
 def term_label(value: int, unit: str) -> str:

@@ -629,7 +629,7 @@ export default function SettingsPage() {
                   ) : null}
                   {!live.data.entitlement ? (
                     <p className="text-2xs text-warn">
-                      Your plan is not eligible for live trading. Pro and Elite include the capability; authorisation is
+                      Your plan is not eligible for live trading. Pro, Elite and VIP include the capability; authorisation is
                       still required.
                     </p>
                   ) : null}

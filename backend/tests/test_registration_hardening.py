@@ -27,7 +27,7 @@ def _register_payload(**overrides) -> dict:
 # --------------------------------------------------------------------------- 422 detail
 @pytest.mark.parametrize(
     "email",
-    ["trader@corvex", "trader@localhost", "trader@example..com", "trader@127.0.0.1"],
+    ["trader@veltrane", "trader@localhost", "trader@example..com", "trader@127.0.0.1"],
 )
 def test_email_without_a_real_domain_is_rejected_with_a_field_locator(client, email):
     """The browser's type=email accepts these; the API must name the field it refused."""
@@ -53,7 +53,7 @@ def test_terms_refusal_is_reported_against_the_checkbox(client):
 
 # --------------------------------------------------------------------------- logging
 def test_validation_failure_logs_the_path_and_field_names_only(client, caplog):
-    email = "leak.probe@corvex"  # rejected domain, still must not be logged
+    email = "leak.probe@veltrane"  # rejected domain, still must not be logged
     secret = "Sup3r-Secret-Value!"
 
     with caplog.at_level(logging.INFO, logger="veltrane"):

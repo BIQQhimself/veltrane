@@ -133,6 +133,9 @@ class RiskContext:
 
     duplicate_exists: bool = False
     executions_today: int = 0
+    # Real-money executions placed today. Counted separately from demo ones so the plan's
+    # daily allowance covers both environments instead of only simulated trading.
+    live_executions_today: int = 0
     daily_execution_limit: int | None = None
     market_open: bool = True
     is_demo_feed: bool = False

@@ -325,7 +325,7 @@ export default function BillingPage() {
         <Panel>
           <PanelHeader
             title="Performance fee"
-            subtitle="Elite only · realized P&L with a high-water mark"
+            subtitle="Elite and VIP · realized P&L with a high-water mark"
             action={<Badge tone="warn">legal review required</Badge>}
           />
           <PanelBody className="space-y-3">

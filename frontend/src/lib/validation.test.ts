@@ -41,7 +41,7 @@ describe("fieldErrors", () => {
 
 describe("emailProblem", () => {
   it("rejects the addresses the browser accepts but the API refuses", () => {
-    expect(emailProblem("trader@corvex")).toMatch(/including the domain/);
+    expect(emailProblem("trader@veltrane")).toMatch(/including the domain/);
     expect(emailProblem("trader@localhost")).toMatch(/including the domain/);
     expect(emailProblem("trader@example..com")).not.toBeNull();
   });

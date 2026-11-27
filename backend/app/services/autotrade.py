@@ -19,7 +19,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from app.core.errors import bad_request, forbidden
-from app.db.constants import AuditAction
+from app.db.constants import AuditAction, TradingRule
 from app.db.models import AutoTradeConfig, AutoTradeSignal, Connection, Order, User
 from app.services import audit, automation_limits, deriv_sessions, execution_gate, kill_switch
 from app.trading import deriv_execution
@@ -70,6 +70,13 @@ def daily_realized(db: Session, connection: Connection) -> float:
 
 
 def _halt_reason(db: Session, config: AutoTradeConfig, connection: Connection, gate) -> str:
+    if TradingRule.below_floor(config.duration, config.duration_unit):
+        # A stored config may predate the floor. Halt loudly rather than submitting a
+        # contract the execution layer would reject on every tick.
+        return (
+            f"Stored duration {config.duration}{config.duration_unit} is below the "
+            f"{TradingRule.MIN_DURATION_SECONDS}s minimum. Save the automation again."
+        )
     switches = kill_switch.state_for(db, config.org_id, provider=connection.provider)
     engaged = [name for name, on in switches.items() if on]
     if engaged:

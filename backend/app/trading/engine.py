@@ -333,6 +333,7 @@ def build_context(
 
     demo_limit = entitlements.numeric_limit(db, user.org_id, Entitlement.MAX_DAILY_DEMO_EXECUTIONS)
     executions_today = int(usage.get_usage(db, user.org_id, "demo_executions"))
+    live_executions_today = int(usage.get_usage(db, user.org_id, "live_executions"))
 
     peak = 0.0
     if session is not None:
@@ -410,6 +411,7 @@ def build_context(
         ),
         duplicate_exists=duplicate,
         executions_today=executions_today,
+        live_executions_today=live_executions_today,
         daily_execution_limit=demo_limit,
         # Venue connections report the session themselves; the platform's calendar only
         # covers instruments in its own registry.

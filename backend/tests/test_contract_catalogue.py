@@ -133,8 +133,12 @@ def test_catalogue_endpoint_returns_the_venue_menu(client, trader, deriv_env):
     body = response.json()
     assert body["available"] is True
     assert body["source"] == "deriv_contracts_for"
-    assert "15s" in body["contracts"]["CALL"]["terms"]
-    assert "1t" in body["contracts"]["CALL"]["terms"]
+    # The venue publishes ticks and 15-second terms; the platform narrows the menu to its
+    # one-minute floor before any client sees it.
+    assert "60s" in body["contracts"]["CALL"]["terms"]
+    assert "1t" not in body["contracts"]["CALL"]["terms"]
+    assert "15s" not in body["contracts"]["CALL"]["terms"]
+    assert body["min_duration_seconds"] == 60
     assert "DIGITODD" not in body["contracts"]
 
 

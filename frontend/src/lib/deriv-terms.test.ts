@@ -26,28 +26,36 @@ describe("venueTermOptions", () => {
 
   it("unions CALL and PUT without duplicating a term", () => {
     const options = venueTermOptions({
-      CALL: { terms: ["1t", "5t", "15s", "30s"] },
-      PUT: { terms: ["5t", "30s", "60s"] },
+      CALL: { terms: ["60s", "5m"] },
+      PUT: { terms: ["5m", "15m"] },
     });
-    expect(options.map((item) => item.term)).toEqual(["1t", "5t", "15s", "30s", "60s"]);
+    expect(options.map((item) => item.term)).toEqual(["60s", "5m", "15m"]);
+  });
+
+  it("never offers a tick or a sub-minute term, even if the venue sends one", () => {
+    const options = venueTermOptions({
+      CALL: { terms: ["1t", "5t", "15s", "30s", "45s", "59s", "60s"] },
+      PUT: { terms: ["5t", "30s", "90s"] },
+    });
+    expect(options.map((item) => item.term)).toEqual(["60s", "90s"]);
   });
 
   it("orders by unit then value, so the menu reads like a ladder", () => {
     const options = venueTermOptions({
-      CALL: { terms: ["1d", "30m", "30s", "5t", "1h", "15s"] },
+      CALL: { terms: ["1d", "30m", "60s", "1h", "5m"] },
     });
-    expect(options.map((item) => item.term)).toEqual(["5t", "15s", "30s", "30m", "1h", "1d"]);
+    expect(options.map((item) => item.term)).toEqual(["60s", "5m", "30m", "1h", "1d"]);
   });
 
   it("drops entries the venue sent that are not terms", () => {
-    const options = venueTermOptions({ CALL: { terms: ["15s", "abc", "", "1y"] } });
-    expect(options.map((item) => item.term)).toEqual(["15s"]);
+    const options = venueTermOptions({ CALL: { terms: ["60s", "abc", "", "1y"] } });
+    expect(options.map((item) => item.term)).toEqual(["60s"]);
   });
 
   it("groups the menu by unit for a grouped select", () => {
-    const options = venueTermOptions({ CALL: { terms: ["5t", "15s", "30s", "1h"] } });
+    const options = venueTermOptions({ CALL: { terms: ["60s", "5m", "1h"] } });
     const groups = groupTerms(options);
-    expect(groups.map((group) => group.label)).toEqual(["ticks", "sec", "hours"]);
-    expect(groups[1]?.items.map((item) => item.term)).toEqual(["15s", "30s"]);
+    expect(groups.map((group) => group.label)).toEqual(["sec", "min", "hours"]);
+    expect(groups[0]?.items.map((item) => item.term)).toEqual(["60s"]);
   });
 });

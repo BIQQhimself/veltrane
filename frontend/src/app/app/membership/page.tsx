@@ -106,7 +106,7 @@ export default function MembershipPage() {
                 href="/app/billing"
                 className="cta-gold inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-2xs font-semibold"
               >
-                {planCode === "elite" ? "Manage subscription" : "Compare and upgrade"}
+                {"elite vip".includes(planCode) ? "Manage subscription" : "Compare and upgrade"}
                 <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
               <Link
@@ -266,7 +266,7 @@ export default function MembershipPage() {
           </p>
           <p>
             <span className="block text-paper">Performance fees are separate.</span>
-            Only Elite can be offered a performance fee agreement, and only on realised profit above a high-water mark,
+            Only Elite and VIP can be offered a performance fee agreement, and only on realised profit above a high-water mark,
             after separate consent and a legal review. It is disabled by default.
           </p>
         </div>

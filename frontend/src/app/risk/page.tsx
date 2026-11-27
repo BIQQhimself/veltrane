@@ -24,7 +24,7 @@ const CHECKS: string[][] = [
 ];
 
 const AUTHORISATION = [
-  "A plan that includes live trading. Pro and Elite by default; configurable by the operator.",
+  "A plan that includes live trading. Pro, Elite and VIP by default; configurable by the operator.",
   "A connected account with a verified read-only synchronisation.",
   "A recorded acknowledgement of this risk document, at its current version.",
   "All eight safety checklist items accepted individually.",

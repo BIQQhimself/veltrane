@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
+from app.db.constants import PlanCode
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -94,8 +95,21 @@ class OnboardingUpdate(BaseModel):
 
 
 # ----------------------------- billing -----------------------------
+def _known_plan(value: str, *, allow_free: bool) -> str:
+    """Plan codes come from ``PlanCode`` so a new tier is added in one place."""
+    code = value.strip().lower()
+    if code not in PlanCode.ALL or (code == PlanCode.FREE and not allow_free):
+        raise ValueError("Unknown plan code.")
+    return code
+
+
 class CheckoutRequest(BaseModel):
-    plan_code: Literal["basic", "pro", "elite"]
+    plan_code: str = Field(min_length=2, max_length=16)
+
+    @field_validator("plan_code")
+    @classmethod
+    def _paid_plan(cls, value: str) -> str:
+        return _known_plan(value, allow_free=False)
 
 
 class MockCompleteRequest(BaseModel):
@@ -103,7 +117,12 @@ class MockCompleteRequest(BaseModel):
 
 
 class ChangePlanRequest(BaseModel):
-    plan_code: Literal["free", "basic", "pro", "elite"]
+    plan_code: str = Field(min_length=2, max_length=16)
+
+    @field_validator("plan_code")
+    @classmethod
+    def _any_plan(cls, value: str) -> str:
+        return _known_plan(value, allow_free=True)
 
 
 class CancelSubscriptionRequest(BaseModel):

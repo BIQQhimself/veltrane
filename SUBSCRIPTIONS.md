@@ -5,7 +5,7 @@
 Prices are stored in the `plans` table and editable from the admin console. The figures below are
 the seeded defaults.
 
-Three paid tiers plus a free sandbox account. The free account is not a sales tier: it exists so a
+Four paid tiers plus a free sandbox account. The free account is not a sales tier: it exists so a
 visitor can see the platform work without a card, and it never executes a real-money order.
 
 | Tier | Price / month | Connections | Open positions | Trades / day | Agent mode | Backtests / day | Live trading |
@@ -13,34 +13,43 @@ visitor can see the platform work without a card, and it never executes a real-m
 | Free | $0 | 2 | 3 | 5 (demo only) | off | 0 | no |
 | Basic | $19 | 3 | 5 | 600 | while the platform is open | 0 | eligible |
 | Pro | $49 | 8 | 15 | 1,200 | background, platform closed | 25 | eligible |
-| Elite | $149 | 25 | 50 | no platform cap | background, platform closed | 200 | eligible |
+| Elite | $149 | 25 | 50 | 2,400 | background, platform closed | 200 | eligible |
+| VIP | $349 | 50 | 100 | no VELTRANE cap | background, platform closed | 500 | eligible |
 
-"Trades / day" is one shared counter per account: a demo execution and an automated signal draw
-from the same budget, so a plan cannot be gamed by switching between the two.
+The VIP price is a **placeholder** for the operator to set. Nothing in the product depends on it;
+the plan row is editable from the admin console, and the tier exists so an account can run without
+a VELTRANE-imposed daily ceiling. "No VELTRANE cap" is not "no limits": every deterministic risk
+rule still applies, and the venue's own API rate limits and contract sizes bound execution.
+
+"Trades / day" is one allowance per account covering both environments: a demo execution, an
+automated signal and a real-money contract all draw on it. Demo executions are metered by the
+`demo_executions` counter and real-money ones by `live_executions`; the risk engine enforces the
+allowance separately for each (`demo_execution_limit`, `live_execution_limit`), so a plan cannot
+be gamed by switching between the two and a paid plan does not leave live trading unbounded.
 
 Feature flags per tier (server-side, `app/db/constants.py::Entitlement`):
 
-| Entitlement | Free | Basic | Pro | Elite |
-| --- | --- | --- | --- | --- |
-| `strategy_library` | trend only | 2 strategies | 3 strategies | full |
-| `backtesting` | – | – | ✓ | ✓ |
-| `strategy_customization` | – | – | ✓ | ✓ |
-| `advanced_analytics` | – | – | ✓ | ✓ |
-| `automation` | – | ✓ (session) | ✓ (background) | ✓ (background) |
-| `portfolio_optimization` | – | – | – | ✓ |
-| `priority_support` | – | – | – | ✓ |
-| `api_access` | – | – | ✓ | ✓ |
-| `performance_fees` | – | – | – | eligible |
-| `live_trading` | – | eligible | eligible | eligible |
+| Entitlement | Free | Basic | Pro | Elite | VIP |
+| --- | --- | --- | --- | --- | --- |
+| `strategy_library` | trend only | 2 strategies | 3 strategies | full | full |
+| `backtesting` | – | – | ✓ | ✓ | ✓ |
+| `strategy_customization` | – | – | ✓ | ✓ | ✓ |
+| `advanced_analytics` | – | – | ✓ | ✓ | ✓ |
+| `automation` | – | ✓ (session) | ✓ (background) | ✓ (background) | ✓ (background) |
+| `portfolio_optimization` | – | – | – | ✓ | ✓ |
+| `priority_support` | – | – | – | ✓ | ✓ |
+| `api_access` | – | – | ✓ | ✓ | ✓ |
+| `performance_fees` | – | – | – | eligible | eligible |
+| `live_trading` | – | eligible | eligible | eligible | eligible |
 
 Free is explicitly **read-only and simulation only**. It is not a trial that can be nudged into
 live execution: the entitlement is absent, and the live-authorisation endpoint refuses a free
 account regardless of how the request is formed.
 
-Basic, Pro and Elite carry `live_trading: true`, which makes an account *eligible*. It authorises
+Basic, Pro, Elite and VIP carry `live_trading: true`, which makes an account *eligible*. It authorises
 nothing. Live execution additionally needs the platform live switch, the explicit multi-step
 authorisation, a passed safety checklist and a clean risk decision, as described in
-[TRADING_RISK_POLICY.md](TRADING_RISK_POLICY.md#5-live-trading-authorisation). The difference
+[TRADING_RISK_POLICY.md](TRADING_RISK_POLICY.md#6-live-trading-authorisation). The difference
 between the tiers is how much the agent may do unattended, not whether a safety control applies.
 
 ## Where entitlements are enforced
@@ -90,7 +99,7 @@ If a downgrade would leave the account over its new limits (too many open positi
 connections), the API returns `409 downgrade_blocked` listing what must be closed first, rather
 than silently violating the limits.
 
-## Performance fees (Elite only)
+## Performance fees (Elite and VIP only)
 
 Implemented in `app/services/performance_fees.py`, disabled by default.
 

@@ -100,6 +100,15 @@ createdb veltrane_test
 Tests run against real PostgreSQL and Redis, with the demo market feed, and never submit a
 real-money order. Live-trading tests assert that execution stays blocked.
 
+### Brand and hostnames
+
+The product brand is VELTRANE. `corvex.fun` is the legacy hostname the services were first
+provisioned on and it still appears in `render.yaml` and the deployment notes: moving a live
+deployment to a VELTRANE-owned domain is a DNS, TLS and legal step that has not been taken, so
+the configuration keeps the hostnames that actually resolve. No user-facing copy uses the old
+name, and the email sender defaults (`VELTRANE_EMAIL_FROM`, `VELTRANE_EMAIL_REPLY_TO`) are
+placeholders that must be set to an address on a sender domain you have verified.
+
 ## Deploy on Render (free tier)
 
 `render.yaml` is a Render Blueprint with a Static Site for the frontend, a Web Service for the API

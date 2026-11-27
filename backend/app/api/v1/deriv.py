@@ -14,7 +14,7 @@ from app.api.deps import get_current_user
 from app.core import rate_limit as limit
 from app.core.config import settings
 from app.core.errors import bad_request, forbidden, not_found
-from app.db.constants import AuditAction
+from app.db.constants import AuditAction, TradingRule
 from app.db.models import Connection, User
 from app.db.session import get_db
 from app.services import (
@@ -30,7 +30,7 @@ from app.services.connections import get_connection, load_credentials
 from app.trading import deriv_execution
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
@@ -50,12 +50,22 @@ class ContractRequest(BaseModel):
     side: str = Field(default="buy", pattern="^(buy|sell)$")
     contract_type: str = Field(default="", max_length=24)
     stake: float = Field(gt=0, le=1_000_000)
-    duration: int = Field(default=5, ge=1, le=86_400)
-    duration_unit: str = Field(default="t", pattern="^(t|s|m|h|d)$")
+    duration: int = Field(default=TradingRule.MIN_DURATION_SECONDS, ge=1, le=86_400)
+    duration_unit: str = Field(default="s", pattern="^(t|s|m|h|d)$")
     currency: str = Field(default="", max_length=8)
     reason: str = Field(default="", max_length=500)
     idempotency_key: str = Field(default="", max_length=120)
     source: str = Field(default="human", max_length=32)
+
+    @model_validator(mode="after")
+    def _duration_floor(self):
+        """Refuse a sub-minute term before the request reaches the execution layer."""
+        if TradingRule.below_floor(self.duration, self.duration_unit):
+            raise ValueError(
+                f"The shortest contract on VELTRANE is {TradingRule.MIN_DURATION_SECONDS} seconds."
+            )
+        return self
+
 
 
 def _deriv_connection(db: Session, org_id: str, connection_id: str) -> Connection:
@@ -116,7 +126,7 @@ def contracts(
     """
     adapter = deriv_sessions.adapter()
     catalogue = contract_catalogue.get(symbol, currency, provider=adapter, refresh=refresh)
-    return catalogue
+    return contract_catalogue.tradeable_catalogue(catalogue)
 
 
 @router.get("/candles")
@@ -476,14 +486,24 @@ class AutomationRequest(BaseModel):
     symbol: str = Field(default="R_100", min_length=1, max_length=32)
     contract_type: str = Field(default="CALL", max_length=24)
     stake: float = Field(default=10.0, gt=0, le=100_000)
-    duration: int = Field(default=5, ge=1, le=86_400)
-    duration_unit: str = Field(default="t", pattern="^(t|s|m|h|d)$")
+    duration: int = Field(default=TradingRule.MIN_DURATION_SECONDS, ge=1, le=86_400)
+    duration_unit: str = Field(default="s", pattern="^(t|s|m|h|d)$")
     max_open_contracts: int = Field(default=1, ge=0, le=50)
     max_stake_per_trade: float = Field(default=25.0, gt=0, le=100_000)
     daily_loss_limit: float = Field(default=100.0, gt=0, le=1_000_000)
     daily_stake_limit: float = Field(default=250.0, gt=0, le=1_000_000)
     cooldown_seconds: int = Field(default=300, ge=0, le=86_400)
     signal_ttl_seconds: int = Field(default=600, ge=30, le=86_400)
+
+    @model_validator(mode="after")
+    def _duration_floor(self):
+        """Refuse a sub-minute term before the request reaches the execution layer."""
+        if TradingRule.below_floor(self.duration, self.duration_unit):
+            raise ValueError(
+                f"The shortest contract on VELTRANE is {TradingRule.MIN_DURATION_SECONDS} seconds."
+            )
+        return self
+
 
 
 def _config_dict(config) -> dict:

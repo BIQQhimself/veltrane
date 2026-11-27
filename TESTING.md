@@ -5,13 +5,23 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 317 tests, ~4 min
+.venv/bin/python -m pytest                  # ~385 tests, ~4 min
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
 
 The suite runs against **real PostgreSQL and real Redis** (database `veltrane_test`, Redis db 9).
-Both must be running before you start: session revocation and login rate limiting live in Redis, so
+Both must be running before you start. On a bare Debian/Ubuntu sandbox:
+
+```bash
+sudo apt-get install -y postgresql redis-server
+sudo pg_ctlcluster 17 main start        # or: sudo service postgresql start
+sudo -u postgres createuser -s veltrane
+sudo -u postgres createdb -O veltrane veltrane_test
+redis-server --daemonize yes
+```
+
+`alembic upgrade head` then builds the schema the tests expect. session revocation and login rate limiting live in Redis, so
 `test_security.py::test_logout_revokes_session` fails if Redis is absent. That failure is the suite
 telling you the environment is incomplete, not a flaky test.
 Nothing is mocked at the database boundary, so SQL, constraints, JSONB behaviour and transaction
@@ -49,6 +59,7 @@ code as Stripe.
 | `test_binary_terms.py` | The `binary_terms` rule in isolation: a venue term inside the published menu passes, a term outside it is refused with the allowed list in the detail, a tick term carries no seconds figure, and an empty menu fails closed |
 | `test_contract_catalogue.py` | Contract discovery: term parsing, mixed-unit bands (`15s`–`1d`), unsupported contract families dropped, ladder terms kept inside their band, only venue-priced terms advertised, unreachable venue reported as unavailable (not as an empty menu), caching with an explicit refresh, and the `/deriv/contracts` endpoint |
 | `src/lib/deriv-terms.test.ts` | The terminal's duration menu: term parsing, CALL/PUT union without duplicates, ladder ordering, malformed venue entries dropped, grouping for the grouped select |
+| `test_duration_floor.py` | The one-minute floor as a single product rule: one definition shared by the paper book and the venue paths, every sub-minute term refused at the catalogue, at the request schema, at the execution layer and in a stored automation config, and no tick or seconds term ever advertised |
 | `test_theme_and_duration.py` | The runtime palette and the expiry floor: defaults returned when nothing is stored, an administrator's colours round-tripping, unknown tokens and malformed hex refused, branding length limits, the support-role gate, an audit row per publish, reset restoring the shipped palette, and `validate_duration` accepting only the offered terms |
 | `test_paper_session.py` | Paper session provisioning, per-session isolation, stop, and balance accounting |
 | `test_market_data.py` | The demo feed's shape and continuity, instrument specs, market open/closed behaviour |
@@ -87,15 +98,21 @@ These are not aspirations; each is checked.
 16. A palette the administrator saves is what subscribers receive, and only colour tokens in the
     known list are accepted — a stored value can never become CSS or script
     (`test_theme_and_duration.py`).
-17. On the platform's own paper book, an expiry shorter than one minute is refused at the schema
-    boundary *and* by the engine, and a term that is not offered is refused with `invalid_duration`
-    (`test_binary.py`, `test_theme_and_duration.py`).
-18. On a venue, the offered durations are whatever the venue published and priced: a duration the
-    venue did not offer is refused with `unsupported_duration` before any order leaves the process,
-    and the interface can only render terms from that same catalogue
-    (`test_contract_catalogue.py`, `test_deriv_integration.py`, `test_binary_terms.py`).
+17. Nothing shorter than one minute can be traded on any path. The floor is defined once
+    (`TradingRule.MIN_DURATION_SECONDS`) and enforced at the catalogue, the request schemas, the
+    execution layer and the automation runner; Deriv's 15-second and tick contracts are refused
+    even though the venue prices them (`test_duration_floor.py`, `test_binary.py`,
+    `test_deriv_integration.py`, `test_deriv_autotrade.py`, `test_theme_and_duration.py`).
+18. On a venue, the durations offered are the venue's published, priced terms *narrowed to the
+    platform floor*: a term the venue did not offer is refused with `unsupported_duration` before
+    any order leaves the process, and the interface renders only terms from that catalogue
+    (`test_contract_catalogue.py`, `test_deriv_integration.py`, `test_binary_terms.py`,
+    `src/lib/deriv-terms.test.ts`).
 19. A contract whose expiry price cannot be resolved is voided with no P&L and no trade row, so a
     data gap can never be recorded as a win or a loss (`test_binary.py`).
+20. A plan's daily allowance bounds real money as well as simulated trading: reaching it produces a
+    `live_execution_limit` refusal before any venue call, and a plan with no numeric cap still
+    passes every other deterministic rule (`test_risk_engine.py`, `test_automation_plans.py`).
 
 ## Static export build (Render)
 

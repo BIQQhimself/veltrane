@@ -14,6 +14,8 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass, field
 
+from app.core.config import settings
+
 MIDNIGHT = "#0b1220"
 CHARCOAL = "#151b26"
 CARD = "#ffffff"
@@ -92,7 +94,7 @@ def layout(
             real results.
           </p>
           <p style="margin:8px 0 0;font-size:12px;line-height:1.6;color:#9aa4b2">
-            Need help? Reply to this message or write to support@corvex.fun.
+            Need help? Reply to this message or write to {_escape(settings.email_reply_to)}.
           </p>
           {unsubscribe}
         </td>

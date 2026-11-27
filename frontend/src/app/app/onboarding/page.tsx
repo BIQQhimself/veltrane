@@ -204,7 +204,7 @@ export default function OnboardingPage() {
                     </p>
                     <p className="mt-0.5 text-xs leading-relaxed text-paper-faint">{item.body}</p>
                     {item.locked ? (
-                      <p className="mt-1 text-2xs text-warn">Requires the Pro or Elite plan.</p>
+                      <p className="mt-1 text-2xs text-warn">Requires the Pro plan or above.</p>
                     ) : null}
                   </div>
                 </div>

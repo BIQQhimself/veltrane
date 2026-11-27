@@ -16,7 +16,7 @@ Repository notes for automated agents working on VELTRANE.
 cd backend
 .venv/bin/pip install -r requirements.txt
 .venv/bin/ruff check app tests           # config lives in backend/pyproject.toml
-.venv/bin/python -m pytest               # 151 tests, needs Postgres + Redis
+.venv/bin/python -m pytest               # ~385 tests, needs Postgres + Redis
 VELTRANE_DATABASE_URL=... .venv/bin/alembic upgrade head
 
 # frontend
@@ -26,6 +26,25 @@ npm run typecheck   # tsc --noEmit
 npm run test        # vitest run (node env, pure logic; config: vitest.config.ts)
 npm run build
 ```
+
+## Product rules that are easy to break
+
+- **One minute is the minimum expiry on every path.** `TradingRule` in `app/db/constants.py` is the
+  only definition. The catalogue (`services/contract_catalogue.tradeable_terms`), the Deriv request
+  schemas (`api/v1/deriv.py`), the execution layer (`trading/deriv_execution._assert_duration_floor`)
+  and the automation runner (`services/autotrade._halt_reason`) all apply it, and
+  `tests/test_duration_floor.py` pins each of them. Deriv prices 15-second and tick contracts;
+  refusing them is a product decision, not a venue limitation.
+- **Plan codes come from `PlanCode`** (`free`, `basic`, `pro`, `elite`, `vip`). Do not write a
+  `Literal[...]` list of plans in a schema or a component: `api/schemas.py` validates against
+  `PlanCode.ALL`, and the frontend reads `TIERS`/`TIER_ORDER` from `src/lib/membership.ts`.
+- **The daily allowance covers real money too.** `demo_executions` and `live_executions` are
+  separate counters compared with the same plan limit by `demo_execution_limit` and
+  `live_execution_limit` in `app/risk/rules.py`. A new execution path must increment the right
+  counter after a confirmed fill.
+- **Brand versus hostname.** The brand is VELTRANE; `corvex.fun` is the legacy deployment hostname
+  and still appears in `render.yaml`, CI and the deployment notes because that is what resolves.
+  Do not "fix" those hostnames to a domain that has not been cleared.
 
 ## CI expectations
 
@@ -165,7 +184,8 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
 
 - `render.yaml` is the Blueprint: `veltrane-api` (Python web service, `rootDir: backend`),
   `veltrane-web` (Render *static site* from `frontend/out`), `veltrane-db` (free Postgres).
-  `DEPLOYMENT_RENDER.md` holds the DNS/cookie/CORS/deploy notes for `corvex.fun`.
+  `DEPLOYMENT_RENDER.md` holds the DNS/cookie/CORS/deploy notes for the legacy `corvex.fun`
+  hostname (see "Brand versus hostname" above).
 - The static build requires `VELTRANE_STATIC_EXPORT=1` (`next.config.ts` then sets
   `output: "export"`, `trailingSlash`, and drops rewrites/headers, which a static host cannot
   honour). Build it locally with

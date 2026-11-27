@@ -9,6 +9,10 @@
 # connected, so checkout refuses instead of granting plans for free), and the demo
 # market-data fallback off so nothing synthetic is ever shown in place of real prices.
 #
+# Hostnames: `corvex.fun` is the legacy deployment domain, held by the operator. The product
+# brand is VELTRANE; moving the services to a VELTRANE-owned domain is a DNS and legal step
+# that this blueprint does not take, so every hostname below stays as it is until then.
+#
 # Values that must be supplied by a human are marked `sync: false`: Render prompts for
 # them when the Blueprint is created and never stores them in this file.
 
@@ -108,6 +112,7 @@ services:
         sync: false
       # Must be a sender on the domain verified at Resend (SPF + DKIM required).
       - key: VELTRANE_EMAIL_FROM
+        # Must be an address on a sender domain verified with the email provider.
         value: VELTRANE <notifications@corvex.fun>
       - key: VELTRANE_EMAIL_REPLY_TO
         value: support@corvex.fun

@@ -79,8 +79,10 @@ class Settings(BaseSettings):
     email_provider: Literal["outbox", "resend"] = "outbox"
     resend_api_key: str = ""
     resend_webhook_secret: str = ""
-    email_from: str = "VELTRANE <notifications@corvex.fun>"
-    email_reply_to: str = "support@corvex.fun"
+    # Placeholders: set both to an address on a sender domain you have verified with the
+    # email provider. Nothing is sent from these addresses until a provider key is configured.
+    email_from: str = "VELTRANE <notifications@veltrane.app>"
+    email_reply_to: str = "support@veltrane.app"
     email_max_attempts: int = 4
     email_retry_base_seconds: int = 300
     # One daily activity digest per user instead of one email per trade.

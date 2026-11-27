@@ -76,8 +76,8 @@ python -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())" #
 | `VELTRANE_EMAIL_PROVIDER` | `outbox` | `outbox` records messages and sends nothing. `resend` delivers through Resend. Anything else fails validation at startup |
 | `VELTRANE_RESEND_API_KEY` | *(empty)* | Required when the provider is `resend`; startup validation rejects the combination without it |
 | `VELTRANE_RESEND_WEBHOOK_SECRET` | *(empty)* | Svix signing secret (`whsec_…`). Without it the webhook answers `401 webhook_not_configured` rather than trusting unsigned payloads |
-| `VELTRANE_EMAIL_FROM` | `VELTRANE <notifications@corvex.fun>` | Must be a verified sender on the provider |
-| `VELTRANE_EMAIL_REPLY_TO` | `support@corvex.fun` | |
+| `VELTRANE_EMAIL_FROM` | `VELTRANE <notifications@veltrane.app>` | Placeholder. Must be a sender address on a domain verified with the provider |
+| `VELTRANE_EMAIL_REPLY_TO` | `support@veltrane.app` | Placeholder. Shown in every email footer as the support address |
 | `VELTRANE_EMAIL_MAX_ATTEMPTS` | `4` | Attempts before a message is marked failed |
 | `VELTRANE_EMAIL_RETRY_BASE_SECONDS` | `300` | Exponential backoff base for retryable failures |
 | `VELTRANE_EMAIL_DIGEST_HOUR_UTC` | `8` | Hour after which the daily digest is due |

@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import pytest
 from app.core.config import settings
-from app.db.models import AutoTradeConfig, AutoTradeSignal, Connection
+from app.db.models import AutoTradeConfig, AutoTradeSignal, Connection, User
+from app.db.session import SessionLocal
 from app.services import deriv_sessions, kill_switch
 
 BASE = "/api/v1"
@@ -97,7 +98,7 @@ def test_preview_prices_a_contract(client, trader, deriv_env):
 
     response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/preview",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert response.status_code == 200, response.text
@@ -123,7 +124,7 @@ def test_demo_contract_opens_and_is_fully_auditable(client, trader, deriv_env):
 
     response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert response.status_code == 201, response.text
@@ -151,7 +152,7 @@ def test_demo_contract_opens_and_is_fully_auditable(client, trader, deriv_env):
 
 def test_duplicate_contract_is_blocked(client, trader, deriv_env):
     connection_id = _connect(client, trader).json()["id"]
-    body = {"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5}
+    body = {"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60}
 
     first = client.post(f"{BASE}/deriv/connections/{connection_id}/contracts", json=body, headers=trader["headers"])
     assert first.status_code == 201, first.text
@@ -165,14 +166,14 @@ def test_free_account_demo_contracts_count_against_the_daily_cap(client, trader,
     connection_id = _connect(client, trader).json()["id"]
     stakes = [10, 11, 12, 13, 14]
     for stake in stakes:
-        body = {"symbol": "R_100", "side": "buy", "stake": stake, "duration": 5}
+        body = {"symbol": "R_100", "side": "buy", "stake": stake, "duration": 60}
         ok = client.post(f"{BASE}/deriv/connections/{connection_id}/contracts", json=body, headers=trader["headers"])
         assert ok.status_code == 201, ok.text
         assert ok.json()["approved"] is True, ok.json().get("risk")
 
     sixth = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 15, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 15, "duration": 60},
         headers=trader["headers"],
     )
     assert sixth.status_code == 201, sixth.text
@@ -187,13 +188,13 @@ def test_distinct_contract_terms_are_not_treated_as_duplicates(client, trader, d
     connection_id = _connect(client, trader).json()["id"]
     first = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert first.status_code == 201, first.text
     second = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 12, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 12, "duration": 60},
         headers=trader["headers"],
     )
     assert second.status_code == 201, second.text
@@ -206,7 +207,7 @@ def test_idempotency_key_replays_the_same_order(client, trader, deriv_env):
         "symbol": "R_100",
         "side": "buy",
         "stake": 10,
-        "duration": 5,
+        "duration": 60,
         "idempotency_key": "qa-idem-1",
     }
     first = client.post(f"{BASE}/deriv/connections/{connection_id}/contracts", json=body, headers=trader["headers"])
@@ -222,7 +223,7 @@ def test_read_only_connection_cannot_execute(client, trader, deriv_env):
 
     response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert response.status_code == 400
@@ -239,7 +240,7 @@ def test_kill_switch_blocks_execution(client, trader, deriv_env, db):
     try:
         blocked = client.post(
             f"{BASE}/deriv/connections/{connection_id}/contracts",
-            json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+            json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
             headers=trader["headers"],
         )
         assert blocked.status_code == 400
@@ -250,7 +251,7 @@ def test_kill_switch_blocks_execution(client, trader, deriv_env, db):
 
     allowed = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert allowed.status_code == 201, allowed.text
@@ -261,7 +262,7 @@ def test_real_account_is_blocked_while_the_platform_flag_is_off(client, trader, 
 
     response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert response.status_code == 400
@@ -276,7 +277,7 @@ def test_contracts_sync_and_close(client, trader, deriv_env, db):
     connection_id = _connect(client, trader).json()["id"]
     opened = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
         headers=trader["headers"],
     )
     assert opened.status_code == 201, opened.text
@@ -384,8 +385,8 @@ def test_pending_signal_is_approved_and_executed(client, trader, deriv_env, db):
         symbol="R_100",
         contract_type="CALL",
         stake=10,
-        duration=5,
-        duration_unit="t",
+        duration=60,
+        duration_unit="s",
         created_by=trader["user_id"],
     )
     db.add(config)
@@ -400,8 +401,8 @@ def test_pending_signal_is_approved_and_executed(client, trader, deriv_env, db):
         side="buy",
         contract_type="CALL",
         stake=10,
-        duration=5,
-        duration_unit="t",
+        duration=60,
+        duration_unit="s",
         reason="qa signal",
     )
     db.add(signal)
@@ -431,8 +432,8 @@ def test_signal_rejection_keeps_it_out_of_the_venue(client, trader, deriv_env, d
         side="buy",
         contract_type="CALL",
         stake=10,
-        duration=5,
-        duration_unit="t",
+        duration=60,
+        duration_unit="s",
         reason="qa signal",
     )
     db.add(signal)
@@ -445,44 +446,84 @@ def test_signal_rejection_keeps_it_out_of_the_venue(client, trader, deriv_env, d
     assert deriv_env.state.contracts == {}
 
 
-# ------------------------------------------------------------------ duration whitelist
-def test_preview_offers_only_durations_the_venue_publishes(client, trader, deriv_env):
+# ------------------------------------------------------- duration floor and venue menu
+def test_preview_offers_only_terms_at_or_above_the_floor(client, trader, deriv_env):
     connection_id = _connect(client, trader).json()["id"]
 
     response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/preview",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 30, "duration_unit": "s"},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60, "duration_unit": "s"},
         headers=trader["headers"],
     )
     assert response.status_code == 200, response.text
     terms = response.json()["terms"]
-    assert terms["term"] == "30s"
-    assert "30s" in terms["allowed_terms"]
-    assert "5t" in terms["allowed_terms"]
+    assert terms["term"] == "60s"
+    assert "60s" in terms["allowed_terms"]
+    # The venue prices ticks and 15-second contracts; the platform must not offer them.
+    assert "5t" not in terms["allowed_terms"]
+    assert "30s" not in terms["allowed_terms"]
+    assert all(int(term[:-1]) * {"s": 1, "m": 60, "h": 3600, "d": 86400}[term[-1]] >= 60
+               for term in terms["allowed_terms"])
     assert terms["term_source"] == "venue"
 
 
-def test_preview_rejects_a_duration_the_venue_does_not_offer(client, trader, deriv_env):
+def test_preview_rejects_a_term_the_venue_does_not_offer(client, trader, deriv_env):
     connection_id = _connect(client, trader).json()["id"]
 
     response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/preview",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 37, "duration_unit": "s"},
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 61, "duration_unit": "s"},
         headers=trader["headers"],
     )
     assert response.status_code == 400, response.text
     body = response.json()["detail"]
     assert body["code"] == "unsupported_duration"
-    assert "30s" in body["details"]["allowed"]
+    assert "60s" in body["details"]["allowed"]
 
 
-def test_tick_contract_carries_no_invented_seconds(client, trader, deriv_env):
+def test_sub_minute_terms_are_refused_before_execution(client, trader, deriv_env):
+    """The schema refuses a sub-minute term, so it never reaches the venue or the engine."""
+    connection_id = _connect(client, trader).json()["id"]
+    priced_before = len(deriv_env.state.proposals)
+
+    for duration, unit in ((5, "t"), (30, "s"), (1, "t")):
+        response = client.post(
+            f"{BASE}/deriv/connections/{connection_id}/preview",
+            json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": duration, "duration_unit": unit},
+            headers=trader["headers"],
+        )
+        assert response.status_code == 422, (duration, unit, response.text)
+    assert len(deriv_env.state.proposals) == priced_before
+
+
+def test_execution_layer_refuses_a_sub_minute_term_even_without_the_schema(client, trader, deriv_env):
+    """Defence in depth: the floor lives in the execution layer, not only in the request model."""
+    from app.core.errors import AppError
+    from app.db.models import Connection
+    from app.trading import deriv_execution
+
+    connection_id = _connect(client, trader).json()["id"]
+    priced_before = len(deriv_env.state.proposals)
+    with SessionLocal() as db:
+        connection = db.get(Connection, connection_id)
+        user = db.get(User, connection.created_by)
+        with pytest.raises(AppError) as excinfo:
+            deriv_execution.preview(
+                db,
+                user=user,
+                connection=connection,
+                payload={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5, "duration_unit": "t"},
+            )
+    assert excinfo.value.detail["code"] == "min_duration"
+    assert len(deriv_env.state.proposals) == priced_before
+
+
+def test_automation_config_refuses_a_sub_minute_duration(client, trader, deriv_env):
     connection_id = _connect(client, trader).json()["id"]
 
-    response = client.post(
-        f"{BASE}/deriv/connections/{connection_id}/preview",
-        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5, "duration_unit": "t"},
+    response = client.put(
+        f"{BASE}/deriv/connections/{connection_id}/automation",
+        json={"enabled": True, "mode": "autonomous", "duration": 15, "duration_unit": "s"},
         headers=trader["headers"],
     )
-    assert response.status_code == 200, response.text
-    assert response.json()["terms"]["duration_seconds"] is None
+    assert response.status_code == 422, response.text

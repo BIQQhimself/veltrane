@@ -24,6 +24,15 @@ competent reviewer would find, so it is cheaper to state it here.
 
 ## Trading
 
+5a. **The one-minute floor is a platform decision, not a venue limit.** Deriv prices 15-second and
+   tick contracts; VELTRANE refuses them at the catalogue, the request schema, the execution layer
+   and the automation runner. If the product ever offers shorter contracts, `TradingRule`
+   (`app/db/constants.py`) is the single constant to change, and `tests/test_duration_floor.py`
+   lists every place that must keep agreeing with it.
+5b. **The real-money daily allowance is enforced but has never been exercised against a venue.**
+   `live_executions` is incremented after a real fill and checked by the risk engine before one.
+   Only the demo counter has been driven end to end, because no funded account has been used.
+
 6. **No live exchange connectivity has been verified.** Binance, Bybit, OKX and Deriv adapters are
    implemented but unverified against real accounts. They are marked `implemented_unverified` in
    INTEGRATIONS.md, and the platform flag keeps live execution off.
@@ -96,6 +105,9 @@ competent reviewer would find, so it is cheaper to state it here.
 24. **No dunning sequence.** A failed payment notifies once and starts a 7-day grace period.
 25. **Tax is a single line item** with no jurisdiction rules. Real invoicing needs a tax engine.
 26. **Performance fees are disabled by design** and require a legal review that has not happened.
+26a. **The VIP price is a placeholder.** $349 is seeded so the tier can be tested end to end; the
+    operator must set the real figure in the admin console before any customer sees it. Every tier
+    price is a database row, so changing it does not require a deploy.
 27. **One historical registration 500 in production was never explained by a traceback.** No log
     access was available. The endpoint now survives the two failure classes reachable in that path
     (a lost duplicate-insert race returns `409`, and a failing verification email is isolated in a
@@ -145,7 +157,10 @@ competent reviewer would find, so it is cheaper to state it here.
     configured here, so no message has been delivered to a real inbox and no `email.delivered`
     webhook has been observed. Until that happens, verification and reset mail in a real
     deployment depends on the operator setting `VELTRANE_EMAIL_PROVIDER=resend` and a verified
-    sender. The outbox never marks anything sent that the provider did not accept.
+    sender. The outbox never marks anything sent that the provider did not accept. The default
+    sender and reply-to addresses (`notifications@veltrane.app`, `support@veltrane.app`) are
+    placeholders: replace them with addresses on a domain verified with the provider, or every
+    message will be rejected for an unverified sender.
 44. **Free Render Postgres expires 30 days after creation** and has no managed backups. It is
     suitable for a preview, not for data you would miss.
 45. **No Redis on the free tier by default.** Rate limiting and market-data caching become

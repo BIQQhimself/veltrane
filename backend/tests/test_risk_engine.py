@@ -189,6 +189,44 @@ def test_demo_execution_limit():
     assert "demo_execution_limit" in codes(assessment)
 
 
+def test_live_execution_limit_uses_the_plan_allowance():
+    """A plan's daily allowance must bound real money too, not only simulated contracts."""
+    live_ctx = context(
+        mode="live",
+        global_live_enabled=True,
+        org_live_authorized=True,
+        org_live_entitlement=True,
+        connection_trade_permission=True,
+        connection_read_only=False,
+        live_executions_today=600,
+        daily_execution_limit=600,
+    )
+    blocked = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=59_000.0), live_ctx)
+    assert "live_execution_limit" in codes(blocked)
+    assert not blocked.approved
+
+    under = engine.evaluate(
+        intent(mode="live", strategy_status="live", stop_loss=59_000.0),
+        live_ctx.with_extra(live_executions_today=599),
+    )
+    assert "live_execution_limit" not in codes(under)
+
+
+def test_an_uncapped_plan_has_no_live_cap():
+    live_ctx = context(
+        mode="live",
+        global_live_enabled=True,
+        org_live_authorized=True,
+        org_live_entitlement=True,
+        connection_trade_permission=True,
+        connection_read_only=False,
+        live_executions_today=50_000,
+        daily_execution_limit=None,
+    )
+    assessment = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=59_000.0), live_ctx)
+    assert "live_execution_limit" not in codes(assessment)
+
+
 def test_stop_loss_validation_for_live():
     live_ctx = context(
         mode="live",

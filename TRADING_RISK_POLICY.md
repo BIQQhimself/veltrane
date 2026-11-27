@@ -44,6 +44,7 @@ version that evaluated them. Rule codes below are the ones emitted by `app/risk/
 | `strategy_approved` | Strategy version approved for the mode in use | on |
 | `connection_permission` | Connection allows trading for this mode | on |
 | `demo_execution_limit` | Simulated executions, counting paper fills and contracts on a venue demo account against one daily allowance | 5 / day (entitlement) |
+| `live_execution_limit` | Real-money contracts against the same plan allowance, counted separately from simulated ones | plan allowance (entitlement) |
 | `binary_terms` | Fixed-odds expiry must be a term the venue published *and* priced; stake and payout inside the offered bounds | venue menu, verified per term |
 
 Three details are easy to get wrong and are pinned by tests:
@@ -54,10 +55,14 @@ Three details are easy to get wrong and are pinned by tests:
   and 5 ticks are all normal — and never a duration invented to fill a gap. A term outside the
   menu is rejected with `unsupported_duration` before any order leaves the process, and the
   terminal can only render what the catalogue returned.
-- **The platform's own paper book keeps a one-minute floor.** That book prices its own contracts,
-  so `duration_seconds` below 60 is refused by the request schema and `duration_too_short` by the
-  engine. The venue path is different on purpose: Deriv's tick and seconds contracts are real
-  products, so the floor there is "whatever the venue published".
+- **One minute is the platform floor, on every path.** Deriv prices 15-second and tick contracts;
+  VELTRANE does not offer them. The floor is a product decision, not a venue capability, so it is
+  enforced once in `TradingRule` (`app/db/constants.py`) and applied at four points: the catalogue
+  endpoint drops sub-minute terms before they reach a client, the Deriv preview and contract
+  request schemas reject them, the execution layer re-checks the term immediately before the
+  proposal call, and the automation runner halts a stored config whose duration is below the
+  floor. `tests/test_duration_floor.py` pins each of those points, so a future change to the
+  catalogue or a request model cannot quietly reopen a sub-minute path.
 - **A tick term never gains a seconds figure.** `duration_seconds` is `None` for `1t`-style
   contracts. Converting ticks to seconds would be a fabricated number, and settlement, the audit
   trail and the duplicate-order window all key off the term instead.
@@ -85,7 +90,17 @@ Nothing is evaluated on gross profit.
 - Portfolio performance is reported net of recorded fees and funding, never gross.
 - Funding and borrow costs are modelled as a per-trade field, not assumed to be zero.
 
-## 4. Limits and kill switches
+## 4. Daily trade allowance
+
+The plan allowance covers real money as well as simulated trading. Simulated executions are
+metered in `demo_executions`, real-money contracts in `live_executions`, and both counters are
+compared with the same plan limit on the server. A plan that reaches its allowance is refused by
+the risk engine (`demo_execution_limit` or `live_execution_limit`) before any venue call, and the
+refusal is recorded like any other rejection. Free is capped at five simulated executions a day
+and can never place a real order; VIP has no VELTRANE numeric cap, but the deterministic rules in
+section 2 and the venue's own limits still apply.
+
+## 5. Limits and kill switches
 
 Scopes: `global` (platform), `org` (tenant), `provider` (e.g. all Binance trading), `user`
 (individual). Engaging a switch:
@@ -98,7 +113,7 @@ Scopes: `global` (platform), `org` (tenant), `provider` (e.g. all Binance tradin
 
 Release requires the same role as engage (owner for global) and is audited.
 
-## 5. Live trading authorisation
+## 6. Live trading authorisation
 
 Live execution requires all of the following, in order:
 
@@ -114,7 +129,7 @@ Live execution requires all of the following, in order:
 Revoking authorisation is immediate and requires no confirmation. Authorisation expires and must
 be renewed; the expiry is stored on `trading_permissions`.
 
-## 6. What the platform will not do
+## 7. What the platform will not do
 
 - It will not claim, imply or display a guaranteed return.
 - It will not optimise for trade frequency.
@@ -124,7 +139,7 @@ be renewed; the expiry is stored on `trading_permissions`.
   override. There is no override path in the code.
 - It will not enable live trading as part of a subscription purchase or an onboarding step.
 
-## 7. Operator responsibilities
+## 8. Operator responsibilities
 
 - Review the risk policy before enabling live trading for any tenant.
 - Keep `VELTRANE_LIVE_TRADING_ENABLED=false` until the live adapters have been verified against

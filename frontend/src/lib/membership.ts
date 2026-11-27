@@ -37,7 +37,7 @@ export const TIERS = {
     badge: "◆",
     promise: "Session automation",
     automationMode: "session",
-    dailyCap: 40,
+    dailyCap: 600,
     accent: "info",
   },
   pro: {
@@ -46,13 +46,22 @@ export const TIERS = {
     badge: "◈",
     promise: "Background automation",
     automationMode: "background",
-    dailyCap: 250,
+    dailyCap: 1200,
     accent: "info",
   },
   elite: {
     code: "elite",
     label: "Elite",
     badge: "★",
+    promise: "Background automation",
+    automationMode: "background",
+    dailyCap: 2400,
+    accent: "gold",
+  },
+  vip: {
+    code: "vip",
+    label: "VIP",
+    badge: "✦",
     promise: "Uncapped automation",
     automationMode: "background",
     dailyCap: null,
@@ -60,7 +69,7 @@ export const TIERS = {
   },
 } satisfies Record<string, Tier>;
 
-export const TIER_ORDER = ["free", "basic", "pro", "elite"];
+export const TIER_ORDER = ["free", "basic", "pro", "elite", "vip"];
 
 export function tierFor(planCode?: string | null): Tier {
   const key = (planCode ?? "free").toLowerCase();
@@ -111,6 +120,6 @@ export function automationSummary(
 
 export function capLabel(tier: Tier, used?: number | null): string {
   if (tier.dailyCap === null) return "No VELTRANE trade cap";
-  const suffix = typeof used === "number" ? ` · ${used} used today` : "";
-  return `${tier.dailyCap} automated trades / day${suffix}`;
+  const suffix = typeof used === "number" ? ` · ${used.toLocaleString("en-US")} used today` : "";
+  return `${tier.dailyCap.toLocaleString("en-US")} automated trades / day${suffix}`;
 }

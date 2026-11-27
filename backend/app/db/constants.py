@@ -2,13 +2,39 @@
 
 from __future__ import annotations
 
+_UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+
+
+class TradingRule:
+    """Platform rules that every execution path must satisfy.
+
+    The one-minute floor is a product decision, not a venue capability: Deriv will happily
+    price 1-tick and 15-second contracts, and the platform still refuses them. Keeping the
+    number here means the paper book, the venue adapter, the API schemas and the agent all
+    read the same constant instead of each carrying its own copy.
+    """
+
+    MIN_DURATION_SECONDS = 60
+
+    @classmethod
+    def term_seconds(cls, value: int, unit: str) -> int | None:
+        """Wall-clock seconds for a ``<value><unit>`` term, or ``None`` for ticks."""
+        multiplier = _UNIT_SECONDS.get(unit)
+        return value * multiplier if multiplier else None
+
+    @classmethod
+    def below_floor(cls, value: int, unit: str) -> bool:
+        seconds = cls.term_seconds(value, unit)
+        return seconds is None or seconds < cls.MIN_DURATION_SECONDS
+
 
 class PlanCode:
     FREE = "free"
     BASIC = "basic"
     PRO = "pro"
     ELITE = "elite"
-    ALL = (FREE, BASIC, PRO, ELITE)
+    VIP = "vip"
+    ALL = (FREE, BASIC, PRO, ELITE, VIP)
 
 
 class SubscriptionStatus:

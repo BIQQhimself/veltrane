@@ -378,6 +378,31 @@ def check_trading_session(intent: OrderIntent, ctx: RiskContext, rules: dict) ->
     return _r("trading_session", True, "Market session is open.")
 
 
+def check_live_execution_limit(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
+    """The plan's daily allowance also applies to real-money contracts.
+
+    Demo executions are metered separately, so without this rule a paid plan would cap
+    simulated trading and leave live trading unbounded — the opposite of the intent.
+    """
+    if intent.mode != "live" or ctx.venue_demo:
+        return _r("live_execution_limit", True, "No live execution cap applies.")
+    if ctx.daily_execution_limit is None:
+        return _r("live_execution_limit", True, "This plan carries no daily trade cap.")
+    if ctx.live_executions_today >= ctx.daily_execution_limit:
+        return _r(
+            "live_execution_limit",
+            False,
+            f"Daily trade limit of {ctx.daily_execution_limit} reached. Upgrade for more.",
+            {"executions_today": ctx.live_executions_today, "limit": ctx.daily_execution_limit},
+        )
+    return _r(
+        "live_execution_limit",
+        True,
+        f"{ctx.live_executions_today}/{ctx.daily_execution_limit} live executions used today.",
+        {"executions_today": ctx.live_executions_today, "limit": ctx.daily_execution_limit},
+    )
+
+
 def check_demo_execution_limit(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
     # A contract on a venue's demo account is simulated money too, so it shares the same cap as
     # paper execution. Only a real-money account escapes it.
@@ -418,6 +443,7 @@ RULES = (
     check_consecutive_losses,
     check_stop_loss,
     check_trading_session,
+    check_live_execution_limit,
     check_demo_execution_limit,
 )
 

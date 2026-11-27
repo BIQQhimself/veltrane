@@ -90,11 +90,25 @@ def test_tier_two_runs_without_a_session(client, trader, db):
     assert automation_limits.blocking_reason(db, trader["org_id"]) == ""
 
 
-def test_elite_is_uncapped(client, trader, db):
-    body = _subscribe(client, trader, "elite")
-    assert body["automation"]["daily_cap"] is None
-    assert body["automation"]["remaining_today"] is None
-    assert body["automation"]["allowed"] is True
+def test_elite_is_capped_and_vip_is_uncapped(client, trader, db):
+    """Elite carries 2,400 trades a day; only VIP is uncapped, and the venue still bounds it."""
+    elite = _subscribe(client, trader, "elite")
+    assert elite["automation"]["daily_cap"] == 2400
+    assert elite["automation"]["remaining_today"] == 2400
+    assert elite["automation"]["allowed"] is True
+
+    vip = _subscribe(client, trader, "vip")
+    assert vip["automation"]["daily_cap"] is None
+    assert vip["automation"]["remaining_today"] is None
+    assert vip["automation"]["allowed"] is True
+
+
+def test_every_plan_matches_the_published_allowance(db):
+    expected = {"free": 5, "basic": 600, "pro": 1200, "elite": 2400, "vip": 0}
+    plans = {plan.code: plan for plan in db.query(Plan).all()}
+    for code, allowance in expected.items():
+        assert plans[code].limits["max_daily_demo_executions"] == allowance, code
+    assert set(expected) <= set(plans)
 
 
 def test_daily_automated_cap_counts_executed_signals(client, trader, db):

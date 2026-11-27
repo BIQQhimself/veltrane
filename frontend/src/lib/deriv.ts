@@ -213,8 +213,16 @@ export type DerivSymbols = {
 
 export type DerivTerm = { term: string; value: number; unit: string; label: string };
 
-const UNIT_ORDER = ["t", "s", "m", "h", "d"];
+const UNIT_ORDER = ["s", "m", "h", "d"];
+/** Seconds per unit. Ticks have no wall-clock length, which is why they are excluded. */
+const UNIT_SECONDS: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+
+/** Mirrors backend ``TradingRule.MIN_DURATION_SECONDS``. The backend is authoritative. */
+export const MIN_DURATION_SECONDS = 60;
+
 const UNIT_NAMES: Record<string, [string, string]> = {
+  // Kept so ``parseTerm`` can still name a tick term in an error message; ticks are absent
+  // from UNIT_ORDER and UNIT_SECONDS, so they never reach a selector.
   t: ["tick", "ticks"],
   s: ["sec", "sec"],
   m: ["min", "min"],
@@ -233,8 +241,10 @@ export function parseTerm(raw: string): DerivTerm | null {
 }
 
 /**
- * The venue's own duration menu. The list is whatever Deriv published for this symbol, so a
- * duration that the venue does not offer can never appear in the interface.
+ * The venue's duration menu, narrowed to what the platform will actually trade.
+ *
+ * The backend already filters this list; filtering again here means a stale or hand-edited
+ * response still cannot put a tick or sub-minute contract in front of a customer.
  */
 export function venueTermOptions(
   contracts: Record<string, { terms?: string[] }> | undefined,
@@ -245,6 +255,8 @@ export function venueTermOptions(
   for (const item of [...(contracts.CALL?.terms ?? []), ...(contracts.PUT?.terms ?? [])]) {
     const term = parseTerm(item);
     if (!term || seen.has(term.term)) continue;
+    const seconds = UNIT_SECONDS[term.unit];
+    if (!seconds || term.value * seconds < MIN_DURATION_SECONDS) continue;
     seen.add(term.term);
     parsed.push(term);
   }

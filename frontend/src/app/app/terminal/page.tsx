@@ -348,7 +348,7 @@ export default function TerminalPage() {
             <Badge tone="warn">Simulated</Badge>
           </>
         }
-        description="Every contract passes the independent risk engine before it opens. Expiries are one minute or longer on the platform book; a venue offers whatever it publishes."
+        description="Every contract passes the independent risk engine before it opens. Expiries are one minute or longer, on the platform book and on a venue: shorter contracts are refused by the backend, not just hidden."
         action={
           <>
           <button

@@ -320,7 +320,7 @@ export default function AdminEmailPage() {
           {audience === "tier" ? (
             <Field label="Plan" htmlFor="campaign-tier">
               <Select id="campaign-tier" value={tier} onChange={(event) => setTier(event.target.value)}>
-                {["free", "basic", "pro", "elite"].map((code) => (
+                {["free", "basic", "pro", "elite", "vip"].map((code) => (
                   <option key={code} value={code}>
                     {titleCase(code)}
                   </option>

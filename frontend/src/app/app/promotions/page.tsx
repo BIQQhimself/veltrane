@@ -107,11 +107,11 @@ export default function PromotionsPage() {
                 ? fee.data.consent?.granted
                   ? "An agreement is on file. Fees apply only to realised profit above your high-water mark."
                   : "You are eligible. The agreement needs separate consent, applies to realised profit only, and is charged above a high-water mark after losses are recovered."
-                : "Performance fees are an Elite option only, and are disabled unless a legal review has been completed."}
+                : "Performance fees are an Elite or VIP option only, and are disabled unless a legal review has been completed."}
             </p>
           )}
           <Link href="/app/billing" className="mt-auto pt-3 text-2xs text-champagne-300 hover:text-champagne-200">
-            {tier.code === "elite" ? "Review the agreement →" : "See Elite →"}
+            {tier.dailyCap === null ? "Review the agreement →" : "See Elite →"}
           </Link>
         </section>
       </div>

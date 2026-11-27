@@ -3,8 +3,8 @@ import { automationSummary, capLabel, tierFor } from "@/lib/membership";
 
 describe("membership tiers", () => {
   it("maps every plan code to a tier with a distinct badge", () => {
-    const badges = ["free", "basic", "pro", "elite"].map((code) => tierFor(code).badge);
-    expect(new Set(badges).size).toBe(4);
+    const badges = ["free", "basic", "pro", "elite", "vip"].map((code) => tierFor(code).badge);
+    expect(new Set(badges).size).toBe(5);
   });
 
   it("falls back to Free for an unknown or missing plan", () => {
@@ -17,9 +17,10 @@ describe("membership tiers", () => {
     expect(tierFor("basic").automationMode).toBe("session");
     expect(tierFor("pro").automationMode).toBe("background");
     expect(tierFor("elite").automationMode).toBe("background");
-    expect(tierFor("basic").dailyCap).toBe(40);
-    expect(tierFor("pro").dailyCap).toBe(250);
-    expect(tierFor("elite").dailyCap).toBeNull();
+    expect(tierFor("basic").dailyCap).toBe(600);
+    expect(tierFor("pro").dailyCap).toBe(1200);
+    expect(tierFor("elite").dailyCap).toBe(2400);
+    expect(tierFor("vip").dailyCap).toBeNull();
   });
 });
 
@@ -28,9 +29,9 @@ describe("automationSummary", () => {
     mode: "session" as const,
     allowed: true,
     session_online: true,
-    daily_cap: 40,
+    daily_cap: 600,
     used_today: 3,
-    remaining_today: 37,
+    remaining_today: 597,
     blockers: [],
   };
 
@@ -59,10 +60,11 @@ describe("automationSummary", () => {
 
 describe("capLabel", () => {
   it("shows the allowance and today's usage", () => {
-    expect(capLabel(tierFor("basic"), 4)).toBe("40 automated trades / day · 4 used today");
+    expect(capLabel(tierFor("basic"), 4)).toBe("600 automated trades / day · 4 used today");
   });
 
-  it("says plainly that Elite has no VELTRANE cap", () => {
-    expect(capLabel(tierFor("elite"), 900)).toBe("No VELTRANE trade cap");
+  it("says plainly that VIP has no VELTRANE cap", () => {
+    expect(capLabel(tierFor("vip"), 900)).toBe("No VELTRANE trade cap");
+    expect(capLabel(tierFor("elite"), 900)).toBe("2,400 automated trades / day · 900 used today");
   });
 });

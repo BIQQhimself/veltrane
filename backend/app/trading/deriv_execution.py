@@ -20,7 +20,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from app.core.errors import bad_request, conflict, not_found
-from app.db.constants import AuditAction, NotificationCategory, Severity
+from app.db.constants import AuditAction, NotificationCategory, Severity, TradingRule
 from app.db.models import Balance, Connection, Order, Position, RiskDecision, Trade, User
 from app.providers.base import CredentialBundle, ProviderError
 from app.providers.deriv import DerivProvider
@@ -107,7 +107,24 @@ def _catalogue_terms(
     except Exception:  # noqa: BLE001 - discovery must not take trading down
         log.warning("contract catalogue unavailable for %s", symbol, exc_info=True)
         return ()
-    return contract_catalogue.terms_for(catalogue, contract_type)
+    return contract_catalogue.tradeable_terms(contract_catalogue.terms_for(catalogue, contract_type))
+
+
+def _assert_duration_floor(term: str, symbol: str) -> None:
+    """Refuse anything shorter than the platform floor, whatever the venue would price.
+
+    Tick contracts have no wall-clock length at all, so they fail this check too: a term the
+    platform cannot express in seconds cannot be shown to respect a one-minute minimum.
+    """
+    parsed = contract_catalogue.parse_term(term)
+    seconds = contract_catalogue.term_seconds(*parsed) if parsed else None
+    if seconds is not None and seconds >= TradingRule.MIN_DURATION_SECONDS:
+        return
+    raise bad_request(
+        "min_duration",
+        f"The shortest contract on VELTRANE is {TradingRule.MIN_DURATION_SECONDS} seconds.",
+        {"term": term, "min_duration_seconds": TradingRule.MIN_DURATION_SECONDS, "symbol": symbol},
+    )
 
 
 def _assert_offered(term: str, allowed: tuple[str, ...], symbol: str) -> None:
@@ -186,12 +203,13 @@ def preview(db: Session, *, user: User, connection: Connection, payload: dict) -
     if not symbol:
         raise bad_request("symbol_required", "Choose an underlying symbol.")
     stake = float(payload.get("stake") or 0)
-    duration = int(payload.get("duration") or 5)
-    duration_unit = payload.get("duration_unit") or "t"
+    duration = int(payload.get("duration") or TradingRule.MIN_DURATION_SECONDS)
+    duration_unit = payload.get("duration_unit") or "s"
     contract_type = (payload.get("contract_type") or ("CALL" if (payload.get("side") or "buy") == "buy" else "PUT")).upper()
     currency = payload.get("currency") or connection.provider_currency or "USD"
     gate = execution_gate.evaluate(db, user=user, connection=connection)
     allowed = _catalogue_terms(provider, symbol, currency, contract_type)
+    _assert_duration_floor(f"{duration}{duration_unit}", symbol)
     _assert_offered(f"{duration}{duration_unit}", allowed, symbol)
     try:
         proposal = provider.proposal(
@@ -270,8 +288,8 @@ def open_contract(
     side = (payload.get("side") or "buy").lower()
     contract_type = (payload.get("contract_type") or ("CALL" if side == "buy" else "PUT")).upper()
     stake = float(payload.get("stake") or 0)
-    duration = int(payload.get("duration") or 5)
-    duration_unit = payload.get("duration_unit") or "t"
+    duration = int(payload.get("duration") or TradingRule.MIN_DURATION_SECONDS)
+    duration_unit = payload.get("duration_unit") or "s"
     currency = payload.get("currency") or connection.provider_currency or "USD"
 
     if not symbol:
@@ -332,6 +350,7 @@ def open_contract(
         )
 
     allowed = _catalogue_terms(provider, symbol, currency, contract_type)
+    _assert_duration_floor(f"{duration}{duration_unit}", symbol)
     _assert_offered(f"{duration}{duration_unit}", allowed, symbol)
 
     try:
@@ -526,6 +545,9 @@ def open_contract(
     if is_demo:
         # Demo executions are metered so a free account cannot run the strategy engine for free.
         usage.increment_usage(db, user.org_id, "demo_executions", 1, meta={"order_id": order.id, "provider": "deriv"})
+    else:
+        # The plan's daily allowance covers real money too; the risk engine reads this counter.
+        usage.increment_usage(db, user.org_id, "live_executions", 1, meta={"order_id": order.id, "provider": "deriv"})
     order.filled_qty = result.get("filled_qty") or 0
     # A fixed-odds contract has no traded price: the stake is the cost and the payout is the
     # terminal value, so the reference price stored on the order is the underlying spot.

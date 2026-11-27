@@ -162,7 +162,7 @@ export default function StrategiesPage() {
                     subtitle={strategy.category}
                     action={
                       <span className="flex items-center gap-1.5">
-                        {locked ? <Badge tone="outline">Elite</Badge> : null}
+                        {locked ? <Badge tone="outline">Elite+</Badge> : null}
                         {strategy.version ? <Badge tone="neutral">v{strategy.version}</Badge> : null}
                       </span>
                     }
@@ -193,10 +193,10 @@ export default function StrategiesPage() {
                         size="sm"
                         variant="secondary"
                         disabled={busy || locked}
-                        title={locked ? "Included from the Elite plan" : undefined}
+                        title={locked ? "Included from the Elite or VIP plan" : undefined}
                         onClick={() => startSession(strategy.code)}
                       >
-                        {locked ? "Elite plan" : "Paper session"}
+                        {locked ? "Elite+ plan" : "Paper session"}
                       </Button>
                     </div>
                   </PanelBody>
