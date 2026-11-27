@@ -169,7 +169,7 @@ export default function MarketsPage() {
                     Trade in terminal
                   </Link>
                   <p className="text-2xs text-paper-faint">
-                    Closes only. Volume is in the API response and is not smoothed here.
+                    Candles show closes only; volume is not smoothed.
                   </p>
                 </div>
               </>

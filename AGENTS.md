@@ -190,3 +190,11 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   `email_service.send_due_campaigns`; the scheduler calls it, so a campaign marked `scheduled`
   sends even if the operator closes the browser. Promotional campaigns respect
   `promotional_allowed()`; transactional mail does not.
+- Never run `next build` while `next dev` is serving the same `frontend/.next`. The build
+  overwrites the dev server's chunks and every route then renders as an unstyled skeleton with
+  no hydration ("Cannot find module '/NNN.js'"). Stop the dev server, run the build, then
+  `rm -rf .next` and restart dev. `npm run build` is safe in CI, where nothing else holds `.next`.
+- The secondary palette token is the brand champagne, not a second blue: the legacy `champagne`
+  Tailwind key aliases `--vt-secondary-*`, so `<Button variant="primary">` and every `champagne-*`
+  utility follow whatever is stored under `ui.theme`. Republish from `/admin/appearance` on a
+  deployment whose stored palette predates a change to `services/theme.py`.
