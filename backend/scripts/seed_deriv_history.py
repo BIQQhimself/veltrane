@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
                 "POST",
                 f"/api/v1/deriv/connections/{connection['id']}/contracts",
                 token,
-                {"symbol": symbol, "side": side, "stake": stake, "duration": 5},
+                {"symbol": symbol, "side": side, "stake": stake, "duration": 60},
             )
         except ApiError as exc:
             failures += 1

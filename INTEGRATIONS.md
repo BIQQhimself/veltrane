@@ -151,6 +151,15 @@ test server (`tests/support/deriv_mock.py`, `tests/test_deriv_integration.py`,
 against a funded Deriv account, so the status stays `implemented_unverified` and live execution
 remains behind the platform switch.
 
+**Forex and metals bars.** The public gateway returns server-side candles for synthetics and
+crypto but an empty list for forex and metals (`frxEURUSD`, `frxXAUUSD`), while still serving
+their ticks. `fetch_ohlcv` therefore falls back to bucketing the tick stream into bars of the
+requested granularity, with volume 0 because ticks carry no traded size. The window is one tick
+page (at most 5,000 ticks), so the reachable depth depends on how busy the instrument is: a 5m
+series is well covered, a 1h series on a quiet pair may yield only a bar or two. Deep forex
+history needs a stored candle cache, which is not built. Off-hours the venue serves no ticks at
+all, so forex series come back empty rather than fabricated.
+
 If Deriv proves unreliable in production, OANDA v20 (REST, well documented) is the fallback —
 not implemented.
 

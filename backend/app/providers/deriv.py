@@ -308,10 +308,47 @@ class DerivProvider(BaseAdapter):
             )
             for row in payload.get("candles") or []
         ]
+        if not candles:
+            candles = self._candles_from_ticks(symbol, granularity, limit)
         # Oldest first, always. Indicators read closes[-1] as the latest bar and the chart draws
         # left to right, so an unordered payload would silently invert both.
         candles.sort(key=lambda candle: candle.ts)
         return candles
+
+    def _candles_from_ticks(self, symbol: str, granularity: int, limit: int) -> list[Candle]:
+        """Bucket the tick stream when the venue serves no server-side candles.
+
+        Deriv returns an empty candle list for forex and metals while still serving their ticks,
+        so those instruments would otherwise have no chart and no bars for indicators. Bucketing
+        is the same arithmetic the venue does; the window is one tick page, so depth is bounded by
+        how many ticks the page holds, and volume stays 0 because ticks carry no traded size.
+        """
+        count = max(1, min(5000, granularity * max(limit, 1)))
+        try:
+            payload = fetch_public(
+                {"ticks_history": symbol, "count": count, "end": "latest", "style": "ticks"},
+                url=self.public_ws_url,
+            )
+        except DerivError as exc:
+            raise _to_provider_error(exc) from exc
+        history = payload.get("history") or {}
+        prices = history.get("prices") or []
+        times = history.get("times") or []
+        buckets: dict[int, list[float]] = {}
+        for ts, price in zip(times, prices, strict=False):
+            buckets.setdefault(int(ts) // granularity * granularity, []).append(float(price))
+        candles = [
+            Candle(
+                ts=bucket_ts,
+                open=values[0],
+                high=max(values),
+                low=min(values),
+                close=values[-1],
+                volume=0.0,
+            )
+            for bucket_ts, values in sorted(buckets.items())
+        ]
+        return candles[-limit:]
 
     def active_symbols(self) -> list[dict[str, Any]]:
         try:

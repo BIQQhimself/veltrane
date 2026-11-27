@@ -213,6 +213,12 @@ competent reviewer would find, so it is cheaper to state it here.
     painted when the screenshot was taken. Both are worth a glance at the stored screenshots after a
     layout change.
 
+57. **Forex and metals bars are bucketed from one page of ticks.** The public Deriv gateway serves
+    no server-side candles for `frx*` symbols, so the adapter aggregates ticks into bars. Depth is
+    bounded by one tick page (at most 5,000 ticks): 5m series are covered, a 1h series on a quiet
+    pair may hold only a bar or two, and off-hours there are no ticks, so the series is empty.
+    There is no stored candle cache, so forex history beyond the live tick window is unavailable.
+
 ## What this build is good for
 
 A foundation a small team can extend: the safety model, tenancy, billing state machine, risk engine

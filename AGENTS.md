@@ -168,6 +168,9 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   three variables above; otherwise you are testing the old process.
 - `/auth/login` is rate limited per address. Probe scripts must back off on `429` (about 15 s) or
   everything after the first few calls fails for the wrong reason.
+- Seed scripts place contracts through the public API, so they obey the same rules a user does,
+  including the 60-second contract floor. A seed payload under a minute is refused with
+  `min_duration` and leaves the account with no history.
 
 ## Two failure modes worth remembering
 

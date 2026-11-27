@@ -34,3 +34,6 @@ dump.rdb
 *.sqlite3
 *.log
 backups/
+
+# --- local run logs ---
+.logs/

@@ -137,6 +137,34 @@ def test_candles_are_mapped(provider):
     assert candles[0].high >= candles[0].low
 
 
+def test_forex_bars_are_bucketed_from_ticks(monkeypatch):
+    """Deriv serves ticks but no candles for forex; the adapter must not return an empty series."""
+    from app.providers import deriv as deriv_module
+
+    calls: list[dict] = []
+
+    def fake_fetch_public(payload, timeout=None, url=None):
+        calls.append(payload)
+        if payload.get("style") == "candles":
+            return {"msg_type": "candles", "candles": []}
+        return {
+            "msg_type": "history",
+            "history": {
+                "prices": [1.1000, 1.1040, 1.0980, 1.1010, 1.1020],
+                "times": [600, 660, 720, 900, 960],
+            },
+        }
+
+    monkeypatch.setattr(deriv_module, "fetch_public", fake_fetch_public)
+    candles = DerivProvider().fetch_ohlcv("frxEURUSD", "5m", 3)
+
+    assert [c.ts for c in candles] == [600, 900]
+    assert (candles[0].open, candles[0].high, candles[0].low, candles[0].close) == (1.1, 1.104, 1.098, 1.098)
+    assert (candles[1].open, candles[1].close) == (1.101, 1.102)
+    assert all(c.volume == 0.0 for c in candles)
+    assert calls[1]["style"] == "ticks"
+
+
 def test_proposal_uses_underlying_symbol(provider, state):
     proposal = provider.proposal(creds(state), {"symbol": "R_100", "stake": 10, "side": "buy", "duration": 5})
     assert proposal["id"]
