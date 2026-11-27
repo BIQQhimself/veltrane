@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
             <PanelHeader title="Advanced analytics" subtitle="Pro and Elite" />
             <PanelBody className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-paper">
-                <Lock className="h-4 w-4 text-champagne-400" aria-hidden />
+                <Lock className="h-4 w-4 text-champagne-600" aria-hidden />
                 Roll-ups, drawdown decomposition and per-session attribution
               </div>
               <p className="text-xs leading-relaxed text-paper-muted">

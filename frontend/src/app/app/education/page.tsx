@@ -118,7 +118,7 @@ export default function EducationPage() {
                 >
                   <span className="min-w-0">
                     <span className="flex flex-wrap items-center gap-2">
-                      <BookOpen className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
+                      <BookOpen className="h-3.5 w-3.5 text-champagne-600" aria-hidden />
                       <span className="text-xs font-medium text-paper">{lesson.title}</span>
                     </span>
                     <span className="mt-1 block text-2xs leading-relaxed text-paper-muted">{lesson.summary}</span>
@@ -163,7 +163,7 @@ export default function EducationPage() {
 
           <section className="tile p-5" aria-label="Costs checklist">
             <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-              <Calculator className="h-4 w-4 text-gold-300" aria-hidden />
+              <Calculator className="h-4 w-4 text-gold-600" aria-hidden />
               Check before you automate
             </h2>
             <ol className="mt-3 space-y-2 text-2xs leading-relaxed text-paper-muted">

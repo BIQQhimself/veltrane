@@ -150,7 +150,7 @@ export default function PortfolioPage() {
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <Link
                       href="/app/terminal"
-                      className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-1.5 text-xs text-gold-300 transition hover:border-gold-300 hover:bg-gold-400/15"
+                      className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-1.5 text-xs text-gold-600 transition hover:border-gold-300 hover:bg-gold-400/15"
                     >
                       Open a paper position
                     </Link>

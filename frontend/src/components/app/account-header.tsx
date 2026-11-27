@@ -81,9 +81,9 @@ export function AccountHeader() {
     <div className="flex items-center gap-1 sm:gap-2">
       {/* Balance: one pill, the number first. The eye toggle only hides it on screen; the value
           is fetched either way. */}
-      <div className="flex items-center gap-1.5 rounded-full border border-line-soft bg-white/[0.03] py-1 pl-3 pr-1.5">
+      <div className="flex items-center gap-1.5 rounded-full border border-line-soft bg-obsidian-700/50 py-1 pl-3 pr-1.5">
         <div className="leading-tight">
-          <p className="text-[9px] uppercase tracking-label text-paper-faint">
+          <p className="hidden text-[9px] uppercase tracking-label text-paper-faint sm:block">
             {hasLive ? "Live" : "Simulated"}
           </p>
           <p className="num text-[13px] font-medium text-paper" aria-live="polite">
@@ -93,7 +93,7 @@ export function AccountHeader() {
         <button
           type="button"
           onClick={toggle}
-          className="rounded-full p-1 text-paper-faint transition hover:bg-white/[0.06] hover:text-paper-muted"
+          className="hidden rounded-full p-1 text-paper-faint transition hover:bg-obsidian-700/80 hover:text-paper-muted sm:inline-flex"
           aria-label={hidden ? "Show balance" : "Hide balance"}
           aria-pressed={hidden}
         >
@@ -111,12 +111,12 @@ export function AccountHeader() {
 
       <Link
         href="/app/notifications"
-        className="relative rounded-full p-2 text-paper-muted transition hover:bg-white/[0.06] hover:text-paper"
+        className="relative rounded-full p-2 text-paper-muted transition hover:bg-obsidian-700/80 hover:text-paper"
         aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
       >
         <Bell className="h-4 w-4" />
         {unread > 0 ? (
-          <span className="absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-champagne-400 px-1 text-[9px] font-semibold text-ink-950">
+          <span className="absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-champagne-400 px-1 text-[9px] font-semibold text-on-accent">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
@@ -129,18 +129,18 @@ export function AccountHeader() {
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           className={cn(
-            "flex items-center gap-2 rounded-full border border-line-soft bg-white/[0.03] py-1 pl-1 pr-2 transition hover:border-line-strong",
-            menuOpen && "border-line-strong bg-white/[0.06]",
+            "flex items-center gap-2 rounded-full border border-line-soft bg-obsidian-700/50 py-1 pl-1 pr-2 transition hover:border-line-strong",
+            menuOpen && "border-line-strong bg-obsidian-700/80",
           )}
         >
           <IdentityAvatar name={name} color={identity?.avatar_color} planCode={plan} size={30} />
-          <span className="hidden min-w-0 text-left xl:block">
+          <span className="hidden min-w-0 text-left 2xl:block">
             <span className="block max-w-[7.5rem] truncate text-2xs font-medium leading-tight text-paper">{name}</span>
             <span className="block text-3xs leading-tight text-paper-faint">
               {tier.badge} {tier.label}
             </span>
           </span>
-          <ChevronDown className={cn("hidden h-3 w-3 text-paper-faint transition xl:block", menuOpen && "rotate-180")} aria-hidden />
+          <ChevronDown className={cn("hidden h-3 w-3 text-paper-faint transition 2xl:block", menuOpen && "rotate-180")} aria-hidden />
         </button>
 
         {menuOpen ? (
@@ -200,7 +200,7 @@ export function AccountHeader() {
                   href="/admin"
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-champagne-300 transition hover:bg-obsidian-800"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-champagne-600 transition hover:bg-obsidian-800"
                 >
                   <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
                   Admin command centre

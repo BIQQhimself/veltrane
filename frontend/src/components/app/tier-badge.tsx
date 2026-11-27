@@ -5,8 +5,8 @@ import { capLabel, TIERS, tierFor, type Tier } from "@/lib/membership";
 
 const ringTone: Record<Tier["accent"], string> = {
   neutral: "border-line-strong bg-obsidian-750 text-paper-muted",
-  info: "border-champagne-400/40 bg-champagne-500/12 text-champagne-200",
-  gold: "border-gold-400/45 bg-gold-500/12 text-gold-300",
+  info: "border-champagne-400/40 bg-champagne-500/12 text-champagne-600",
+  gold: "border-gold-400/45 bg-gold-500/12 text-gold-600",
 };
 
 /** The tier chip. The emoji is decorative; the label and `aria-label` carry the meaning. */
@@ -71,7 +71,7 @@ export function IdentityAvatar({
     <span className={cn("relative inline-flex shrink-0", className)} style={{ width: size, height: size }}>
       <span className="identity-ring flex h-full w-full" data-tier={tier.code}>
         <span
-          className="flex h-full w-full items-center justify-center rounded-full font-medium text-obsidian-950"
+          className="flex h-full w-full items-center justify-center rounded-full font-medium text-on-accent"
           style={{
             background: `linear-gradient(150deg, ${color ?? "#C8A96A"}, ${color ?? "#C8A96A"}cc)`,
             fontSize: Math.max(10, Math.round(size * 0.34)),

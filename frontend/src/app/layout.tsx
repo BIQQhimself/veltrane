@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#04060a",
+  themeColor: "#eef1f7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-obsidian-950 font-sans antialiased">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-champagne-400 focus:px-3 focus:py-2 focus:text-sm focus:text-ink-950"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-champagne-400 focus:px-3 focus:py-2 focus:text-sm focus:text-on-accent"
         >
           Skip to content
         </a>

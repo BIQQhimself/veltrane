@@ -263,7 +263,7 @@ export default function AccountsPage() {
               ["Revocable", "Revoking destroys the stored ciphertext immediately."],
             ].map(([title, body]) => (
               <div key={title} className="flex items-start gap-2.5">
-                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gain/80" aria-hidden />
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gain" aria-hidden />
                 <div>
                   <p className="text-xs text-paper">{title}</p>
                   <p className="mt-0.5 text-2xs text-paper-faint">{body}</p>

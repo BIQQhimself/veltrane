@@ -110,7 +110,7 @@ export function AccountHero({
               <button
                 type="button"
                 onClick={onStartPaper}
-                className="rounded-full border border-line-strong px-4 py-2.5 text-xs text-paper transition hover:border-line-strong hover:bg-white/[0.04]"
+                className="rounded-full border border-line-strong px-4 py-2.5 text-xs text-paper transition hover:border-line-strong hover:bg-obsidian-700/60"
               >
                 Start paper account
               </button>

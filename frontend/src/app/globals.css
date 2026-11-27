@@ -2,53 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The shipped palette, mirrored from src/lib/theme.ts. These are only the values painted
+   before GET /theme resolves (and the fallback if it never does); the ThemeProvider
+   overwrites every one of them. "r g b" triples so Tailwind can still apply an alpha. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Fallbacks for the runtime palette. The ThemeProvider overwrites these from GET /theme,
-     which is what lets an administrator repaint the platform without a rebuild. Values are
-     "r g b" triples so Tailwind can still apply an alpha channel. */
-  --vt-bg: 6 9 17;
-  --vt-bg-elev: 10 14 24;
-  --vt-bg-850: 13 18 29;
-  --vt-bg-800: 17 23 36;
-  --vt-bg-750: 22 29 44;
-  --vt-bg-700: 29 38 55;
-  --vt-bg-600: 41 52 72;
-  --vt-line: 30 39 55;
-  --vt-line-soft: 21 28 41;
-  --vt-line-strong: 46 58 78;
-  --vt-text: 237 241 247;
-  --vt-text-muted: 160 172 189;
-  --vt-text-faint: 118 132 151;
+  --vt-bg: 238 241 247;
+  --vt-bg-elev: 252 253 255;
+  --vt-bg-850: 255 255 255;
+  --vt-bg-800: 247 249 252;
+  --vt-bg-750: 241 244 249;
+  --vt-bg-700: 233 238 245;
+  --vt-bg-600: 222 229 239;
+  --vt-line: 215 223 235;
+  --vt-line-soft: 233 238 245;
+  --vt-line-strong: 195 205 221;
+  --vt-text: 16 26 46;
+  --vt-text-muted: 74 88 112;
+  --vt-text-faint: 81 95 118;
   --vt-button-text: 255 255 255;
-  --vt-primary-100: 235 244 255;
-  --vt-primary-200: 199 221 255;
-  --vt-primary-300: 143 187 255;
-  --vt-primary-400: 92 155 255;
-  --vt-primary-500: 46 123 255;
-  --vt-primary-600: 27 95 224;
-  --vt-primary-700: 22 71 168;
-  --vt-primary-900: 12 36 80;
-  --vt-secondary-200: 240 231 213;
-  --vt-secondary-300: 232 219 194;
-  --vt-secondary-400: 220 203 172;
-  --vt-secondary-500: 203 182 145;
-  --vt-secondary-600: 172 148 110;
-  --vt-accent-300: 240 220 180;
-  --vt-accent-400: 220 192 138;
-  --vt-accent-500: 195 160 104;
-  --vt-chart-up: 22 199 132;
-  --vt-chart-down: 240 71 92;
-  --vt-chart-grid: 22 29 44;
-  --vt-chart-line-500: 92 155 255;
-  --vt-gain: 22 199 132;
-  --vt-loss: 240 71 92;
-  --vt-warn: 240 180 41;
-  --vt-info: 92 155 255;
+  --vt-on-accent: 11 17 32;
+  --vt-primary-100: 247 249 253;
+  --vt-primary-200: 226 232 242;
+  --vt-primary-300: 176 190 212;
+  --vt-primary-400: 108 128 160;
+  --vt-primary-500: 23 37 63;
+  --vt-primary-600: 14 25 48;
+  --vt-primary-700: 9 17 34;
+  --vt-primary-900: 5 10 21;
+  --vt-secondary-200: 240 250 247;
+  --vt-secondary-300: 203 234 226;
+  --vt-secondary-400: 128 199 183;
+  --vt-secondary-500: 14 124 102;
+  --vt-secondary-600: 11 99 82;
+  --vt-accent-300: 192 170 131;
+  --vt-accent-600: 129 100 50;
+  --vt-accent-700: 108 85 44;
+  --vt-accent-400: 175 146 96;
+  --vt-accent-500: 157 122 61;
+  --vt-chart-up: 15 169 104;
+  --vt-chart-down: 224 69 92;
+  --vt-chart-grid: 34 49 75;
+  --vt-chart-line-400: 240 227 197;
+  --vt-chart-line-500: 227 197 138;
+  --vt-gain: 8 110 69;
+  --vt-loss: 168 31 57;
+  --vt-warn: 125 79 20;
+  --vt-info: 13 92 105;
 
-  --grid: rgba(255, 255, 255, 0.024);
-  --hairline: rgba(255, 255, 255, 0.055);
+  /* Dark instrument surface: charts, terminal panel, hero. */
+  --vt-contrast: 15 26 46;
+  --vt-contrast-raised: 32 42 61;
+  --vt-contrast-raised-2: 46 56 73;
+  --vt-contrast-text: 234 240 250;
+  --vt-contrast-muted: 173 178 185;
+  --vt-contrast-faint: 159 163 170;
+  --vt-contrast-gain: 122 177 155;
+  --vt-contrast-loss: 205 125 140;
+  --vt-contrast-info: 146 182 188;
+  --vt-contrast-warn: 206 188 166;
+  --vt-contrast-line: 73 81 96;
+  --vt-contrast-line-soft: 44 53 71;
+
+  --grid: rgba(16, 26, 46, 0.035);
+  --hairline: rgba(16, 26, 46, 0.07);
 
   /* One radius scale for the whole product. Cards, sheets and popovers share it so nothing
      looks borrowed from a different design. */
@@ -71,17 +89,18 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* A single, very low-contrast wash behind everything. It reads as depth rather than
-     decoration, and it stops large empty areas from looking like a void. */
+  /* Two very low-contrast washes: cool navy from the top, a trace of the brand gold from
+     the right. They read as depth rather than decoration and keep large empty areas from
+     looking like flat paper. */
   background-image:
-    radial-gradient(120% 80% at 50% -30%, rgba(46, 123, 255, 0.07), transparent 60%),
-    radial-gradient(70% 50% at 100% 0%, rgba(203, 182, 145, 0.045), transparent 65%);
+    radial-gradient(120% 80% at 50% -30%, rgba(23, 37, 63, 0.06), transparent 60%),
+    radial-gradient(70% 50% at 100% 0%, rgba(169, 133, 69, 0.05), transparent 65%);
   background-attachment: fixed;
 }
 
 ::selection {
-  background: rgba(203, 182, 145, 0.28);
-  color: #fff;
+  background: rgba(169, 133, 69, 0.24);
+  color: rgb(var(--vt-text));
 }
 
 ::-webkit-scrollbar {
@@ -92,14 +111,23 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #202a3b;
+  background: rgb(var(--vt-line-strong));
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2c3950;
+  background: rgb(var(--vt-text-faint));
   background-clip: content-box;
+}
+
+/* A tab strip that fits on screen should not show a scrollbar gutter; it still scrolls
+   when a narrow viewport needs it. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 :focus-visible {
@@ -113,8 +141,9 @@ body {
      shared by links that cannot use the button element. */
   .cta-gold {
     background-image: linear-gradient(to bottom, rgb(var(--vt-accent-400)), rgb(var(--vt-accent-500)));
-    color: rgb(var(--vt-bg));
-    box-shadow: 0 10px 30px -14px rgba(200, 169, 106, 0.7);
+    /* Near-black ink on gold: white on this gold lands near 2.2:1, which fails AA. */
+    color: rgb(var(--vt-on-accent));
+    box-shadow: 0 10px 30px -14px rgb(var(--vt-accent-500) / 0.6);
   }
   .cta-gold:hover {
     background-image: linear-gradient(to bottom, rgb(var(--vt-accent-300)), rgb(var(--vt-accent-400)));
@@ -141,8 +170,8 @@ body {
        their own overflow container instead of widening the page. */
     @apply min-w-0 border border-line-soft shadow-panel;
     border-radius: var(--radius-card);
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0));
-    background-color: rgb(var(--vt-bg-850) / 0.92);
+    background-image: linear-gradient(180deg, rgba(16, 26, 46, 0.012), rgba(16, 26, 46, 0));
+    background-color: rgb(var(--vt-bg-850) / 0.94);
   }
   .panel-header {
     @apply flex items-center justify-between gap-3 border-b border-line-soft px-5 py-4;
@@ -177,7 +206,7 @@ body {
     background-image: theme("backgroundImage.aurora");
   }
   .glass {
-    @apply border border-white/[0.06] bg-obsidian-900/70 backdrop-blur-xl;
+    @apply border border-line-soft bg-obsidian-850/80 backdrop-blur-xl;
   }
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-line-soft bg-obsidian-800/70 px-2.5 py-1 text-2xs text-paper-muted;
@@ -191,29 +220,69 @@ body {
   .shimmer {
     position: relative;
     overflow: hidden;
-    background: #131b2a;
+    background: rgb(var(--vt-bg-750));
   }
   .shimmer::after {
     content: "";
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    background: linear-gradient(90deg, transparent, rgba(16, 26, 46, 0.06), transparent);
     animation: shimmer 1.8s infinite;
   }
   .divider-glow {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(203, 182, 145, 0.35), transparent);
   }
+  /* The marketing hero and the terminal frame: a dark instrument panel set into the light
+     workspace. It is the one place the product goes dark on purpose, because a candlestick
+     chart reads better against navy than against paper. */
   .hero-frame {
     position: relative;
     border-radius: 1.5rem;
+    color: rgb(var(--vt-contrast-text));
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
-      rgb(var(--vt-bg-elev));
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01)),
+      rgb(var(--vt-contrast));
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 40px 120px -60px rgba(46, 123, 255, 0.45);
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 40px 90px -50px rgba(9, 17, 32, 0.55);
+  }
+  .instrument {
+    color: rgb(var(--vt-contrast-text));
+    background-color: rgb(var(--vt-contrast));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  /* Everything inside an instrument surface reads its ink and hairlines from the contrast
+     pair instead of the chrome palette. Redefining the variables (rather than overriding
+     each utility) means charts, tables and badges written against the normal tokens flip
+     to light-on-navy automatically, with no per-component special case. */
+  .hero-frame,
+  .instrument-surface {
+    --vt-text: var(--vt-contrast-text);
+    --vt-text-muted: var(--vt-contrast-muted);
+    --vt-text-faint: var(--vt-contrast-faint);
+    --vt-line: var(--vt-contrast-line);
+    --vt-line-soft: var(--vt-contrast-line-soft);
+    --vt-line-strong: var(--vt-contrast-line);
+    --vt-bg-elev: var(--vt-contrast-raised);
+    --vt-bg-850: var(--vt-contrast-raised);
+    --vt-bg-800: var(--vt-contrast-raised);
+    --vt-bg-750: var(--vt-contrast-raised-2);
+    --vt-bg-700: var(--vt-contrast-raised-2);
+    --vt-bg-600: var(--vt-contrast-raised-2);
+    --vt-chart-grid: var(--vt-contrast-line-soft);
+    /* Text uses the dark stop of each accent scale; inside a dark panel the same class must
+       render light, so the dark stops point back at the light ones here. */
+    --vt-accent-600: var(--vt-accent-300);
+    --vt-secondary-600: var(--vt-secondary-300);
+    --vt-gain: var(--vt-contrast-gain);
+    --vt-loss: var(--vt-contrast-loss);
+    --vt-info: var(--vt-contrast-info);
+    --vt-warn: var(--vt-contrast-warn);
+    --grid: rgba(255, 255, 255, 0.04);
+    --hairline: rgba(255, 255, 255, 0.1);
+    color: rgb(var(--vt-contrast-text));
   }
 }
 
@@ -223,18 +292,18 @@ body {
   .tile {
     @apply relative min-w-0 overflow-hidden border border-line-soft;
     border-radius: var(--radius-card);
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0));
-    background-color: rgb(var(--vt-bg-850) / 0.82);
+    background-image: linear-gradient(180deg, rgba(16, 26, 46, 0.012), rgba(16, 26, 46, 0));
+    background-color: rgb(var(--vt-bg-850) / 0.9);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.035),
-      0 24px 60px -46px rgba(0, 0, 0, 0.9);
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 18px 44px -38px rgba(16, 26, 46, 0.45);
   }
   .tile-sheen::before {
     content: "";
     position: absolute;
     inset: 0 0 auto;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
   }
   .tile-hover {
     @apply transition duration-200 ease-smooth;
@@ -243,8 +312,8 @@ body {
     @apply border-line-strong;
     transform: translateY(-1px);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.05),
-      0 30px 70px -46px rgba(0, 0, 0, 0.95);
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 24px 52px -38px rgba(16, 26, 46, 0.5);
   }
   .tile-pad {
     @apply px-5 py-4;
@@ -266,11 +335,17 @@ body {
   .identity-ring[data-tier="elite"] {
     background-image: conic-gradient(from 210deg, rgb(var(--vt-accent-300)), rgb(var(--vt-accent-500)), rgb(var(--vt-accent-300)));
   }
+  .identity-ring[data-tier="vip"] {
+    background-image: conic-gradient(from 210deg, rgb(var(--vt-accent-300)), rgb(var(--vt-primary-500)), rgb(var(--vt-secondary-400)), rgb(var(--vt-accent-300)));
+  }
+  .tier-glow[data-tier="vip"] {
+    box-shadow: 0 0 0 1px rgb(var(--vt-accent-500) / 0.4), 0 18px 44px -30px rgb(var(--vt-accent-500) / 0.5);
+  }
   .tier-glow[data-tier="elite"] {
-    box-shadow: 0 0 0 1px rgba(200, 169, 106, 0.35), 0 18px 44px -30px rgba(200, 169, 106, 0.55);
+    box-shadow: 0 0 0 1px rgb(var(--vt-accent-500) / 0.35), 0 18px 44px -30px rgb(var(--vt-accent-500) / 0.55);
   }
   .tier-glow[data-tier="pro"] {
-    box-shadow: 0 0 0 1px rgba(92, 155, 255, 0.3), 0 18px 44px -30px rgba(46, 123, 255, 0.45);
+    box-shadow: 0 0 0 1px rgb(var(--vt-secondary-500) / 0.3), 0 18px 44px -30px rgb(var(--vt-secondary-500) / 0.45);
   }
 
   /* Segmented control used by filters and mode switches. */
@@ -281,8 +356,8 @@ body {
     @apply rounded-full px-3 py-1 text-2xs transition;
   }
   .segmented > button[data-active="true"] {
-    @apply bg-obsidian-750 text-paper;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    @apply bg-obsidian-700/80 text-paper;
+    box-shadow: inset 0 0 0 1px rgb(var(--vt-line));
   }
   .segmented > button[data-active="false"] {
     @apply text-paper-faint hover:text-paper-muted;
@@ -301,11 +376,11 @@ body {
   /* Top navigation, modelled on the reference product: a quiet rail of labels with a single
      clearly-marked active item, and no boxes around the inactive ones. */
   .nav-link {
-    @apply relative flex items-center gap-2 rounded-full px-3 py-2 text-[13px] font-medium text-paper-muted transition-colors duration-150 ease-smooth hover:bg-white/[0.04] hover:text-paper;
+    @apply relative flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] font-medium text-paper-muted transition-colors duration-150 ease-smooth hover:bg-obsidian-700/70 hover:text-paper;
   }
   .nav-link[data-active="true"] {
-    @apply bg-white/[0.07] text-paper;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    @apply bg-obsidian-700/80 text-paper;
+    box-shadow: inset 0 0 0 1px rgb(var(--vt-line));
   }
 
   /* The two trade buttons. Solid fills read faster than outlines at a glance, which is the
@@ -315,22 +390,22 @@ body {
     @apply relative flex flex-col items-center justify-center gap-0.5 rounded-2xl border px-3 py-4 text-center transition duration-150 ease-smooth disabled:cursor-not-allowed disabled:opacity-45;
   }
   .trade-call {
-    border-color: rgba(22, 199, 132, 0.42);
-    background-image: linear-gradient(180deg, rgba(22, 199, 132, 0.26), rgba(22, 199, 132, 0.07));
+    border-color: rgb(var(--vt-gain) / 0.45);
+    background-image: linear-gradient(180deg, rgb(var(--vt-gain) / 0.16), rgb(var(--vt-gain) / 0.04));
     color: rgb(var(--vt-gain));
   }
   .trade-call:hover:not(:disabled) {
-    border-color: rgba(22, 199, 132, 0.85);
-    background-image: linear-gradient(180deg, rgba(22, 199, 132, 0.34), rgba(22, 199, 132, 0.1));
+    border-color: rgb(var(--vt-gain) / 0.9);
+    background-image: linear-gradient(180deg, rgb(var(--vt-gain) / 0.24), rgb(var(--vt-gain) / 0.07));
   }
   .trade-put {
-    border-color: rgba(240, 71, 92, 0.42);
-    background-image: linear-gradient(180deg, rgba(240, 71, 92, 0.26), rgba(240, 71, 92, 0.07));
+    border-color: rgb(var(--vt-loss) / 0.45);
+    background-image: linear-gradient(180deg, rgb(var(--vt-loss) / 0.16), rgb(var(--vt-loss) / 0.04));
     color: rgb(var(--vt-loss));
   }
   .trade-put:hover:not(:disabled) {
-    border-color: rgba(240, 71, 92, 0.85);
-    background-image: linear-gradient(180deg, rgba(240, 71, 92, 0.34), rgba(240, 71, 92, 0.1));
+    border-color: rgb(var(--vt-loss) / 0.9);
+    background-image: linear-gradient(180deg, rgb(var(--vt-loss) / 0.24), rgb(var(--vt-loss) / 0.07));
   }
 
   /* Quick-pick chips for stake and expiry. */
@@ -338,7 +413,7 @@ body {
     @apply rounded-full border border-line-soft bg-obsidian-800/60 px-3 py-1.5 text-xs text-paper-muted transition duration-150 ease-smooth hover:border-line-strong hover:text-paper;
   }
   .pick[data-active="true"] {
-    @apply border-champagne-600/60 bg-champagne-500/10 text-champagne-200;
+    @apply border-gold-600/70 bg-gold-500/10 text-gold-600;
   }
 }
 

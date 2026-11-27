@@ -164,7 +164,7 @@ export default function MarketsPage() {
                 <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line-soft pt-4">
                   <Link
                     href={`/app/terminal?symbol=${encodeURIComponent(active)}`}
-                    className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-1.5 text-xs text-gold-300 transition hover:border-gold-300 hover:bg-gold-400/15"
+                    className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-1.5 text-xs text-gold-600 transition hover:border-gold-300 hover:bg-gold-400/15"
                   >
                     Trade in terminal
                   </Link>

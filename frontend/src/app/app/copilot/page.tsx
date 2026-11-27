@@ -81,7 +81,7 @@ export default function CopilotPage() {
                   onClick={() => setTimeframe(tf)}
                   className={cn(
                     "rounded px-1 py-1.5 text-3xs transition",
-                    timeframe === tf ? "bg-champagne-500/15 text-champagne-200" : "text-paper-faint hover:text-paper-muted",
+                    timeframe === tf ? "bg-champagne-500/15 text-champagne-600" : "text-paper-faint hover:text-paper-muted",
                   )}
                 >
                   {tf}
@@ -98,12 +98,12 @@ export default function CopilotPage() {
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-2xs transition",
                     duration === option.seconds
-                      ? "border-champagne-500/40 bg-champagne-500/10 text-champagne-200"
+                      ? "border-champagne-500/40 bg-champagne-500/10 text-champagne-600"
                       : "border-line-soft text-paper-faint hover:border-line-strong hover:text-paper-muted",
                   )}
                 >
                   {option.label}
-                  {option.seconds <= 300 ? <span className="text-3xs text-warn/70">noise-weighted</span> : null}
+                  {option.seconds <= 300 ? <span className="text-3xs text-warn">noise-weighted</span> : null}
                 </button>
               ))}
             </div>
@@ -163,7 +163,7 @@ export default function CopilotPage() {
                   </ul>
                 </div>
                 <div className="border-t border-line-soft bg-obsidian-900/50 px-4 py-3">
-                  <p className="flex items-start gap-2 text-2xs text-warn/90">
+                  <p className="flex items-start gap-2 text-2xs text-warn">
                     <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                     Invalidation: {read.data.invalidation}
                   </p>
@@ -173,7 +173,7 @@ export default function CopilotPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="panel p-4">
                   <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
-                    <Brain className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
+                    <Brain className="h-3.5 w-3.5 text-champagne-600" aria-hidden />
                     How to read this
                   </p>
                   <ul className="mt-2 space-y-1.5 text-3xs leading-relaxed text-paper-faint">
@@ -184,7 +184,7 @@ export default function CopilotPage() {
                 </div>
                 <div className="panel p-4">
                   <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
-                    <Info className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
+                    <Info className="h-3.5 w-3.5 text-champagne-600" aria-hidden />
                     What this is not
                   </p>
                   <p className="mt-2 text-3xs leading-relaxed text-paper-faint">{read.data.disclaimer}</p>
@@ -201,7 +201,7 @@ export default function CopilotPage() {
                   <Sparkles className="h-3 w-3" aria-hidden />
                   Want to act on this? The terminal requires your explicit click.
                 </p>
-                <Link href="/app/terminal" className="text-2xs text-champagne-300 hover:text-champagne-200">
+                <Link href="/app/terminal" className="text-2xs text-champagne-600 hover:text-champagne-600">
                   Open terminal →
                 </Link>
               </div>

@@ -185,7 +185,7 @@ export default function StrategiesPage() {
                       <button
                         type="button"
                         onClick={() => openStrategy(strategy)}
-                        className="text-xs text-champagne-300 hover:text-champagne-200"
+                        className="text-xs text-champagne-600 hover:text-champagne-600"
                       >
                         View specification
                       </button>

@@ -42,7 +42,7 @@ export function VerifyForm() {
         <p className="mt-2 text-xs text-paper-muted">You can sign in and finish setting up your workspace.</p>
         <Link
           href="/login"
-          className="mt-4 inline-flex h-10 items-center rounded-lg bg-gradient-to-b from-champagne-400 to-champagne-600 px-4 text-xs font-medium text-ink-950"
+          className="mt-4 inline-flex h-10 items-center rounded-lg bg-gradient-to-b from-champagne-400 to-champagne-600 px-4 text-xs font-medium text-on-accent"
         >
           Continue to sign in
         </Link>

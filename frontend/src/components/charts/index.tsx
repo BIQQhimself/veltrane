@@ -148,7 +148,7 @@ export function Donut({
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#141a23" strokeWidth={thickness} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgb(var(--vt-line))" strokeWidth={thickness} />
         {total > 0 &&
           segments.map((segment) => {
             const fraction = Math.max(0, segment.value) / total;

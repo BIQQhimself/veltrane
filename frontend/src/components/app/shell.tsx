@@ -117,12 +117,12 @@ function AutomationPill() {
     <Link
       href="/app/membership"
       className={cn(
-        "hidden items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-3xs transition xl:flex",
+        "hidden items-center gap-2 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-3xs transition 2xl:flex",
         summary.tone === "gain"
           ? "border-gain/25 bg-gain/[0.07] text-gain hover:bg-gain/[0.12]"
           : summary.tone === "warn"
             ? "border-warn/25 bg-warn/[0.07] text-warn hover:bg-warn/[0.12]"
-            : "border-line-soft bg-white/[0.03] text-paper-muted",
+            : "border-line-soft bg-obsidian-700/50 text-paper-muted",
       )}
       title={summary.detail}
     >
@@ -175,7 +175,7 @@ function MoreMenu({ isActive }: { isActive: (href: string) => boolean }) {
               role="menuitem"
               className={cn(
                 "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition",
-                isActive(item.href) ? "bg-white/[0.06] text-paper" : "text-paper-muted hover:bg-white/[0.04] hover:text-paper",
+                isActive(item.href) ? "bg-obsidian-700/80 text-paper" : "text-paper-muted hover:bg-obsidian-700/60 hover:text-paper",
               )}
             >
               <item.icon className="h-4 w-4 opacity-80" aria-hidden />
@@ -190,7 +190,7 @@ function MoreMenu({ isActive }: { isActive: (href: string) => boolean }) {
               role="menuitem"
               className={cn(
                 "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition",
-                isActive(item.href) ? "bg-white/[0.06] text-paper" : "text-paper-muted hover:bg-white/[0.04] hover:text-paper",
+                isActive(item.href) ? "bg-obsidian-700/80 text-paper" : "text-paper-muted hover:bg-obsidian-700/60 hover:text-paper",
               )}
             >
               <item.icon className="h-4 w-4 opacity-80" aria-hidden />
@@ -221,10 +221,10 @@ function SheetLink({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] transition",
-        active ? "bg-white/[0.07] text-paper" : "text-paper-muted hover:bg-white/[0.04] hover:text-paper",
+        active ? "bg-obsidian-700/85 text-paper" : "text-paper-muted hover:bg-obsidian-700/60 hover:text-paper",
       )}
     >
-      <item.icon className={cn("h-4 w-4", active ? "text-champagne-300" : "opacity-70")} aria-hidden />
+      <item.icon className={cn("h-4 w-4", active ? "text-champagne-600" : "opacity-70")} aria-hidden />
       <span className="flex-1 truncate">{item.label}</span>
       {badge}
     </Link>
@@ -242,7 +242,7 @@ function SheetContent({ onNavigate }: { onNavigate: () => void }) {
   const unread = notifications.data?.unread_count ?? 0;
 
   const unreadBadge = unread ? (
-    <span className="rounded-full bg-champagne-500/20 px-1.5 text-3xs text-champagne-200">{unread}</span>
+    <span className="rounded-full bg-champagne-500/20 px-1.5 text-3xs text-champagne-600">{unread}</span>
   ) : undefined;
 
   return (
@@ -253,7 +253,7 @@ function SheetContent({ onNavigate }: { onNavigate: () => void }) {
           type="button"
           onClick={onNavigate}
           aria-label="Close navigation"
-          className="rounded-full p-2 text-paper-faint transition hover:bg-white/[0.06] hover:text-paper"
+          className="rounded-full p-2 text-paper-faint transition hover:bg-obsidian-700/80 hover:text-paper"
         >
           <X className="h-4 w-4" />
         </button>
@@ -294,7 +294,7 @@ function SheetContent({ onNavigate }: { onNavigate: () => void }) {
           <Link
             href="/admin"
             onClick={onNavigate}
-            className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] text-champagne-300 transition hover:bg-white/[0.04]"
+            className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] text-champagne-600 transition hover:bg-obsidian-700/60"
           >
             <Gauge className="h-4 w-4" aria-hidden />
             Admin command centre
@@ -310,7 +310,7 @@ function SheetContent({ onNavigate }: { onNavigate: () => void }) {
             await logout();
             router.push("/login");
           }}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-paper-muted transition hover:bg-white/[0.04] hover:text-paper"
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-paper-muted transition hover:bg-obsidian-700/60 hover:text-paper"
         >
           <LogOut className="h-4 w-4" aria-hidden />
           Sign out
@@ -349,7 +349,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
 
-          <nav className="ml-1 hidden items-center gap-0.5 lg:flex" aria-label="Primary">
+          <nav className="ml-1 hidden items-center gap-0.5 xl:flex" aria-label="Primary">
             {PRIMARY.map((item) => (
               <Link
                 key={item.href}
@@ -371,7 +371,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
-              className="rounded-full p-2 text-paper-muted transition hover:bg-white/[0.06] hover:text-paper lg:hidden"
+              className="rounded-full p-2 text-paper-muted transition hover:bg-obsidian-700/80 hover:text-paper xl:hidden"
               aria-label="Open navigation"
               aria-expanded={sheetOpen}
             >
@@ -432,7 +432,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <span
                     className={cn(
-                      "-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-champagne-600/40 bg-gradient-to-b from-champagne-300 to-champagne-500 text-ink-950 shadow-[0_12px_24px_-12px_rgba(203,182,145,0.9)]",
+                      "-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-champagne-600/40 bg-gradient-to-b from-champagne-300 to-champagne-500 text-on-accent shadow-[0_12px_24px_-12px_rgba(203,182,145,0.9)]",
                       active && "ring-2 ring-champagne-300/40",
                     )}
                   >
@@ -452,7 +452,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   active ? "text-paper" : "text-paper-faint",
                 )}
               >
-                <tab.icon className={cn("h-5 w-5", active && "text-champagne-300")} aria-hidden />
+                <tab.icon className={cn("h-5 w-5", active && "text-champagne-600")} aria-hidden />
                 {tab.label}
               </Link>
             );

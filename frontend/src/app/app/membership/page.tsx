@@ -111,7 +111,7 @@ export default function MembershipPage() {
               </Link>
               <Link
                 href="/app/accounts"
-                className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-2 text-2xs text-paper-muted transition hover:bg-white/[0.05] hover:text-paper"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-2 text-2xs text-paper-muted transition hover:bg-obsidian-700/70 hover:text-paper"
               >
                 Connected accounts
               </Link>
@@ -151,7 +151,7 @@ export default function MembershipPage() {
                 </li>
               ))}
               <li className="flex gap-2">
-                <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-gain/70" aria-hidden />
+                <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-gain" aria-hidden />
                 Every order still passes the independent risk engine, whatever the plan.
               </li>
             </ul>
@@ -189,7 +189,7 @@ export default function MembershipPage() {
                   <div className="flex items-center justify-between">
                     <TierBadge planCode={plan.code} size="xs" />
                     {current ? (
-                      <span className="text-3xs uppercase tracking-label text-champagne-300">Current</span>
+                      <span className="text-3xs uppercase tracking-label text-champagne-600">Current</span>
                     ) : null}
                   </div>
                   <p className="mt-3 font-display text-xl text-paper">
@@ -222,7 +222,7 @@ export default function MembershipPage() {
                   <ul className="mt-3 flex-1 space-y-1.5 text-2xs text-paper-muted">
                     {plan.features.slice(0, 5).map((feature) => (
                       <li key={feature} className="flex gap-2">
-                        <Check className="mt-0.5 h-3 w-3 shrink-0 text-gain/70" aria-hidden />
+                        <Check className="mt-0.5 h-3 w-3 shrink-0 text-gain" aria-hidden />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -233,10 +233,10 @@ export default function MembershipPage() {
                     className={cn(
                       "mt-4 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-2xs font-semibold transition",
                       current
-                        ? "border border-line-strong text-paper-muted hover:bg-white/[0.05]"
+                        ? "border border-line-strong text-paper-muted hover:bg-obsidian-700/70"
                         : plan.code === "pro"
                           ? "cta-gold"
-                          : "border border-line-strong text-paper hover:bg-white/[0.05]",
+                          : "border border-line-strong text-paper hover:bg-obsidian-700/70",
                     )}
                   >
                     {current ? "Manage" : `Choose ${plan.name}`}
@@ -250,7 +250,7 @@ export default function MembershipPage() {
 
       <section className="tile p-5">
         <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-          <Info className="h-4 w-4 text-champagne-300" aria-hidden />
+          <Info className="h-4 w-4 text-champagne-600" aria-hidden />
           What a membership never unlocks
         </h2>
         <div className="mt-3 grid gap-4 text-2xs leading-relaxed text-paper-muted md:grid-cols-3">
@@ -271,7 +271,7 @@ export default function MembershipPage() {
           </p>
         </div>
         <p className="mt-4 flex items-center gap-2 text-2xs text-paper-faint">
-          <Sparkles className="h-3 w-3 text-gold-300" aria-hidden />
+          <Sparkles className="h-3 w-3 text-gold-600" aria-hidden />
           No plan promises a return. Simulated results are not forecasts.
         </p>
       </section>

@@ -74,7 +74,7 @@ function Metric({
           "stat-value mt-2",
           tone === "gain" && "text-gain",
           tone === "loss" && "text-loss",
-          tone === "info" && "text-champagne-300",
+          tone === "info" && "text-champagne-600",
         )}
       >
         {value}
@@ -166,7 +166,7 @@ export default function OverviewPage() {
             </Link>
             <Link
               href="/app/copilot"
-              className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-4 py-2.5 text-xs text-paper transition hover:bg-white/[0.04]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-4 py-2.5 text-xs text-paper transition hover:bg-obsidian-700/60"
             >
               <Bot className="h-3.5 w-3.5 text-paper-muted" aria-hidden />
               Ask the copilot
@@ -275,7 +275,7 @@ export default function OverviewPage() {
                       Start paper account
                     </Button>
                   )}
-                  <Link href="/app/terminal" className="text-2xs text-champagne-300 hover:text-champagne-200">
+                  <Link href="/app/terminal" className="text-2xs text-champagne-600 hover:text-champagne-600">
                     Go to the terminal →
                   </Link>
                 </div>
@@ -344,7 +344,7 @@ export default function OverviewPage() {
                   ? "Authorised for this organisation. The platform gate still governs routing."
                   : "Not authorised. Paper execution only until the safety checklist is completed."}
               </p>
-              <Link href="/app/settings" className="mt-2 inline-flex items-center gap-1 text-3xs text-champagne-300 hover:text-champagne-200">
+              <Link href="/app/settings" className="mt-2 inline-flex items-center gap-1 text-3xs text-champagne-600 hover:text-champagne-600">
                 Review authorisation <ArrowRight className="h-3 w-3" aria-hidden />
               </Link>
             </div>
@@ -360,7 +360,7 @@ export default function OverviewPage() {
               <h2 className="text-sm font-medium text-paper">Quick trade</h2>
               <p className="mt-0.5 text-3xs text-paper-faint">5-minute payout per asset · simulated book</p>
             </div>
-            <Link href="/app/markets" className="text-3xs text-champagne-300 hover:text-champagne-200">
+            <Link href="/app/markets" className="text-3xs text-champagne-600 hover:text-champagne-600">
               All markets →
             </Link>
           </div>
@@ -420,12 +420,12 @@ export default function OverviewPage() {
           <div className="flex items-center justify-between border-b border-line-soft px-4 py-3">
             <div>
               <h2 className="flex items-center gap-1.5 text-sm font-medium text-paper">
-                <Bot className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
+                <Bot className="h-3.5 w-3.5 text-champagne-600" aria-hidden />
                 Copilot briefing
               </h2>
               <p className="mt-0.5 text-3xs text-paper-faint">Deterministic technical reads · not advice</p>
             </div>
-            <Link href="/app/copilot" className="text-3xs text-champagne-300 hover:text-champagne-200">
+            <Link href="/app/copilot" className="text-3xs text-champagne-600 hover:text-champagne-600">
               Open →
             </Link>
           </div>
@@ -472,7 +472,7 @@ export default function OverviewPage() {
               <Clock className="h-3.5 w-3.5 text-warn" aria-hidden />
               Open contracts
             </h2>
-            <Link href="/app/terminal" className="text-3xs text-champagne-300 hover:text-champagne-200">
+            <Link href="/app/terminal" className="text-3xs text-champagne-600 hover:text-champagne-600">
               Manage →
             </Link>
           </div>
@@ -510,7 +510,7 @@ export default function OverviewPage() {
               Every trade opens into its full risk and cost record. Fixed-odds contracts show stake → return.
             </p>
           </div>
-          <Link href="/app/portfolio" className="text-3xs text-champagne-300 hover:text-champagne-200">
+          <Link href="/app/portfolio" className="text-3xs text-champagne-600 hover:text-champagne-600">
             Full history →
           </Link>
         </div>
@@ -544,7 +544,7 @@ export default function OverviewPage() {
                   >
                     <td className="px-4 py-2.5">
                       <span className="font-mono text-paper">{trade.symbol}</span>
-                      {trade.is_demo ? <span className="ml-2 text-3xs text-warn/70">sim</span> : null}
+                      {trade.is_demo ? <span className="ml-2 text-3xs text-warn">sim</span> : null}
                     </td>
                     <td className="px-4 py-2.5 text-paper-muted">{trade.side}</td>
                     <td className="num px-4 py-2.5 text-right text-paper-muted">

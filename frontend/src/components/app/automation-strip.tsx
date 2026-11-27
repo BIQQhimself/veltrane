@@ -84,10 +84,10 @@ export function AutomationStrip() {
 
       <div className="ml-auto flex items-center gap-3">
         <span className="hidden items-center gap-1.5 text-3xs text-paper-faint sm:flex">
-          <ShieldCheck className="h-3 w-3 text-gain/70" aria-hidden />
+          <ShieldCheck className="h-3 w-3 text-gain" aria-hidden />
           Risk engine enforced
         </span>
-        <Link href="/app/membership" className="inline-flex items-center gap-1 text-2xs text-champagne-300 hover:text-champagne-200">
+        <Link href="/app/membership" className="inline-flex items-center gap-1 text-2xs text-champagne-600 hover:text-champagne-600">
           {automation.mode === "none" ? "Unlock automation" : "Plan details"}
           <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>

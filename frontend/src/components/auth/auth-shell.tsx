@@ -69,7 +69,7 @@ export function AuthShell({
             <ul className="mt-8 space-y-5">
               {POINTS.map((point) => (
                 <li key={point.title} className="flex gap-3.5">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-soft bg-white/[0.03] text-champagne-300">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-soft bg-obsidian-700/50 text-champagne-600">
                     <point.icon className="h-4 w-4" aria-hidden />
                   </span>
                   <div>

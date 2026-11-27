@@ -8,7 +8,8 @@
     "start": "next start -p 3000",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "audit:visual": "node e2e/visual-audit.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -24,8 +25,10 @@
     "@types/react": "19.0.2",
     "@types/react-dom": "19.0.2",
     "autoprefixer": "10.4.20",
+    "axe-core": "^4.14.1",
     "eslint": "9.17.0",
     "eslint-config-next": "^15.1.0",
+    "playwright": "^1.49.0",
     "postcss": "8.4.49",
     "tailwindcss": "3.4.17",
     "typescript": "5.7.2",

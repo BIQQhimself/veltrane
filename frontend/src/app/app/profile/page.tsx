@@ -164,7 +164,7 @@ export default function ProfilePage() {
           <section className="tile p-5" aria-label="Membership summary">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-paper">Membership</h2>
-              <Link href="/app/membership" className="text-2xs text-champagne-300 hover:text-champagne-200">
+              <Link href="/app/membership" className="text-2xs text-champagne-600 hover:text-champagne-600">
                 Manage →
               </Link>
             </div>

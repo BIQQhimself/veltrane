@@ -25,31 +25,43 @@ export type ThemePayload = {
   updated_by?: string | null;
 };
 
+/**
+ * The shipped palette: a light, calm workspace with deep-navy instrument surfaces.
+ *
+ * Light chrome keeps long reading and table sessions comfortable; the navy `contrast_*`
+ * pair gives charts and the terminal the dark surface a candlestick needs. Neither is
+ * overwhelming: the background is a soft blue-grey rather than white, and the dark
+ * surfaces are reserved for instruments rather than whole pages.
+ */
 export const DEFAULT_COLORS: ThemeColors = {
-  background: "#04060a",
-  surface: "#0a0e15",
-  surface_raised: "#121821",
-  border: "#1b2430",
-  text: "#e8edf4",
-  text_muted: "#98a6b8",
-  primary: "#cbb691",
-  primary_hover: "#b99e6f",
-  secondary: "#d6c39a",
-  accent: "#dcc08a",
-  button_text: "#0b0f16",
-  chart_up: "#00e07a",
-  chart_down: "#ff3b52",
-  chart_grid: "#141a23",
-  chart_line: "#d6c39a",
-  gain: "#00e07a",
-  loss: "#ff3b52",
-  warn: "#f0b429",
+  background: "#eef1f7",
+  surface: "#ffffff",
+  surface_raised: "#f7f9fc",
+  border: "#d7dfeb",
+  text: "#101a2e",
+  text_muted: "#4a5870",
+  primary: "#17253f",
+  primary_hover: "#0e1930",
+  secondary: "#0e7c66",
+  accent: "#9d7a3d",
+  button_text: "#ffffff",
+  on_accent: "#0b1120",
+  chart_up: "#0fa968",
+  chart_down: "#e0455c",
+  chart_grid: "#22314b",
+  chart_line: "#e3c58a",
+  gain: "#086e45",
+  loss: "#a81f39",
+  warn: "#7d4f14",
+  info: "#0d5c69",
+  contrast_surface: "#0f1a2e",
+  contrast_text: "#eaf0fa",
 };
 
 export const DEFAULT_BRANDING: ThemeBranding = {
   product_name: "VELTRANE",
   logo_mark: "V",
-  default_theme: "obsidian",
+  default_theme: "light",
   tagline: "Autonomous trading, under your control",
 };
 
@@ -92,8 +104,13 @@ function triple(hex: string): string {
 
 /**
  * The variables Tailwind reads. Keys are CSS custom properties without the `--` prefix.
- * A scale is generated per role so existing utility classes (electric-200 … electric-900)
+ * A scale is generated per role so existing utility classes (primary-200 … primary-900)
  * keep their relative lightness whatever base colour the administrator picks.
+ *
+ * Polarity matters. On a dark palette a "raised" surface is lighter than its base and a
+ * hairline is darker; on a light palette it is the reverse. Without this switch a light
+ * theme renders every hover state and input as white-on-white. The direction comes from the
+ * background's luminance, so one code path serves both.
  */
 export function deriveVars(colors: ThemeColors): Record<string, string> {
   const c: Record<string, string> = { ...DEFAULT_COLORS, ...colors };
@@ -109,34 +126,66 @@ export function deriveVars(colors: ThemeColors): Record<string, string> {
     return out;
   };
 
+  const dir = isLightColor(pick("background")) ? -1 : 1;
+  const contrastBase = pick("contrast_surface");
+  const contrastText = pick("contrast_text");
+
   return {
     "vt-bg": triple(pick("background")),
-    "vt-bg-elev": triple(shade(pick("surface"), 0.02)),
+    "vt-bg-elev": triple(shade(pick("surface"), 0.02 * dir)),
     "vt-bg-850": triple(pick("surface")),
     "vt-bg-800": triple(pick("surface_raised")),
-    "vt-bg-750": triple(shade(pick("surface_raised"), 0.04)),
-    "vt-bg-700": triple(shade(pick("surface_raised"), 0.09)),
-    "vt-bg-600": triple(shade(pick("surface_raised"), 0.16)),
+    "vt-bg-750": triple(shade(pick("surface_raised"), 0.04 * dir)),
+    "vt-bg-700": triple(shade(pick("surface_raised"), 0.09 * dir)),
+    "vt-bg-600": triple(shade(pick("surface_raised"), 0.16 * dir)),
     "vt-line": triple(pick("border")),
-    "vt-line-soft": triple(shade(pick("border"), -0.25)),
-    "vt-line-strong": triple(shade(pick("border"), 0.16)),
+    "vt-line-soft": triple(shade(pick("border"), -0.25 * dir)),
+    "vt-line-strong": triple(shade(pick("border"), 0.16 * dir)),
     "vt-text": triple(pick("text")),
     "vt-text-muted": triple(pick("text_muted")),
-    "vt-text-faint": triple(shade(pick("text_muted"), -0.28)),
+    "vt-text-faint": triple(shade(pick("text_muted"), -0.04 * dir)),
     "vt-button-text": triple(pick("button_text")),
+    // Ink for bright fills (gold CTAs, "in profit" buttons). Independent of the chrome so a
+    // light palette cannot turn a gold button's label into pale-on-pale.
+    "vt-on-accent": triple(pick("on_accent")),
     "vt-chart-grid": triple(pick("chart_grid")),
+    // The dark instrument surface. Always shades toward white: it sits on a dark base by
+    // definition, whatever polarity the surrounding chrome uses.
+    "vt-contrast": triple(contrastBase),
+    "vt-contrast-raised": triple(shade(contrastBase, 0.07)),
+    "vt-contrast-raised-2": triple(shade(contrastBase, 0.13)),
+    "vt-contrast-text": triple(contrastText),
+    "vt-contrast-muted": triple(shade(contrastText, -0.26)),
+    "vt-contrast-faint": triple(shade(contrastText, -0.32)),
+    // Value colours need lifting on navy: the chrome-tuned green and red sit too close to
+    // the panel to read at a glance, which is the one thing a P&L number must do.
+    "vt-contrast-gain": triple(shade(pick("gain"), 0.46)),
+    "vt-contrast-loss": triple(shade(pick("loss"), 0.42)),
+    "vt-contrast-info": triple(shade(pick("info"), 0.55)),
+    "vt-contrast-warn": triple(shade(pick("warn"), 0.62)),
+    "vt-contrast-line": triple(shade(contrastBase, 0.24)),
+    "vt-contrast-line-soft": triple(shade(contrastBase, 0.12)),
     ...scale("primary", [100, 200, 300, 400, 500, 600, 700, 900]),
     ...scale("secondary", [200, 300, 400, 500, 600]),
-    ...scale("accent", [300, 400, 500]),
+    ...scale("accent", [300, 400, 500, 600, 700]),
     ...scale("chart-line", [400, 500]),
     "vt-chart-up": triple(pick("chart_up")),
     "vt-chart-down": triple(pick("chart_down")),
     "vt-gain": triple(pick("gain")),
     "vt-loss": triple(pick("loss")),
     "vt-warn": triple(pick("warn")),
-    "vt-info": triple(pick("chart_line")),
+    "vt-info": triple(pick("info")),
   };
 }
+
+/** True when a colour is closer to white than to black, i.e. chrome that needs dark ink. */
+export function isLightColor(hex: string): boolean {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return false;
+  // Perceived brightness (ITU-R BT.601), which matches how large areas read to the eye.
+  return (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000 > 140;
+}
+
 
 /** Apply a payload to a document element. Kept separate from React so tests can call it. */
 export function applyVars(

@@ -291,9 +291,9 @@ export default function MarketingPage() {
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-6 py-3 text-sm text-paper transition hover:bg-white/[0.06]"
+                  className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-obsidian-700/50 px-6 py-3 text-sm text-paper transition hover:bg-obsidian-700/80"
                 >
-                  <LineChart className="h-4 w-4 text-champagne-300" aria-hidden />
+                  <LineChart className="h-4 w-4 text-champagne-600" aria-hidden />
                   Explore the terminal
                 </Link>
               </div>
@@ -327,7 +327,7 @@ export default function MarketingPage() {
                         key={tf}
                         className={cn(
                           "rounded px-2 py-1 text-3xs",
-                          index === 2 ? "bg-champagne-500/15 text-champagne-300" : "text-paper-faint",
+                          index === 2 ? "bg-champagne-500/15 text-champagne-600" : "text-paper-faint",
                         )}
                       >
                         {tf}
@@ -338,11 +338,11 @@ export default function MarketingPage() {
                 <CandleChart candles={heroCandles} height={260} livePrice={heroCandles.at(-1)?.close} />
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <div className="rounded-lg border border-gain/30 bg-gain/10 px-3 py-2.5">
-                    <p className="text-3xs uppercase tracking-label text-gain/80">Call · 5m</p>
+                    <p className="text-3xs uppercase tracking-label text-gain">Call · 5m</p>
                     <p className="num mt-1 text-lg font-medium text-gain">+80%</p>
                   </div>
                   <div className="rounded-lg border border-loss/30 bg-loss/10 px-3 py-2.5">
-                    <p className="text-3xs uppercase tracking-label text-loss/80">Put · 5m</p>
+                    <p className="text-3xs uppercase tracking-label text-loss">Put · 5m</p>
                     <p className="num mt-1 text-lg font-medium text-loss">+80%</p>
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export default function MarketingPage() {
                 className="group relative overflow-hidden rounded-xl border border-line bg-obsidian-850 p-6 transition-colors hover:border-champagne-500/45"
               >
                 <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-champagne-500/[0.06] blur-2xl transition group-hover:bg-champagne-500/10" aria-hidden />
-                <pillar.icon className="h-5 w-5 text-champagne-300" aria-hidden />
+                <pillar.icon className="h-5 w-5 text-champagne-600" aria-hidden />
                 <h3 className="mt-4 font-display text-lg font-medium text-paper">{pillar.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-paper-muted">{pillar.body}</p>
               </article>
@@ -462,7 +462,7 @@ export default function MarketingPage() {
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-3 py-2 text-xs transition",
                     mode === item.key
-                      ? "bg-champagne-500/15 text-champagne-200 shadow-[inset_0_0_0_1px_rgba(46,123,255,0.35)]"
+                      ? "bg-champagne-500/15 text-champagne-600 shadow-[inset_0_0_0_1px_rgba(46,123,255,0.35)]"
                       : "text-paper-faint hover:text-paper-muted",
                   )}
                 >
@@ -580,7 +580,7 @@ export default function MarketingPage() {
               </article>
             ))}
           </div>
-          <p className="mt-8 rounded-xl border border-warn/25 bg-warn/[0.06] px-4 py-3 text-2xs leading-relaxed text-warn/90">
+          <p className="mt-8 rounded-xl border border-warn/25 bg-warn/[0.06] px-4 py-3 text-2xs leading-relaxed text-warn">
             Risk disclosure: fixed-odds contracts are high-risk instruments. Most short-dated
             contracts lose money after costs. Nothing on this site is investment advice, and no
             performance figure shown is a forecast. Live trading remains disabled until the
@@ -602,7 +602,7 @@ export default function MarketingPage() {
                 Live trading always needs its own explicit authorisation, on every tier.
               </p>
             </div>
-            <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {PLANS.map((plan) => (
                 <article
                   key={plan.name}
@@ -612,7 +612,7 @@ export default function MarketingPage() {
                   )}
                 >
                   {plan.highlight ? (
-                    <span className="absolute -top-2.5 left-6 rounded-full bg-gold-400 px-2 py-0.5 text-3xs font-medium uppercase tracking-label text-ink-950">
+                    <span className="absolute -top-2.5 left-6 rounded-full bg-gold-400 px-2 py-0.5 text-3xs font-medium uppercase tracking-label text-on-accent">
                       Most chosen
                     </span>
                   ) : null}
@@ -675,7 +675,7 @@ export default function MarketingPage() {
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-6 py-3 text-sm text-paper transition hover:bg-white/[0.06]"
+                className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-obsidian-700/50 px-6 py-3 text-sm text-paper transition hover:bg-obsidian-700/80"
               >
                 Sign in
               </Link>

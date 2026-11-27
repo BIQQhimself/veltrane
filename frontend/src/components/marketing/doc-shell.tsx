@@ -58,7 +58,7 @@ export function DocShell({
       </header>
 
       <main id="main" className="mx-auto max-w-3xl px-5 py-16 lg:px-8 lg:py-24">
-        <p className="text-2xs uppercase tracking-label text-champagne-300">{eyebrow}</p>
+        <p className="text-2xs uppercase tracking-label text-champagne-600">{eyebrow}</p>
         <h1 className="mt-4 font-display text-4xl tracking-tight text-paper lg:text-5xl">{title}</h1>
         <p className="mt-5 max-w-2xl text-sm leading-relaxed text-paper-muted">{summary}</p>
         <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-line-soft px-3 py-1 text-2xs text-paper-faint">
@@ -129,7 +129,7 @@ export function DocTable({
     <div className="overflow-x-auto rounded-xl border border-line-soft">
       <table className="w-full border-collapse text-left text-xs">
         <thead>
-          <tr className="border-b border-line-soft bg-white/[0.02]">
+          <tr className="border-b border-line-soft bg-obsidian-750/60">
             {head.map((cell) => (
               <th
                 key={cell}

@@ -34,7 +34,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-w-0 items-center gap-3">
             <Wordmark compact />
             <span className="hidden h-4 w-px bg-line-strong sm:block" />
-            <span className="hidden text-2xs uppercase tracking-[0.18em] text-champagne-400 sm:block">
+            <span className="hidden text-2xs uppercase tracking-[0.18em] text-champagne-600 sm:block">
               Command centre
             </span>
           </div>
@@ -65,11 +65,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs transition",
                     active
-                      ? "bg-white/[0.06] text-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
-                      : "text-paper-faint hover:bg-white/[0.03] hover:text-paper-muted",
+                      ? "bg-obsidian-700/80 text-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                      : "text-paper-faint hover:bg-obsidian-700/50 hover:text-paper-muted",
                   )}
                 >
-                  <item.icon className={cn("h-3.5 w-3.5", active && "text-champagne-400")} aria-hidden />
+                  <item.icon className={cn("h-3.5 w-3.5", active && "text-champagne-600")} aria-hidden />
                   {item.label}
                 </Link>
               );
@@ -90,7 +90,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={cn(
                     "whitespace-nowrap rounded-full border border-line-soft px-3 py-1.5 text-2xs",
-                    active ? "border-champagne-500/40 bg-white/[0.06] text-paper" : "text-paper-faint",
+                    active ? "border-champagne-500/40 bg-obsidian-700/80 text-paper" : "text-paper-faint",
                   )}
                 >
                   {item.label}

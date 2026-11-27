@@ -86,7 +86,7 @@ export function InstrumentBar({
           className={cn(
             "ml-0.5 rounded-lg border p-1.5 transition",
             favourite
-              ? "border-gold-400/50 bg-gold-400/10 text-gold-300"
+              ? "border-gold-400/50 bg-gold-400/10 text-gold-600"
               : "border-line-soft text-paper-faint hover:border-line-strong hover:text-paper",
           )}
         >
@@ -181,7 +181,7 @@ export function Watchlist({ assets, favourites, active, onSelect, onToggleFavour
               aria-label={starred ? `Unstar ${asset.symbol}` : `Star ${asset.symbol}`}
               className={cn(
                 "rounded p-1 transition",
-                starred ? "text-gold-300" : "text-paper-faint/50 hover:text-paper-muted",
+                starred ? "text-gold-600" : "text-paper-faint/50 hover:text-paper-muted",
               )}
             >
               <Star className={cn("h-3 w-3", starred && "fill-current")} aria-hidden />

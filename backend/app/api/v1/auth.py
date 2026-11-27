@@ -38,15 +38,36 @@ REFRESH_COOKIE = "veltrane_refresh"
 CSRF_COOKIE = "veltrane_csrf"
 
 
-def _set_refresh_cookies(response: Response, refresh_token: str, csrf_token: str) -> None:
+def _cookie_flags(request: Request | None) -> tuple[bool, str]:
+    """Transport flags for the session cookies.
+
+    A ``Secure`` cookie is never sent back over plain HTTP, so with the production profile
+    (``Secure`` + ``SameSite=None``, needed when web and API are different sites) a local
+    ``http://localhost`` session cannot be refreshed and every page load signs the operator
+    out. Outside production the flags follow the request scheme; production always keeps the
+    configured values and the settings validator refuses anything weaker.
+    """
+    if settings.env == "production" or request is None:
+        return settings.cookie_secure, settings.cookie_samesite
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    https = request.scope.get("scheme") == "https" or forwarded == "https"
+    if https:
+        return settings.cookie_secure, settings.cookie_samesite
+    return False, "lax"
+
+
+def _set_refresh_cookies(
+    response: Response, refresh_token: str, csrf_token: str, request: Request | None = None
+) -> None:
+    secure, samesite = _cookie_flags(request)
     max_age = settings.refresh_token_days * 24 * 3600
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,
         max_age=max_age,
         httponly=True,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
+        secure=secure,
+        samesite=samesite,
         path="/api/v1/auth",
     )
     response.set_cookie(
@@ -54,8 +75,8 @@ def _set_refresh_cookies(response: Response, refresh_token: str, csrf_token: str
         csrf_token,
         max_age=max_age,
         httponly=False,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
+        secure=secure,
+        samesite=samesite,
         path="/",
     )
 
@@ -65,9 +86,9 @@ def _clear_cookies(response: Response) -> None:
     response.delete_cookie(CSRF_COOKIE, path="/")
 
 
-def _issue(response: Response, issued: dict, user: User) -> dict:
+def _issue(response: Response, issued: dict, user: User, request: Request | None = None) -> dict:
     csrf = new_csrf_token()
-    _set_refresh_cookies(response, issued["refresh_token"], csrf)
+    _set_refresh_cookies(response, issued["refresh_token"], csrf, request)
     return {
         "access_token": issued["access_token"],
         "token_type": "bearer",
@@ -161,7 +182,7 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
         db, user=user, ip=request.client.host if request.client else None, user_agent=request.headers.get("user-agent")
     )
     db.commit()
-    return _issue(response, issued, user)
+    return _issue(response, issued, user, request)
 
 
 @router.post("/mfa/verify")
@@ -184,7 +205,7 @@ def verify_mfa_login(payload: MfaLoginRequest, request: Request, response: Respo
         user_agent=request.headers.get("user-agent"),
     )
     db.commit()
-    return _issue(response, issued, user)
+    return _issue(response, issued, user, request)
 
 
 @router.post("/refresh")
@@ -205,7 +226,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     )
     user = db.get(User, decode_token(issued["access_token"], expected_type="access")["sub"])
     db.commit()
-    return _issue(response, issued, user)
+    return _issue(response, issued, user, request)
 
 
 @router.post("/logout")

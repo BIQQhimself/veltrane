@@ -164,6 +164,38 @@ def test_password_reset_flow(client, trader):
     assert old.status_code == 401
 
 
+def test_session_cookies_are_secure_over_https_only():
+    """A Secure cookie cannot be replayed over plain HTTP, so the local profile must not set it.
+
+    Production keeps the configured flags (Secure + SameSite=None for split web/API hosts);
+    development follows the request scheme, otherwise a reload on http://localhost cannot
+    refresh the session and signs the operator out.
+    """
+    from app.api.v1.auth import _cookie_flags
+    from app.core.config import settings
+    from starlette.requests import Request
+
+    def make(scheme: str, forwarded: str | None = None) -> Request:
+        headers = [(b"x-forwarded-proto", forwarded.encode())] if forwarded else []
+        return Request({"type": "http", "scheme": scheme, "headers": headers, "server": ("testserver", 80)})
+
+    original = (settings.env, settings.cookie_secure, settings.cookie_samesite)
+    try:
+        settings.env = "production"
+        settings.cookie_secure = True
+        settings.cookie_samesite = "none"
+        assert _cookie_flags(make("https")) == (True, "none")
+        # Production never downgrades, even if a probe arrives over plain HTTP.
+        assert _cookie_flags(make("http")) == (True, "none")
+
+        settings.env = "development"
+        assert _cookie_flags(make("http")) == (False, "lax")
+        assert _cookie_flags(make("https")) == (True, "none")
+        assert _cookie_flags(make("http", forwarded="https")) == (True, "none")
+    finally:
+        settings.env, settings.cookie_secure, settings.cookie_samesite = original
+
+
 def test_logout_revokes_refresh(client, trader):
     response = client.post(f"{BASE}/auth/logout")
     assert response.status_code == 200

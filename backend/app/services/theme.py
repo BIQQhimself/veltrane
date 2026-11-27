@@ -27,24 +27,31 @@ HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 # token -> (label, group, default). The order is the order the admin form renders.
 PALETTE: dict[str, tuple[str, str, str]] = {
-    "background": ("App background", "Surfaces", "#04060a"),
-    "surface": ("Panel surface", "Surfaces", "#0a0e15"),
-    "surface_raised": ("Raised surface", "Surfaces", "#121821"),
-    "border": ("Borders", "Surfaces", "#1b2430"),
-    "text": ("Primary text", "Typography", "#e8edf4"),
-    "text_muted": ("Secondary text", "Typography", "#98a6b8"),
-    "primary": ("Primary action", "Brand", "#cbb691"),
-    "primary_hover": ("Primary hover", "Brand", "#b99e6f"),
-    "secondary": ("Secondary accent", "Brand", "#d6c39a"),
-    "accent": ("Accent / highlight", "Brand", "#dcc08a"),
-    "button_text": ("Button label", "Brand", "#0b0f16"),
-    "chart_up": ("Chart up candle", "Charts", "#00e07a"),
-    "chart_down": ("Chart down candle", "Charts", "#ff3b52"),
-    "chart_grid": ("Chart grid", "Charts", "#141a23"),
-    "chart_line": ("Chart overlays", "Charts", "#d6c39a"),
-    "gain": ("Profit", "Semantics", "#00e07a"),
-    "loss": ("Loss", "Semantics", "#ff3b52"),
-    "warn": ("Warning", "Semantics", "#f0b429"),
+    # Light chrome with a deep-navy instrument surface. The dark pair exists so a chart,
+    # the terminal frame and the marketing hero can go dark without darkening the whole
+    # product; see ``frontend/src/lib/theme.ts`` for how the shades are derived.
+    "background": ("App background", "Surfaces", "#eef1f7"),
+    "surface": ("Panel surface", "Surfaces", "#ffffff"),
+    "surface_raised": ("Raised surface", "Surfaces", "#f7f9fc"),
+    "border": ("Borders", "Surfaces", "#d7dfeb"),
+    "contrast_surface": ("Instrument surface", "Surfaces", "#0f1a2e"),
+    "contrast_text": ("Instrument text", "Surfaces", "#eaf0fa"),
+    "text": ("Primary text", "Typography", "#101a2e"),
+    "text_muted": ("Secondary text", "Typography", "#4a5870"),
+    "primary": ("Primary action", "Brand", "#17253f"),
+    "primary_hover": ("Primary hover", "Brand", "#0e1930"),
+    "secondary": ("Secondary accent", "Brand", "#0e7c66"),
+    "accent": ("Accent / highlight", "Brand", "#9d7a3d"),
+    "button_text": ("Button label", "Brand", "#ffffff"),
+    "on_accent": ("Label on bright fills", "Brand", "#0b1120"),
+    "chart_up": ("Chart up candle", "Charts", "#0fa968"),
+    "chart_down": ("Chart down candle", "Charts", "#e0455c"),
+    "chart_grid": ("Chart grid", "Charts", "#22314b"),
+    "chart_line": ("Chart overlays", "Charts", "#e3c58a"),
+    "gain": ("Profit", "Semantics", "#086e45"),
+    "loss": ("Loss", "Semantics", "#a81f39"),
+    "warn": ("Warning", "Semantics", "#7d4f14"),
+    "info": ("Informational", "Semantics", "#0d5c69"),
 }
 
 BRANDING_KEYS = ("product_name", "logo_mark", "default_theme", "tagline")
@@ -52,7 +59,7 @@ BRANDING_KEYS = ("product_name", "logo_mark", "default_theme", "tagline")
 DEFAULT_BRANDING: dict[str, str] = {
     "product_name": "VELTRANE",
     "logo_mark": "V",
-    "default_theme": "obsidian",
+    "default_theme": "light",
     "tagline": "Autonomous trading, under your control",
 }
 

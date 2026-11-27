@@ -71,6 +71,9 @@ const config: Config = {
           300: "rgb(var(--vt-accent-300) / <alpha-value>)",
           400: "rgb(var(--vt-accent-400) / <alpha-value>)",
           500: "rgb(var(--vt-accent-500) / <alpha-value>)",
+          // Darker stops are for gold *text* on a light surface, where 500 sits at 3.4:1.
+          600: "rgb(var(--vt-accent-600) / <alpha-value>)",
+          700: "rgb(var(--vt-accent-700) / <alpha-value>)",
         },
         platinum: "rgb(var(--vt-text-muted) / <alpha-value>)",
         gain: "rgb(var(--vt-gain) / <alpha-value>)",
@@ -89,6 +92,19 @@ const config: Config = {
           DEFAULT: "rgb(var(--vt-primary-500) / <alpha-value>)",
           hover: "rgb(var(--vt-primary-600) / <alpha-value>)",
           foreground: "rgb(var(--vt-button-text) / <alpha-value>)",
+        },
+        // The dark instrument surface: charts, the terminal panel and the marketing hero.
+        // It is deliberately independent of the chrome palette so a light workspace can
+        // still give a candlestick chart the contrast it needs.
+        "on-accent": "rgb(var(--vt-on-accent) / <alpha-value>)",
+        // Text on a saturated gain/loss fill. Green needs dark text, crimson needs white, so the
+        // two trade buttons deliberately use different tokens.
+        "on-solid": "rgb(var(--vt-button-text) / <alpha-value>)",
+        contrast: {
+          DEFAULT: "rgb(var(--vt-contrast) / <alpha-value>)",
+          raised: "rgb(var(--vt-contrast-raised) / <alpha-value>)",
+          text: "rgb(var(--vt-contrast-text) / <alpha-value>)",
+          muted: "rgb(var(--vt-contrast-muted) / <alpha-value>)",
         },
       },
       fontFamily: {
@@ -135,9 +151,10 @@ const config: Config = {
         card: "var(--radius-card)",
       },
       boxShadow: {
-        panel: "0 1px 0 0 rgba(255,255,255,0.035) inset, 0 30px 70px -46px rgba(0,0,0,0.85)",
-        card: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 18px 40px -30px rgba(0,0,0,0.8)",
-        lift: "0 24px 60px -32px rgba(0,0,0,0.9)",
+        panel: "0 1px 0 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(16,26,46,0.05), 0 18px 40px -32px rgba(16,26,46,0.35)",
+        card: "0 1px 0 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(16,26,46,0.05), 0 10px 24px -22px rgba(16,26,46,0.3)",
+        lift: "0 20px 44px -28px rgba(16,26,46,0.34)",
+        instrument: "0 30px 60px -40px rgba(9,17,32,0.55)",
         glow: "0 0 0 1px rgba(203,182,145,0.32), 0 18px 50px -22px rgba(203,182,145,0.45)",
         "glow-emerald": "0 0 0 1px rgba(16,185,129,0.35), 0 18px 50px -24px rgba(16,185,129,0.45)",
       },

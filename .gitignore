@@ -17,6 +17,9 @@ venv/
 htmlcov/
 .coverage
 
+# --- audit output ---
+frontend/e2e/artifacts/
+
 # --- node ----------------------------------------------------------------
 node_modules/
 .next/

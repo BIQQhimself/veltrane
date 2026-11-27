@@ -44,7 +44,7 @@ export function TradeButtons({
             <ArrowUpRight className="h-4 w-4" aria-hidden /> Call
           </span>
           <span className="num text-2xl font-medium leading-none">+{payoutPct.toFixed(0)}%</span>
-          <span className="text-3xs opacity-80">returns {money(stake + profit)}</span>
+          <span className="text-3xs">returns {money(stake + profit)}</span>
         </button>
         <button
           type="button"
@@ -56,7 +56,7 @@ export function TradeButtons({
             <ArrowDownRight className="h-4 w-4" aria-hidden /> Put
           </span>
           <span className="num text-2xl font-medium leading-none">+{payoutPct.toFixed(0)}%</span>
-          <span className="text-3xs opacity-80">loses {money(stake)} if wrong</span>
+          <span className="text-3xs">loses {money(stake)} if wrong</span>
         </button>
       </div>
     </div>

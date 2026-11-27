@@ -185,7 +185,7 @@ export function DerivTerminal({ connections }: Props) {
       <div className="space-y-3 p-4">
         <div className="rounded-xl border border-line-soft bg-obsidian-900/60 p-4">
           <p className="flex items-center gap-2 text-sm text-paper">
-            <Plug className="h-4 w-4 text-champagne-300" aria-hidden />
+            <Plug className="h-4 w-4 text-champagne-600" aria-hidden />
             No Deriv account connected
           </p>
           <p className="mt-1.5 text-2xs leading-relaxed text-paper-muted">
@@ -195,7 +195,7 @@ export function DerivTerminal({ connections }: Props) {
           </p>
           <a
             href="/app/accounts"
-            className="mt-3 inline-flex text-2xs text-champagne-300 underline-offset-4 hover:underline"
+            className="mt-3 inline-flex text-2xs text-champagne-600 underline-offset-4 hover:underline"
           >
             Connect an account
           </a>
@@ -212,7 +212,7 @@ export function DerivTerminal({ connections }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-xs text-paper">
-              <Activity className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
+              <Activity className="h-3.5 w-3.5 text-champagne-600" aria-hidden />
               {status.data?.connection.label ?? "Deriv"}
               {isDemo ? <Badge tone="info">demo</Badge> : <Badge tone="warn">real funds</Badge>}
             </p>
@@ -254,13 +254,13 @@ export function DerivTerminal({ connections }: Props) {
           </Select>
         ) : null}
         {status.data && !status.data.gate.allowed ? (
-          <p className="mt-2 flex items-start gap-1.5 text-3xs leading-relaxed text-warn/90">
+          <p className="mt-2 flex items-start gap-1.5 text-3xs leading-relaxed text-warn">
             <ShieldAlert className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
             {status.data.gate.blocking_message}
           </p>
         ) : null}
         {status.data?.contracts_error ? (
-          <p className="mt-2 text-3xs text-loss/90">{status.data.contracts_error}</p>
+          <p className="mt-2 text-3xs text-loss">{status.data.contracts_error}</p>
         ) : null}
       </div>
 
@@ -680,7 +680,7 @@ function AutomationCard({
     <div className="rounded-xl border border-line-soft bg-obsidian-900/60 p-3">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs text-paper">
-          <Sparkles className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
+          <Sparkles className="h-3.5 w-3.5 text-champagne-600" aria-hidden />
           Autotrade
         </p>
         <Badge tone={enabled ? "gain" : "neutral"}>{enabled ? "running" : "paused"}</Badge>
@@ -755,7 +755,7 @@ function AutomationCard({
       </div>
 
       {mode === "autonomous" && !gateAllowed ? (
-        <p className="mt-2 text-3xs text-warn/90">
+        <p className="mt-2 text-3xs text-warn">
           Autonomous mode stays blocked until the connection passes every execution gate.
         </p>
       ) : null}
@@ -774,7 +774,7 @@ function AutomationCard({
           Save
         </Button>
       </div>
-      {config?.halt_reason ? <p className="mt-1.5 text-3xs text-loss/90">{config.halt_reason}</p> : null}
+      {config?.halt_reason ? <p className="mt-1.5 text-3xs text-loss">{config.halt_reason}</p> : null}
     </div>
   );
 }

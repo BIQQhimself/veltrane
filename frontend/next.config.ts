@@ -7,6 +7,7 @@ const staticExport = process.env.VELTRANE_STATIC_EXPORT === "1";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  devIndicators: false,
   ...(staticExport
     ? { output: "export" as const, trailingSlash: true, images: { unoptimized: true } }
     : {}),

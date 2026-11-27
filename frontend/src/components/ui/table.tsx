@@ -72,8 +72,8 @@ export function TR({
       }
       className={cn(
         "transition-colors duration-150",
-        interactive && "cursor-pointer hover:bg-white/[0.035] focus:bg-white/[0.05] focus:outline-none",
-        selected && "bg-white/[0.05]",
+        interactive && "cursor-pointer hover:bg-obsidian-700/55 focus:bg-obsidian-700/70 focus:outline-none",
+        selected && "bg-obsidian-700/70",
         className,
       )}
     >

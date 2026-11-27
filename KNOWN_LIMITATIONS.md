@@ -7,8 +7,11 @@ competent reviewer would find, so it is cheaper to state it here.
 
 1. **The web app is working software, not a finished product.** `frontend/` is a Next.js 15 app
    with twelve workspace screens, onboarding and an admin console that talks to this API, and it is
-   installable as a PWA. It has not been through design QA on real devices, has no localisation,
-   no end-to-end browser tests in CI, and only a thin unit suite (chart scale invariants).
+   installable as a PWA. It has not been through design QA on real devices and has no localisation.
+   There is no scripted end-to-end journey (sign up → connect → trade) and no React component test
+   runner; the unit suite covers chart invariants, validation, theme derivation and the watchlist,
+   and `frontend/e2e/visual-audit.mjs` checks every route for overflow, WCAG AA contrast and console
+   errors at three viewports, but nothing exercises a flow through the UI.
 2. **No AI model is wired in.** The strategy library is deterministic (trend following, mean
    reversion, breakout, momentum rotation) and clearly labelled as such. "AI strategy generation"
    is a feature flag with no implementation behind it. No LLM is called anywhere, so there is no
@@ -201,7 +204,14 @@ competent reviewer would find, so it is cheaper to state it here.
     the admin console. There is no per-organisation white-labelling, and no light theme beyond the
     stored `default_theme` hint.
 55. **Contrast is reported, not enforced.** The appearance console measures body and button contrast
-    and warns below 4.5:1, but publishing a low-contrast palette is still allowed.
+    and warns below 4.5:1, but publishing a low-contrast palette is still allowed. The shipped
+    palette passes WCAG AA on every route and breakpoint (`npm run audit:visual`), but an
+    administrator who repaints the platform can still publish a palette that does not.
+56. **The visual audit has two blind spots.** Text inside `position: fixed` bars is not measured from
+    pixels, because those bars stack over one another and a crop cannot be attributed to a single
+    element; and text over a canvas or a live chart is measured against the frame that happened to be
+    painted when the screenshot was taken. Both are worth a glance at the stored screenshots after a
+    layout change.
 
 ## What this build is good for
 

@@ -441,7 +441,7 @@ export default function TerminalPage() {
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_336px]">
         {/* Chart + positions dock */}
         <div className="order-1 min-w-0 space-y-3">
-          <section className="panel">
+          <section className="panel instrument-surface">
             <div className="border-b border-line-soft">
               <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
                 <p className="text-2xs text-paper-faint">
@@ -456,7 +456,7 @@ export default function TerminalPage() {
                       onClick={() => setTimeframe(tf)}
                       className={cn(
                         "rounded px-1.5 py-1 text-3xs transition",
-                        timeframe === tf ? "bg-gold-400/15 text-gold-300" : "text-paper-faint hover:text-paper-muted",
+                        timeframe === tf ? "bg-gold-400/15 text-gold-600" : "text-paper-faint hover:text-paper-muted",
                       )}
                     >
                       {tf}
@@ -507,7 +507,7 @@ export default function TerminalPage() {
                       className={cn(
                         "rounded-md border px-2 py-1 text-3xs transition",
                         active
-                          ? "border-gold-400/40 bg-gold-400/10 text-gold-300"
+                          ? "border-gold-400/40 bg-gold-400/10 text-gold-600"
                           : "border-line-soft text-paper-faint hover:text-paper-muted",
                       )}
                     >
@@ -523,7 +523,7 @@ export default function TerminalPage() {
                     title="Horizontal line"
                     className={cn(
                       "rounded-md border p-1 transition",
-                      tool === "hline" ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
+                      tool === "hline" ? "border-gold-400/40 bg-gold-400/10 text-gold-600" : "border-line-soft text-paper-faint hover:text-paper-muted",
                     )}
                   >
                     <Crosshair className="h-3.5 w-3.5" aria-hidden />
@@ -536,7 +536,7 @@ export default function TerminalPage() {
                     title="Trend line"
                     className={cn(
                       "rounded-md border p-1 transition",
-                      tool === "trend" ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
+                      tool === "trend" ? "border-gold-400/40 bg-gold-400/10 text-gold-600" : "border-line-soft text-paper-faint hover:text-paper-muted",
                     )}
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -619,7 +619,7 @@ export default function TerminalPage() {
             {copilot.data ? (
               <div className="border-t border-line-soft px-4 py-3">
                 <div className="flex items-start gap-2">
-                  <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-champagne-300" aria-hidden />
+                  <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-champagne-600" aria-hidden />
                   <div className="min-w-0">
                     <p className="text-2xs text-paper-muted">
                       <span className="text-paper">Copilot · {copilot.data.model}</span>{" "}
@@ -634,7 +634,7 @@ export default function TerminalPage() {
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-1.5 text-2xs text-warn/80">{copilot.data.invalidation}</p>
+                    <p className="mt-1.5 text-2xs text-warn">{copilot.data.invalidation}</p>
                   </div>
                 </div>
               </div>
@@ -738,7 +738,7 @@ export default function TerminalPage() {
                 <button
                   type="button"
                   onClick={() => setCfdQty(maxQty > 0 ? (maxQty * 0.95).toFixed(4) : "0.01")}
-                  className="rounded border border-line-soft px-1.5 py-0.5 transition hover:border-gold-400/40 hover:text-gold-300"
+                  className="rounded border border-line-soft px-1.5 py-0.5 transition hover:border-gold-400/40 hover:text-gold-600"
                 >
                   Use max
                 </button>
@@ -794,13 +794,13 @@ export default function TerminalPage() {
                   className={cn(
                     "flex flex-col items-center rounded-xl border py-3 transition",
                     cfdSide === "buy"
-                      ? "border-gain bg-gain/20 text-gain shadow-[0_0_24px_-10px_rgba(0,224,122,0.8)]"
-                      : "border-gain/30 bg-gain/5 text-gain/70 hover:bg-gain/10",
+                      ? "border-gain bg-gain/15 text-gain"
+                      : "border-gain/30 bg-gain/5 text-gain hover:bg-gain/10",
                   )}
                 >
                   <ArrowUpRight className="h-4 w-4" aria-hidden />
                   <span className="mt-1 text-xs font-semibold uppercase tracking-label">Buy</span>
-                  <span className="num text-3xs opacity-80">{fmtPrice(livePrice)}</span>
+                  <span className="num text-3xs">{fmtPrice(livePrice)}</span>
                 </button>
                 <button
                   type="button"
@@ -809,13 +809,13 @@ export default function TerminalPage() {
                   className={cn(
                     "flex flex-col items-center rounded-xl border py-3 transition",
                     cfdSide === "sell"
-                      ? "border-loss bg-loss/20 text-loss shadow-[0_0_24px_-10px_rgba(255,59,82,0.8)]"
-                      : "border-loss/30 bg-loss/5 text-loss/70 hover:bg-loss/10",
+                      ? "border-loss bg-loss/15 text-loss"
+                      : "border-loss/30 bg-loss/5 text-loss hover:bg-loss/10",
                   )}
                 >
                   <ArrowDownRight className="h-4 w-4" aria-hidden />
                   <span className="mt-1 text-xs font-semibold uppercase tracking-label">Sell</span>
-                  <span className="num text-3xs opacity-80">{fmtPrice(livePrice)}</span>
+                  <span className="num text-3xs">{fmtPrice(livePrice)}</span>
                 </button>
               </div>
 
@@ -913,7 +913,7 @@ export default function TerminalPage() {
           ) : (
           <div className="space-y-4 p-4">
             {/* The payout is the number a fixed-odds trader reads first, so it leads. */}
-            <div className="rounded-2xl border border-line-soft bg-gradient-to-b from-white/[0.055] to-transparent px-4 py-3">
+            <div className="rounded-2xl border border-line-soft bg-gradient-to-b from-obsidian-700/60 to-transparent px-4 py-3">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="label">Payout if correct</p>
@@ -1080,7 +1080,7 @@ export default function TerminalPage() {
                 onClick={() => setAssetClass(key)}
                 className={cn(
                   "rounded px-2 py-1 text-3xs uppercase tracking-label transition",
-                  assetClass === key ? "bg-gold-400/15 text-gold-300" : "text-paper-faint hover:text-paper-muted",
+                  assetClass === key ? "bg-gold-400/15 text-gold-600" : "text-paper-faint hover:text-paper-muted",
                 )}
               >
                 {key === "all" ? "All" : CLASS_LABEL[key]}
@@ -1246,7 +1246,7 @@ export default function TerminalPage() {
             setTicketTab("fixed");
             setConfirmOpen(true);
           }}
-          className="flex-1 rounded-lg bg-gain py-2.5 text-xs font-semibold uppercase tracking-label text-ink-950"
+          className="flex-1 rounded-lg bg-gain py-2.5 text-xs font-semibold uppercase tracking-label text-on-solid"
         >
           Up · +{payout.toFixed(0)}%
         </button>
@@ -1257,7 +1257,7 @@ export default function TerminalPage() {
             setTicketTab("fixed");
             setConfirmOpen(true);
           }}
-          className="flex-1 rounded-lg bg-loss py-2.5 text-xs font-semibold uppercase tracking-label text-white"
+          className="flex-1 rounded-lg bg-loss py-2.5 text-xs font-semibold uppercase tracking-label text-on-solid"
         >
           Down · +{payout.toFixed(0)}%
         </button>

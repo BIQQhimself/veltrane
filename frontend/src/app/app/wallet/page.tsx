@@ -63,7 +63,7 @@ export default function WalletPage() {
                 ? "—"
                 : money(totals.paper_equity_usd)}
             </p>
-            <Link href="/app/terminal" className="mt-2 inline-block text-3xs text-champagne-300 hover:text-champagne-200">
+            <Link href="/app/terminal" className="mt-2 inline-block text-3xs text-champagne-600 hover:text-champagne-600">
               Open the terminal →
             </Link>
           </div>
@@ -74,7 +74,7 @@ export default function WalletPage() {
         <section className="tile" aria-label="Connected accounts and balances">
           <div className="panel-header">
             <h2 className="text-sm font-medium text-paper">Accounts</h2>
-            <Link href="/app/accounts" className="text-2xs text-champagne-300 hover:text-champagne-200">
+            <Link href="/app/accounts" className="text-2xs text-champagne-600 hover:text-champagne-600">
               Manage connections →
             </Link>
           </div>
@@ -130,7 +130,7 @@ export default function WalletPage() {
 
         <section className="tile p-5" aria-label="Funding">
           <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-            <WalletIcon className="h-4 w-4 text-gold-300" aria-hidden />
+            <WalletIcon className="h-4 w-4 text-gold-600" aria-hidden />
             Deposits and withdrawals
           </h2>
           <p className="mt-2 text-2xs leading-relaxed text-paper-muted">{funding?.note}</p>
@@ -152,7 +152,7 @@ export default function WalletPage() {
             </Link>
           </div>
           <p className="mt-4 flex gap-2 rounded-lg border border-line-soft bg-obsidian-900/60 p-3 text-3xs leading-relaxed text-paper-faint">
-            <Info className="mt-0.5 h-3 w-3 shrink-0 text-champagne-300" aria-hidden />
+            <Info className="mt-0.5 h-3 w-3 shrink-0 text-champagne-600" aria-hidden />
             We ask for trading permission only and never request withdrawal access, so VELTRANE cannot withdraw on
             your behalf even if a token were compromised.
           </p>

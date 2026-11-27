@@ -42,8 +42,8 @@ type Props = {
 };
 
 /** Shipped defaults. The rendered colours come from the runtime palette (see theme.ts). */
-export const CHART_UP = "#00e07a";
-export const CHART_DOWN = "#ff3b52";
+export const CHART_UP = "#0a7a4c";
+export const CHART_DOWN = "#bd2643";
 const UP = "rgb(var(--vt-chart-up))";
 const DOWN = "rgb(var(--vt-chart-down))";
 const GRID = "rgb(var(--vt-chart-grid))";
@@ -317,7 +317,10 @@ export function CandleChart({
             {/* The live chip owns this band of the rail; a label under it is unreadable. */}
             {livePrice !== null && Math.abs(y(price) - y(livePrice)) < 11 ? null : (
               <text
-                x={plotWidth + 8}
+                /* Right-aligned inside the rail: a six-digit price would otherwise run
+                   past the SVG edge and lose its last digits. */
+                x={width - 6}
+                textAnchor="end"
                 y={y(price) + 3}
                 fill={AXIS_TEXT}
                 fontSize={9}

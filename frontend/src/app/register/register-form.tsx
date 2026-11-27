@@ -94,7 +94,7 @@ export function RegisterForm() {
   if (done) {
     return (
       <div className="mt-8 rounded-xl border border-line bg-ink-850 p-6">
-        <MailCheck className="h-5 w-5 text-champagne-400" aria-hidden />
+        <MailCheck className="h-5 w-5 text-champagne-600" aria-hidden />
         <h2 className="mt-3 text-sm font-medium text-paper">Check your inbox</h2>
         <p className="mt-2 text-xs leading-relaxed text-paper-muted">
           We sent a verification link to <span className="text-paper">{done.email}</span>. Verify the address,

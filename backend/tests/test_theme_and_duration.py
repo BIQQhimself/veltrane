@@ -10,6 +10,7 @@ Two behaviours the redesign depends on:
 
 from __future__ import annotations
 
+from app.services import theme as theme_service
 from app.trading import binary as binary_engine
 
 BASE = "/api/v1"
@@ -119,7 +120,7 @@ def test_admin_can_change_colours_and_the_public_endpoint_reflects_it(client, ad
     assert public["colors"]["primary"] == "#123456"
     assert public["colors"]["chart_up"] == "#00ff88"
     # Untouched tokens keep their defaults rather than disappearing.
-    assert public["colors"]["background"] == "#04060a"
+    assert public["colors"]["background"] == "#eef1f7"
 
 
 def test_admin_can_change_branding(client, admin):
@@ -165,7 +166,8 @@ def test_reset_returns_the_shipped_palette(client, admin):
     response = client.put(f"{BASE}/admin/theme", headers=admin["headers"], json={"reset": True})
     assert response.status_code == 200
     assert response.json()["theme"]["source"] == "default"
-    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == "#cbb691"
+    # The shipped palette is whatever the service declares, not a colour copied into a test.
+    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == theme_service.defaults()["colors"]["primary"]
 
 
 def test_theme_changes_are_audited(client, admin, db):
@@ -185,4 +187,5 @@ def test_theme_changes_are_audited(client, admin, db):
 def test_subscribers_cannot_change_the_theme(client, trader):
     response = client.put(f"{BASE}/admin/theme", headers=_auth(trader), json={"colors": {"primary": "#abcdef"}})
     assert response.status_code in (403, 404)
-    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == "#cbb691"
+    # The shipped palette is whatever the service declares, not a colour copied into a test.
+    assert client.get(f"{BASE}/theme").json()["colors"]["primary"] == theme_service.defaults()["colors"]["primary"]

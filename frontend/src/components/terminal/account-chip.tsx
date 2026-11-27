@@ -30,7 +30,7 @@ export function AccountChip({
   const isVirtual = Boolean(active?.provider_meta?.is_virtual) || active?.provider_account_type === "demo";
   return (
     <div className="flex items-center gap-2">
-      <div className="flex items-center gap-2 rounded-full border border-line-soft bg-white/[0.03] py-1 pl-2.5 pr-2">
+      <div className="flex items-center gap-2 rounded-full border border-line-soft bg-obsidian-700/50 py-1 pl-2.5 pr-2">
         <Wallet className="h-3.5 w-3.5 text-paper-faint" aria-hidden />
         <div className="leading-tight">
           <p className="text-[9px] uppercase tracking-label text-paper-faint">{equityLabel}</p>
@@ -127,7 +127,7 @@ export function PositionsDock({ tab, onTab, open, settled, summary, onOpenContra
               onClick={() => onTab(key)}
               className={cn(
                 "rounded-md px-2.5 py-1.5 text-2xs transition",
-                tab === key ? "bg-champagne-500/15 text-champagne-200" : "text-paper-faint hover:text-paper-muted",
+                tab === key ? "bg-champagne-500/15 text-champagne-600" : "text-paper-faint hover:text-paper-muted",
               )}
             >
               {label}

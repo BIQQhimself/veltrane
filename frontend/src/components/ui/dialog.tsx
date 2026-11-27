@@ -68,7 +68,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="-mr-1 rounded-full p-1.5 text-paper-faint transition hover:bg-white/[0.06] hover:text-paper"
+            className="-mr-1 rounded-full p-1.5 text-paper-faint transition hover:bg-obsidian-700/80 hover:text-paper"
           >
             <X className="h-4 w-4" />
           </button>
@@ -96,7 +96,7 @@ export function Tabs({
   className?: string;
 }) {
   return (
-    <div className={cn("flex gap-1 overflow-x-auto border-b border-line-soft", className)} role="tablist">
+    <div className={cn("no-scrollbar flex gap-1 overflow-x-auto border-b border-line-soft", className)} role="tablist">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -110,7 +110,7 @@ export function Tabs({
         >
           {tab.label}
           {typeof tab.count === "number" ? (
-            <span className="ml-1.5 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-2xs text-paper-muted">{tab.count}</span>
+            <span className="ml-1.5 rounded-full bg-obsidian-700/80 px-1.5 py-0.5 text-2xs text-paper-muted">{tab.count}</span>
           ) : null}
           {active === tab.id ? (
             <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-champagne-400" />

@@ -43,7 +43,7 @@ export default function PromotionsPage() {
         <section className="tile tile-sheen flex flex-col p-5" aria-label="Free trial">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-              <Sparkles className="h-4 w-4 text-gold-300" aria-hidden />
+              <Sparkles className="h-4 w-4 text-gold-600" aria-hidden />
               Trial
             </h2>
             <Badge tone={plan === "free" ? "gold" : "neutral"}>{plan === "free" ? "Available" : "In use"}</Badge>
@@ -64,7 +64,7 @@ export default function PromotionsPage() {
               </p>
             </>
           )}
-          <Link href="/app/billing" className="mt-auto pt-3 text-2xs text-champagne-300 hover:text-champagne-200">
+          <Link href="/app/billing" className="mt-auto pt-3 text-2xs text-champagne-600 hover:text-champagne-600">
             {plan === "free" ? "Start at checkout →" : "View billing →"}
           </Link>
         </section>
@@ -72,7 +72,7 @@ export default function PromotionsPage() {
         <section className="tile tile-sheen flex flex-col p-5" aria-label="Referral rewards">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-              <Users className="h-4 w-4 text-champagne-300" aria-hidden />
+              <Users className="h-4 w-4 text-champagne-600" aria-hidden />
               Referral programme
             </h2>
             <Badge tone={referral.data?.enabled ? "gain" : "neutral"}>
@@ -84,7 +84,7 @@ export default function PromotionsPage() {
               ? "Share your Deriv link and commission is settled by Deriv under their terms. VELTRANE does not pay for self-referral and does not estimate earnings."
               : "No referral link is configured for this deployment yet."}
           </p>
-          <Link href="/app/referrals" className="mt-auto pt-3 text-2xs text-champagne-300 hover:text-champagne-200">
+          <Link href="/app/referrals" className="mt-auto pt-3 text-2xs text-champagne-600 hover:text-champagne-600">
             Open referrals →
           </Link>
         </section>
@@ -92,7 +92,7 @@ export default function PromotionsPage() {
         <section className="tile tile-sheen flex flex-col p-5" aria-label="Performance fee agreement">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-              <BadgePercent className="h-4 w-4 text-gold-300" aria-hidden />
+              <BadgePercent className="h-4 w-4 text-gold-600" aria-hidden />
               Performance fee
             </h2>
             <TierBadge planCode={plan} size="xs" />
@@ -110,7 +110,7 @@ export default function PromotionsPage() {
                 : "Performance fees are an Elite or VIP option only, and are disabled unless a legal review has been completed."}
             </p>
           )}
-          <Link href="/app/billing" className="mt-auto pt-3 text-2xs text-champagne-300 hover:text-champagne-200">
+          <Link href="/app/billing" className="mt-auto pt-3 text-2xs text-champagne-600 hover:text-champagne-600">
             {tier.dailyCap === null ? "Review the agreement →" : "See Elite →"}
           </Link>
         </section>
@@ -119,7 +119,7 @@ export default function PromotionsPage() {
       <section className="tile p-5" aria-label="Active campaigns">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-            <Gift className="h-4 w-4 text-gold-300" aria-hidden />
+            <Gift className="h-4 w-4 text-gold-600" aria-hidden />
             Active campaigns
           </h2>
           <Badge tone="neutral">0 running</Badge>
@@ -149,7 +149,7 @@ export default function PromotionsPage() {
           </div>
         ) : null}
         <p className="mt-4 flex items-start gap-2 text-3xs text-paper-faint">
-          <Info className="mt-0.5 h-3 w-3 shrink-0 text-champagne-300" aria-hidden />
+          <Info className="mt-0.5 h-3 w-3 shrink-0 text-champagne-600" aria-hidden />
           Promotions never change what the risk engine allows, and no promotion makes live trading available without the
           usual authorisation.
         </p>

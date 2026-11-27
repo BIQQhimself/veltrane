@@ -99,7 +99,7 @@ export default function ReferralsPage() {
         <section className="tile p-5" aria-label="Referral activity">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-              <Users className="h-4 w-4 text-champagne-300" aria-hidden />
+              <Users className="h-4 w-4 text-champagne-600" aria-hidden />
               Activity
             </h2>
             <Badge tone="neutral">{status.data?.events.length ?? 0}</Badge>

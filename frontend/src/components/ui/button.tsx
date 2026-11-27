@@ -6,11 +6,11 @@ type Size = "xs" | "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-b from-champagne-300 to-champagne-500 text-ink-950 shadow-[0_12px_28px_-16px_rgba(203,182,145,0.85)] hover:from-champagne-200 hover:to-champagne-400 active:from-champagne-400 active:to-champagne-600",
+    "bg-gradient-to-b from-champagne-300 to-champagne-500 text-on-accent shadow-[0_12px_28px_-16px_rgba(203,182,145,0.85)] hover:from-champagne-200 hover:to-champagne-400 active:from-champagne-400 active:to-champagne-600",
   secondary:
-    "border border-line-strong bg-white/[0.03] text-paper hover:border-line-strong hover:bg-white/[0.06]",
-  ghost: "text-paper-muted hover:bg-white/[0.05] hover:text-paper",
-  quiet: "bg-white/[0.06] text-paper hover:bg-white/[0.1]",
+    "border border-line-strong bg-obsidian-700/50 text-paper hover:border-line-strong hover:bg-obsidian-700/80",
+  ghost: "text-paper-muted hover:bg-obsidian-700/70 hover:text-paper",
+  quiet: "bg-obsidian-700/80 text-paper hover:bg-obsidian-600/80",
   danger: "border border-loss/35 bg-loss/10 text-loss hover:border-loss/60 hover:bg-loss/15",
   success: "border border-gain/35 bg-gain/10 text-gain hover:border-gain/60 hover:bg-gain/15",
 };

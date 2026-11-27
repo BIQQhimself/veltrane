@@ -172,62 +172,60 @@ overview can never say "within limits" while a budget is breached.
 `src/lib/validation.test.ts` (9 tests) pins the sign-up rules that the API also enforces (an
 address needs a dotted domain, and the five password rules are reported in the API's order) and
 the mapping from a 422 body to the input that should carry the message.
-`src/lib/theme.test.ts` (8 tests) pins the palette derivation: every Tailwind stop the components
+`src/lib/theme.test.ts` (13 tests) pins the palette derivation: every Tailwind stop the components
 use is produced from the base tokens, a changed base colour moves the whole ramp in the same
-direction, invalid input falls back to the shipped colour instead of emitting a broken value, and
-the shipped text/background pairing stays above 4.5:1 contrast.
+direction, invalid input falls back to the shipped colour instead of emitting a broken value, the
+muted/faint text ramp keeps its hierarchy, and every shipped text/background pairing — including
+text on the dark instrument surface — stays above 4.5:1.
 `src/lib/favourites.test.ts` (4 tests) pins the device-local watchlist: toggling adds and removes,
-the list caps at twelve and drops the oldest, and instruments the venue no longer offers disappear. Component and end-to-end browser
-tests are still outstanding; see KNOWN_LIMITATIONS.
+the list caps at twelve and drops the oldest, and instruments the venue no longer offers disappear.
+There is no React component test runner and no scripted end-to-end journey (sign up → connect →
+trade): the committed browser check covers rendering, contrast and overflow, not behaviour. See
+KNOWN_LIMITATIONS.
 
 ```bash
 cd frontend
 npm run test        # vitest run
 ```
 
-## Responsive overflow check
+## Visual, contrast and overflow audit
 
-Wide data tables are the usual cause of a phone layout sliding sideways. Before a UI release, audit
-every workspace route at 390, 768 and 1440 CSS pixels. An ad-hoc Playwright run does it without
-adding a dependency to this repository:
+Wide data tables are the usual cause of a phone layout sliding sideways, and a palette edit is the
+usual cause of unreadable labels. Both are checked by one committed script, run against a dev server
+with the seeded review account:
 
 ```bash
-python3 -m venv /tmp/pwenv && /tmp/pwenv/bin/pip install playwright
+cd frontend
+npm run dev                 # in another shell
+npm run audit:visual
 ```
 
-```python
-import asyncio
-from playwright.async_api import async_playwright
+`e2e/visual-audit.mjs` walks every public and workspace route at 1440, 834 and 390 CSS pixels and
+fails on four things:
 
-BASE = "http://localhost:3000/"
-ROUTES = ["app", "app/terminal", "app/markets", "app/strategies", "app/copilot", "app/accounts",
-          "app/portfolio", "app/analytics", "app/notifications", "app/billing", "app/settings",
-          "app/onboarding"]
+- **Layout overflow** — `scrollWidth - clientWidth` above two pixels. Fix the container (`min-w-0` on
+  the panel, an explicit `grid-cols-1`, collapsing secondary table columns) rather than hiding the
+  scrollbar.
+- **Contrast, judged by axe-core** — the `color-contrast` rule runs on every node. Anything axe
+  reports as a violation fails the run.
+- **Contrast, judged from pixels** — axe cannot decide text painted over a gradient, an image or a
+  canvas, and it returns those nodes as "incomplete". The script measures them itself: every glyph is
+  made transparent, the page is captured band by band in the viewport, and the paint under each text
+  box is read back through a canvas. The modal colour of five sample points is the backdrop, so one
+  sample landing on an icon cannot decide the verdict. Capture is per band rather than one full-page
+  shot because resizing the viewport to the page height reflows the layout (and the live chart) and
+  leaves the measured rectangles pointing at the wrong pixels.
+- **Console and network errors** — uncaught exceptions and 4xx/5xx responses during load.
 
+Screenshots of every route and viewport are written to `frontend/e2e/artifacts/` (git-ignored) for
+human review. The script signs in through the API and keeps the tokens in `sessionStorage`, the same
+path the app uses, so no test-only auth bypass exists.
 
-async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(args=["--no-sandbox"])
-        for width in (390, 768, 1440):
-            context = await browser.new_context(viewport={"width": width, "height": 900})
-            page = await context.new_page()
-            # sign in here if the routes redirect to /login
-            for route in ["", *ROUTES]:
-                await page.goto(BASE + route, wait_until="load")
-                overflow = await page.evaluate(
-                    "() => document.documentElement.scrollWidth"
-                    " - document.documentElement.clientWidth"
-                )
-                print(width, route or "/", "OVERFLOW" if overflow > 2 else "ok", overflow)
-            await context.close()
-        await browser.close()
-
-
-asyncio.run(main())
-```
-
-Anything reporting more than two pixels is a bug: fix the container (`min-w-0` on the panel, an
-explicit `grid-cols-1`, collapsing secondary table columns) rather than hiding the scrollbar.
+Two limits are worth knowing. Text inside `position: fixed` bars is skipped by the pixel pass, because
+those bars stack over each other and a crop of one cannot be attributed to a single element; axe
+still judges them wherever the background is a flat colour. And a route that renders a live feed can
+shift by a few pixels between measurement and capture, so a marginal result there is worth confirming
+by eye against the stored screenshot.
 
 ## Test hygiene rules for contributors
 
