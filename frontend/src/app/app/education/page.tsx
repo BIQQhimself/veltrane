@@ -118,7 +118,7 @@ export default function EducationPage() {
                 >
                   <span className="min-w-0">
                     <span className="flex flex-wrap items-center gap-2">
-                      <BookOpen className="h-3.5 w-3.5 text-electric-300" aria-hidden />
+                      <BookOpen className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
                       <span className="text-xs font-medium text-paper">{lesson.title}</span>
                     </span>
                     <span className="mt-1 block text-2xs leading-relaxed text-paper-muted">{lesson.summary}</span>

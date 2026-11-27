@@ -29,6 +29,7 @@ import { RiskBudgetRows } from "@/components/app/risk-budget";
 import { AccountHero } from "@/components/app/account-hero";
 import { AutomationStrip } from "@/components/app/automation-strip";
 import { TierBadge } from "@/components/app/tier-badge";
+import { PageHeader } from "@/components/ui/panel";
 import { contractReturn, contractStake } from "@/lib/contracts";
 import { budgetLabel, budgetTone, type RiskBudget } from "@/lib/risk-budget";
 import { TradeDetailDialog } from "@/components/app/trade-detail";
@@ -73,7 +74,7 @@ function Metric({
           "stat-value mt-2",
           tone === "gain" && "text-gain",
           tone === "loss" && "text-loss",
-          tone === "info" && "text-electric-300",
+          tone === "info" && "text-champagne-300",
         )}
       >
         {value}
@@ -128,49 +129,51 @@ export default function OverviewPage() {
   };
 
   const firstName = (user?.full_name ?? "Trader").split(" ")[0];
+  const now = new Date();
+  const greeting = {
+    day: now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }),
+    title: `Good ${now.getHours() < 12 ? "morning" : now.getHours() < 18 ? "afternoon" : "evening"}, ${firstName}`,
+  };
   const topAssets = [...(assets.data?.assets ?? [])].sort(byAssetClass).slice(0, 6);
   // The risk engine charges spot/CFD notional against the same 30% cap, so the
   // posture panel must count it or it reads as zero exposure while a trade is open.
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-2xs uppercase tracking-label text-paper-faint">
-            {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-          </p>
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-paper">
-            Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"},{" "}
-            {firstName}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <PageHeader
+        eyebrow={greeting.day}
+        title={greeting.title}
+        badge={
+          <>
             <TierBadge planCode={plan} size="xs" />
-            <Badge tone={killEngaged ? "loss" : "gain"}>
+            <Badge tone={killEngaged ? "loss" : "neutral"}>
               {killEngaged ? "Kill switch engaged" : "Kill switch released"}
             </Badge>
             <Badge tone={platform?.live_trading_enabled ? "warn" : "neutral"}>
               {platform?.live_trading_enabled ? "Live gate open" : "Live disabled"}
             </Badge>
             <Badge tone="warn">Simulated</Badge>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/app/terminal"
-            className="cta-gold inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition"
-          >
-            <Zap className="h-3.5 w-3.5" aria-hidden />
-            Open terminal
-          </Link>
-          <Link
-            href="/app/copilot"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3.5 py-2 text-xs text-paper transition hover:border-electric-600/60"
-          >
-            <Bot className="h-3.5 w-3.5 text-electric-300" aria-hidden />
-            Ask the copilot
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+        action={
+          <>
+            <Link
+              href="/app/terminal"
+              className="cta-gold inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold transition"
+            >
+              <Zap className="h-3.5 w-3.5" aria-hidden />
+              Open terminal
+            </Link>
+            <Link
+              href="/app/copilot"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-4 py-2.5 text-xs text-paper transition hover:bg-white/[0.04]"
+            >
+              <Bot className="h-3.5 w-3.5 text-paper-muted" aria-hidden />
+              Ask the copilot
+            </Link>
+          </>
+        }
+      />
 
       <AutomationStrip />
 
@@ -272,7 +275,7 @@ export default function OverviewPage() {
                       Start paper account
                     </Button>
                   )}
-                  <Link href="/app/terminal" className="text-2xs text-electric-300 hover:text-electric-200">
+                  <Link href="/app/terminal" className="text-2xs text-champagne-300 hover:text-champagne-200">
                     Go to the terminal →
                   </Link>
                 </div>
@@ -341,7 +344,7 @@ export default function OverviewPage() {
                   ? "Authorised for this organisation. The platform gate still governs routing."
                   : "Not authorised. Paper execution only until the safety checklist is completed."}
               </p>
-              <Link href="/app/settings" className="mt-2 inline-flex items-center gap-1 text-3xs text-electric-300 hover:text-electric-200">
+              <Link href="/app/settings" className="mt-2 inline-flex items-center gap-1 text-3xs text-champagne-300 hover:text-champagne-200">
                 Review authorisation <ArrowRight className="h-3 w-3" aria-hidden />
               </Link>
             </div>
@@ -357,7 +360,7 @@ export default function OverviewPage() {
               <h2 className="text-sm font-medium text-paper">Quick trade</h2>
               <p className="mt-0.5 text-3xs text-paper-faint">5-minute payout per asset · simulated book</p>
             </div>
-            <Link href="/app/markets" className="text-3xs text-electric-300 hover:text-electric-200">
+            <Link href="/app/markets" className="text-3xs text-champagne-300 hover:text-champagne-200">
               All markets →
             </Link>
           </div>
@@ -378,7 +381,7 @@ export default function OverviewPage() {
                           asset.asset_class === "crypto"
                             ? "bg-gold-400/70"
                             : asset.asset_class === "forex"
-                              ? "bg-electric-500/60"
+                              ? "bg-champagne-500"
                               : "bg-paper-faint/40",
                         )}
                       />
@@ -417,12 +420,12 @@ export default function OverviewPage() {
           <div className="flex items-center justify-between border-b border-line-soft px-4 py-3">
             <div>
               <h2 className="flex items-center gap-1.5 text-sm font-medium text-paper">
-                <Bot className="h-3.5 w-3.5 text-electric-300" aria-hidden />
+                <Bot className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
                 Copilot briefing
               </h2>
               <p className="mt-0.5 text-3xs text-paper-faint">Deterministic technical reads · not advice</p>
             </div>
-            <Link href="/app/copilot" className="text-3xs text-electric-300 hover:text-electric-200">
+            <Link href="/app/copilot" className="text-3xs text-champagne-300 hover:text-champagne-200">
               Open →
             </Link>
           </div>
@@ -469,7 +472,7 @@ export default function OverviewPage() {
               <Clock className="h-3.5 w-3.5 text-warn" aria-hidden />
               Open contracts
             </h2>
-            <Link href="/app/terminal" className="text-3xs text-electric-300 hover:text-electric-200">
+            <Link href="/app/terminal" className="text-3xs text-champagne-300 hover:text-champagne-200">
               Manage →
             </Link>
           </div>
@@ -507,7 +510,7 @@ export default function OverviewPage() {
               Every trade opens into its full risk and cost record. Fixed-odds contracts show stake → return.
             </p>
           </div>
-          <Link href="/app/portfolio" className="text-3xs text-electric-300 hover:text-electric-200">
+          <Link href="/app/portfolio" className="text-3xs text-champagne-300 hover:text-champagne-200">
             Full history →
           </Link>
         </div>

@@ -45,7 +45,9 @@ export function AutomationStrip() {
         </span>
         <div className="min-w-0">
           <p className="truncate text-xs text-paper">{summary.title}</p>
-          <p className="truncate text-3xs text-paper-faint">{automation.label}</p>
+          <p className="truncate text-3xs text-paper-faint">
+            {automation.label && automation.label !== summary.title ? automation.label : summary.detail}
+          </p>
         </div>
       </div>
 
@@ -85,7 +87,7 @@ export function AutomationStrip() {
           <ShieldCheck className="h-3 w-3 text-gain/70" aria-hidden />
           Risk engine enforced
         </span>
-        <Link href="/app/membership" className="inline-flex items-center gap-1 text-2xs text-electric-300 hover:text-electric-200">
+        <Link href="/app/membership" className="inline-flex items-center gap-1 text-2xs text-champagne-300 hover:text-champagne-200">
           {automation.mode === "none" ? "Unlock automation" : "Plan details"}
           <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>

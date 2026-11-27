@@ -5,7 +5,7 @@ import { capLabel, TIERS, tierFor, type Tier } from "@/lib/membership";
 
 const ringTone: Record<Tier["accent"], string> = {
   neutral: "border-line-strong bg-obsidian-750 text-paper-muted",
-  info: "border-electric-400/40 bg-electric-500/12 text-electric-200",
+  info: "border-champagne-400/40 bg-electric-500/12 text-electric-200",
   gold: "border-gold-400/45 bg-gold-500/12 text-gold-300",
 };
 

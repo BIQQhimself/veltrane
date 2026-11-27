@@ -19,11 +19,11 @@ export function Stat({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={cn("panel p-5", className)}>
-      <p className="label">{label}</p>
+    <div className={cn("tile px-5 py-4", className)}>
+      <p className="metric-label">{label}</p>
       <p
         className={cn(
-          "num mt-3 text-[26px] font-medium leading-none tracking-tight",
+          "num mt-2.5 text-[26px] font-medium leading-none tracking-tight",
           tone === "gain" && "text-gain",
           tone === "loss" && "text-loss",
           tone === "neutral" && "text-paper",
@@ -66,10 +66,14 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
-      {icon ? <div className="text-paper-faint/70">{icon}</div> : null}
+      {icon ? (
+        <div className="flex h-11 w-11 items-center justify-center rounded-full border border-line-soft bg-white/[0.03] text-paper-faint/80">
+          {icon}
+        </div>
+      ) : null}
       <p className="text-sm font-medium text-paper">{title}</p>
       {description ? <p className="max-w-sm text-xs leading-relaxed text-paper-faint">{description}</p> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
+      {action ? <div className="mt-1">{action}</div> : null}
     </div>
   );
 }
@@ -80,10 +84,14 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-loss/30 bg-loss/5 px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-loss/30 bg-loss/5 px-4 py-3">
       <p className="text-xs text-loss">{message}</p>
       {onRetry ? (
-        <button type="button" onClick={onRetry} className="text-xs text-paper underline decoration-line-strong underline-offset-4">
+        <button
+          type="button"
+          onClick={onRetry}
+          className="text-xs text-paper underline decoration-line-strong underline-offset-4"
+        >
           Retry
         </button>
       ) : null}
@@ -91,10 +99,17 @@ export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
-export function Progress({ value, max = 100, tone = "gold" }: { value: number; max?: number; tone?: "gold" | "gain" | "loss" | "info" }) {
+export function Progress({
+  value,
+  max = 100,
+  tone = "gold",
+}: {
+  value: number;
+  max?: number;
+  tone?: "gold" | "gain" | "loss" | "info";
+}) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
-  const fill =
-    tone === "gain" ? "bg-gain" : tone === "loss" ? "bg-loss" : tone === "info" ? "bg-info" : "bg-champagne-500";
+  const fill = tone === "gain" ? "bg-gain" : tone === "loss" ? "bg-loss" : tone === "info" ? "bg-info" : "bg-champagne-500";
   return (
     <div
       className="h-1.5 w-full overflow-hidden rounded-full bg-ink-700"

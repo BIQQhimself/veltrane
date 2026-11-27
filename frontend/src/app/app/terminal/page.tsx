@@ -36,6 +36,7 @@ import {
   type DrawingTool,
 } from "@/components/charts/candles";
 import { RiskBudgetStrip } from "@/components/app/risk-budget";
+import { PageHeader } from "@/components/ui/panel";
 import { AccountChip, PositionsDock } from "@/components/terminal/account-chip";
 import { InstrumentBar, Watchlist } from "@/components/terminal/instrument-bar";
 import { TradeButtons } from "@/components/terminal/trade-buttons";
@@ -338,20 +339,18 @@ export default function TerminalPage() {
 
   return (
     <div className="space-y-3 pb-24 xl:pb-0">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-xl font-semibold tracking-tight text-paper sm:text-2xl">
-              Trading terminal
-            </h1>
+      <PageHeader
+        eyebrow="Trade"
+        title="Trading terminal"
+        badge={
+          <>
             <Badge tone="info">Fixed-odds</Badge>
             <Badge tone="warn">Simulated</Badge>
-          </div>
-          <p className="mt-1 text-xs text-paper-faint">
-            One-minute minimum expiry. Every contract passes the independent risk engine before it opens.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+          </>
+        }
+        description="One-minute minimum expiry. Every contract passes the independent risk engine before it opens."
+        action={
+          <>
           <button
             type="button"
             onClick={() => {
@@ -368,8 +367,9 @@ export default function TerminalPage() {
             {openContracts.length + openPositions.length} open ·{" "}
             {summary?.open_stake ? money(summary.open_stake) : money(0)} staked
           </span>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <InstrumentBar
         symbol={symbol}
@@ -400,6 +400,43 @@ export default function TerminalPage() {
       />
 
       <RiskBudgetStrip budget={riskBudget.data} />
+
+      {/* Mobile: the two decisions stay within thumb reach no matter how far the chart scrolls. */}
+      <div className="fixed inset-x-0 bottom-[64px] z-30 border-t border-line-soft bg-obsidian-900/95 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl xl:hidden">
+        <div className="mx-auto flex max-w-md items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-2xs font-medium text-paper">{symbol}</p>
+            <p className="num text-3xs text-paper-faint">
+              {money(stake)} · {DURATIONS.find((option) => option.seconds === duration)?.label ?? "1m"} · +
+              {payout.toFixed(0)}%
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setDirection("call");
+              setConfirmOpen(true);
+            }}
+            className="trade-call flex-row gap-1.5 px-4 py-2.5"
+          >
+            <ArrowUpRight className="h-4 w-4" aria-hidden />
+            <span className="text-xs font-semibold uppercase tracking-label">Call</span>
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setDirection("put");
+              setConfirmOpen(true);
+            }}
+            className="trade-put flex-row gap-1.5 px-4 py-2.5"
+          >
+            <ArrowDownRight className="h-4 w-4" aria-hidden />
+            <span className="text-xs font-semibold uppercase tracking-label">Put</span>
+          </button>
+        </div>
+      </div>
 
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_336px]">
         {/* Chart + positions dock */}
@@ -582,7 +619,7 @@ export default function TerminalPage() {
             {copilot.data ? (
               <div className="border-t border-line-soft px-4 py-3">
                 <div className="flex items-start gap-2">
-                  <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-electric-300" aria-hidden />
+                  <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-champagne-300" aria-hidden />
                   <div className="min-w-0">
                     <p className="text-2xs text-paper-muted">
                       <span className="text-paper">Copilot · {copilot.data.model}</span>{" "}
@@ -875,20 +912,32 @@ export default function TerminalPage() {
             </div>
           ) : (
           <div className="space-y-4 p-4">
+            {/* The payout is the number a fixed-odds trader reads first, so it leads. */}
+            <div className="rounded-2xl border border-line-soft bg-gradient-to-b from-white/[0.055] to-transparent px-4 py-3">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="label">Payout if correct</p>
+                  <p className="num mt-1 text-[32px] font-medium leading-none text-gain">+{payout.toFixed(0)}%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xs text-paper-faint">You collect</p>
+                  <p className="num text-sm text-paper">{money(stake + potentialReturn)}</p>
+                  <p className="num text-3xs text-loss">-{money(stake)} if wrong</p>
+                </div>
+              </div>
+            </div>
+
             <div>
-              <p className="label mb-1.5">Duration</p>
-              <div className="grid grid-cols-5 gap-1 rounded-lg border border-line-soft bg-obsidian-900/60 p-1">
+              <p className="label mb-2">Expiry</p>
+              <div className="grid grid-cols-5 gap-1.5">
                 {DURATIONS.map((option) => (
                   <button
                     key={option.seconds}
                     type="button"
                     onClick={() => setDuration(option.seconds)}
-                    className={cn(
-                      "rounded-md py-1.5 text-2xs transition",
-                      duration === option.seconds
-                        ? "bg-electric-500/20 text-electric-100 shadow-[inset_0_0_0_1px_rgba(46,123,255,0.4)]"
-                        : "text-paper-faint hover:text-paper-muted",
-                    )}
+                    aria-pressed={duration === option.seconds}
+                    data-active={duration === option.seconds}
+                    className="pick px-0 text-center"
                   >
                     {option.label}
                   </button>
@@ -897,17 +946,17 @@ export default function TerminalPage() {
             </div>
 
             <div>
-              <div className="mb-1.5 flex items-baseline justify-between">
+              <div className="mb-2 flex items-baseline justify-between">
                 <p className="label">Stake</p>
                 <p className="text-3xs text-paper-faint">
-                  min {money(quote.data?.min_stake ?? 10)} · max {money(quote.data?.max_stake ?? 2000)}
+                  {money(quote.data?.min_stake ?? 10)} – {money(quote.data?.max_stake ?? 2000)}
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => adjustStake(-25)}
-                  className="rounded-lg border border-line-strong p-2 text-paper-muted transition hover:text-paper"
+                  className="rounded-control border border-line-strong p-2.5 text-paper-muted transition hover:text-paper"
                   aria-label="Decrease stake"
                 >
                   <Minus className="h-3.5 w-3.5" aria-hidden />
@@ -922,25 +971,26 @@ export default function TerminalPage() {
                     value={stake}
                     onChange={(event) => setStake(Number(event.target.value))}
                     aria-label="Stake amount"
-                    className="num w-full rounded-lg border border-line bg-obsidian-900 py-2 pl-7 pr-2 text-center text-sm text-paper outline-none transition focus:border-electric-500/60"
+                    className="num h-10 w-full rounded-control border border-line-strong bg-obsidian-900 py-2 pl-7 pr-2 text-center text-sm text-paper outline-none transition focus:border-champagne-500/70"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => adjustStake(25)}
-                  className="rounded-lg border border-line-strong p-2 text-paper-muted transition hover:text-paper"
+                  className="rounded-control border border-line-strong p-2.5 text-paper-muted transition hover:text-paper"
                   aria-label="Increase stake"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>
-              <div className="mt-1.5 flex gap-1">
+              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
                 {[50, 100, 250, 500].map((amount) => (
                   <button
                     key={amount}
                     type="button"
                     onClick={() => setStake(amount)}
-                    className="flex-1 rounded border border-line-soft py-1 text-3xs text-paper-faint transition hover:border-line-strong hover:text-paper-muted"
+                    data-active={stake === amount}
+                    className="pick px-0 text-center text-3xs"
                   >
                     ${amount}
                   </button>
@@ -948,38 +998,21 @@ export default function TerminalPage() {
               </div>
             </div>
 
-            <dl className="space-y-1.5 rounded-lg border border-line-soft bg-obsidian-900/60 p-3">
-              <div className="flex items-center justify-between text-2xs">
-                <dt className="text-paper-faint">Payout if correct</dt>
-                <dd className="num text-gain">{payout.toFixed(0)}%</dd>
-              </div>
-              <div className="flex items-center justify-between text-2xs">
-                <dt className="text-paper-faint">Profit if correct</dt>
-                <dd className="num text-paper">{money(potentialReturn)}</dd>
-              </div>
-              <div className="flex items-center justify-between text-2xs">
-                <dt className="text-paper-faint">Returned if correct</dt>
-                <dd className="num text-paper">{money(stake + potentialReturn)}</dd>
-              </div>
-              <div className="flex items-center justify-between text-2xs">
-                <dt className="text-paper-faint">Loss if wrong</dt>
-                <dd className="num text-loss">-{money(stake)}</dd>
-              </div>
-              <div className="flex items-center justify-between text-2xs">
-                <dt className="text-paper-faint">Entry price</dt>
-                <dd className="num text-paper">{fmtPrice(livePrice)}</dd>
-              </div>
-              <div className="flex items-center justify-between text-2xs">
-                <dt className="text-paper-faint">Expiry</dt>
-                <dd className="num text-paper">
+            <div className="flex items-center justify-between rounded-control border border-line-soft bg-obsidian-900/50 px-3 py-2 text-3xs text-paper-faint">
+              <span>
+                Entry <span className="num text-paper">{fmtPrice(livePrice)}</span>
+              </span>
+              <span>
+                Expires{" "}
+                <span className="num text-paper">
                   {new Date(quote.data?.expires_at ?? Date.now()).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                     second: "2-digit",
                   })}
-                </dd>
-              </div>
-            </dl>
+                </span>
+              </span>
+            </div>
 
             <TradeButtons
               stake={stake}

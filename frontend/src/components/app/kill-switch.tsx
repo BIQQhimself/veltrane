@@ -15,7 +15,15 @@ import { useToast } from "@/components/ui/toast";
  * "Kill all AI trading". The server-side switch is what stops orders; this control only
  * flips it, so it works the same whether or not a strategy is running.
  */
-export function KillSwitchControl({ compact = false }: { compact?: boolean }) {
+export function KillSwitchControl({
+  compact = false,
+  iconOnly = false,
+  className,
+}: {
+  compact?: boolean;
+  iconOnly?: boolean;
+  className?: string;
+}) {
   const toast = useToast();
   const { refresh } = useAuth();
   const [open, setOpen] = React.useState(false);
@@ -58,16 +66,23 @@ export function KillSwitchControl({ compact = false }: { compact?: boolean }) {
             ? "border-loss/50 bg-loss/15 text-loss hover:bg-loss/25"
             : "border-line-strong text-paper-muted hover:border-loss/40 hover:text-loss",
           compact && "justify-center px-2",
+          iconOnly &&
+            "relative h-9 w-9 justify-center rounded-full border-line-soft px-0 text-paper-muted hover:border-loss/40 hover:text-loss",
+          engaged && iconOnly && "border-loss/50 bg-loss/15 text-loss",
+          className,
         )}
         aria-label={engaged ? "Release the trading kill switch" : "Engage the trading kill switch"}
       >
-        <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden />
-        {compact ? null : (
+        <ShieldAlert className={cn("shrink-0", iconOnly ? "h-4 w-4" : "h-4 w-4")} aria-hidden />
+        {compact || iconOnly ? null : (
           <span className="min-w-0 flex-1 truncate text-left">
             {engaged ? "Trading halted — release" : "Kill all AI trading"}
           </span>
         )}
-        {engaged ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-loss" aria-hidden /> : null}
+        {engaged && !iconOnly ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-loss" aria-hidden /> : null}
+        {engaged && iconOnly ? (
+          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-loss" aria-hidden />
+        ) : null}
       </button>
       <Dialog
         open={open}

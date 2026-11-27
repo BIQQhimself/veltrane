@@ -68,7 +68,7 @@ export default function SupportPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
         <section className="tile p-5" aria-label="Open a ticket">
           <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-            <LifeBuoy className="h-4 w-4 text-electric-300" aria-hidden />
+            <LifeBuoy className="h-4 w-4 text-champagne-300" aria-hidden />
             New ticket
           </h2>
           <form onSubmit={submit} className="mt-4 space-y-3">
@@ -160,7 +160,7 @@ export default function SupportPage() {
                             className={cn(
                               "rounded-lg border p-2.5 text-2xs",
                               message.role === "staff"
-                                ? "border-electric-500/25 bg-electric-500/[0.06] text-paper"
+                                ? "border-champagne-500/25 bg-champagne-500/[0.06] text-paper"
                                 : "border-line-soft bg-obsidian-900/60 text-paper-muted",
                             )}
                           >

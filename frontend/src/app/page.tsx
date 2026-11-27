@@ -243,7 +243,7 @@ export default function MarketingPage() {
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 grid-bg opacity-70" aria-hidden />
-          <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-electric-500/10 blur-[120px]" aria-hidden />
+          <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-champagne-500/[0.09] blur-[120px]" aria-hidden />
           <div className="relative mx-auto grid max-w-7xl gap-14 px-5 pb-16 pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:px-8 lg:pb-24 lg:pt-24">
             <div className="animate-fade-up">
               <span className="chip">
@@ -264,16 +264,16 @@ export default function MarketingPage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/register"
-                  className="cta-gold inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-medium transition"
+                  className="cta-gold inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition"
                 >
                   Open a paper account
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-obsidian-850 px-5 py-3 text-sm text-paper transition hover:border-electric-600/60"
+                  className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-6 py-3 text-sm text-paper transition hover:bg-white/[0.06]"
                 >
-                  <LineChart className="h-4 w-4 text-electric-300" aria-hidden />
+                  <LineChart className="h-4 w-4 text-champagne-300" aria-hidden />
                   Explore the terminal
                 </Link>
               </div>
@@ -307,7 +307,7 @@ export default function MarketingPage() {
                         key={tf}
                         className={cn(
                           "rounded px-2 py-1 text-3xs",
-                          index === 2 ? "bg-electric-500/15 text-electric-300" : "text-paper-faint",
+                          index === 2 ? "bg-champagne-500/15 text-champagne-300" : "text-paper-faint",
                         )}
                       >
                         {tf}
@@ -331,7 +331,7 @@ export default function MarketingPage() {
                   returns nothing. Not a forecast.
                 </p>
               </div>
-              <div className="absolute -left-4 -top-5 hidden w-52 rounded-xl border border-line bg-obsidian-900/95 p-3 shadow-lift lg:block">
+              <div className="absolute -bottom-8 -left-8 hidden w-56 rounded-2xl border border-line bg-obsidian-900/95 p-3.5 shadow-lift lg:block">
                 <p className="text-3xs uppercase tracking-label text-paper-faint">Risk engine</p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-gain">
                   <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> 17 checks passed
@@ -360,10 +360,10 @@ export default function MarketingPage() {
             {PILLARS.map((pillar) => (
               <article
                 key={pillar.title}
-                className="group relative overflow-hidden rounded-xl border border-line bg-obsidian-850 p-6 transition-colors hover:border-electric-600/50"
+                className="group relative overflow-hidden rounded-xl border border-line bg-obsidian-850 p-6 transition-colors hover:border-champagne-500/45"
               >
-                <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-electric-500/5 blur-2xl transition group-hover:bg-electric-500/10" aria-hidden />
-                <pillar.icon className="h-5 w-5 text-electric-300" aria-hidden />
+                <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-champagne-500/[0.06] blur-2xl transition group-hover:bg-champagne-500/10" aria-hidden />
+                <pillar.icon className="h-5 w-5 text-champagne-300" aria-hidden />
                 <h3 className="mt-4 font-display text-lg font-medium text-paper">{pillar.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-paper-muted">{pillar.body}</p>
               </article>
@@ -442,7 +442,7 @@ export default function MarketingPage() {
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-3 py-2 text-xs transition",
                     mode === item.key
-                      ? "bg-electric-500/15 text-electric-200 shadow-[inset_0_0_0_1px_rgba(46,123,255,0.35)]"
+                      ? "bg-champagne-500/15 text-champagne-200 shadow-[inset_0_0_0_1px_rgba(46,123,255,0.35)]"
                       : "text-paper-faint hover:text-paper-muted",
                   )}
                 >
@@ -459,7 +459,7 @@ export default function MarketingPage() {
               <ul className="mt-6 grid gap-2.5">
                 {activeMode.points.map((point) => (
                   <li key={point} className="flex items-center gap-2 text-xs text-paper-muted">
-                    <span className="h-1 w-1 rounded-full bg-electric-400" aria-hidden />
+                    <span className="h-1 w-1 rounded-full bg-champagne-400" aria-hidden />
                     {point}
                   </li>
                 ))}
@@ -483,7 +483,7 @@ export default function MarketingPage() {
                     </div>
                     <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-obsidian-750">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-electric-500 to-gain"
+                        className="h-full rounded-full bg-gradient-to-r from-champagne-600 to-champagne-300"
                         style={{ width: `${width}%` }}
                       />
                     </div>
@@ -586,8 +586,8 @@ export default function MarketingPage() {
                 <article
                   key={plan.name}
                   className={cn(
-                    "relative flex flex-col rounded-xl border bg-obsidian-850 p-6",
-                    plan.highlight ? "border-electric-500/50 shadow-glow" : "border-line",
+                    "relative flex flex-col rounded-2xl border bg-obsidian-850/80 p-6 backdrop-blur-sm",
+                    plan.highlight ? "border-champagne-500/50 shadow-glow" : "border-line",
                   )}
                 >
                   {plan.highlight ? (
@@ -612,10 +612,10 @@ export default function MarketingPage() {
                   <Link
                     href="/register"
                     className={cn(
-                      "mt-6 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-xs font-medium transition",
+                      "mt-6 inline-flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-semibold transition",
                       plan.highlight
                         ? "cta-gold"
-                        : "border border-line-strong text-paper hover:border-electric-600/60",
+                        : "border border-line-strong text-paper hover:border-champagne-500/50",
                     )}
                   >
                     {plan.cta}
@@ -647,14 +647,14 @@ export default function MarketingPage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/register"
-                className="cta-gold inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-medium transition"
+                className="cta-gold inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition"
               >
                 Create your account
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-obsidian-900/70 px-5 py-3 text-sm text-paper transition hover:border-electric-600/60"
+                className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-6 py-3 text-sm text-paper transition hover:bg-white/[0.06]"
               >
                 Sign in
               </Link>

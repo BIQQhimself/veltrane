@@ -183,13 +183,13 @@ export default function MembershipPage() {
                   key={plan.code}
                   className={cn(
                     "tile tile-sheen flex flex-col p-4 transition",
-                    current ? "border-electric-400/40" : "hover:border-line-strong",
+                    current ? "border-champagne-400/40" : "hover:border-line-strong",
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <TierBadge planCode={plan.code} size="xs" />
                     {current ? (
-                      <span className="text-3xs uppercase tracking-label text-electric-300">Current</span>
+                      <span className="text-3xs uppercase tracking-label text-champagne-300">Current</span>
                     ) : null}
                   </div>
                   <p className="mt-3 font-display text-xl text-paper">
@@ -246,7 +246,7 @@ export default function MembershipPage() {
 
       <section className="tile p-5">
         <h2 className="flex items-center gap-2 text-sm font-medium text-paper">
-          <Info className="h-4 w-4 text-electric-300" aria-hidden />
+          <Info className="h-4 w-4 text-champagne-300" aria-hidden />
           What a membership never unlocks
         </h2>
         <div className="mt-3 grid gap-4 text-2xs leading-relaxed text-paper-muted md:grid-cols-3">

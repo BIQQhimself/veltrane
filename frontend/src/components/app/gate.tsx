@@ -40,12 +40,16 @@ function Gate({ children, admin }: { children: React.ReactNode; admin?: boolean 
           The command centre is limited to VELTRANE staff accounts. The API enforces the same rule on its own, so a
           direct request from this account is refused whether or not the page renders.
         </p>
-        <Link href="/app" className="mt-5 text-xs text-electric-300 hover:text-electric-200">
+        <Link href="/app" className="mt-5 text-xs text-champagne-300 hover:text-champagne-200">
           Back to the workspace →
         </Link>
       </main>
     );
   }
+
+  // The command centre brings its own frame; nesting it inside the workspace shell would
+  // stack two navigation bars and two kill switches.
+  if (admin) return <>{children}</>;
 
   return (
     <PresenceProvider>

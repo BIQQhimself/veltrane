@@ -165,7 +165,7 @@ export function Watchlist({ assets, favourites, active, onSelect, onToggleFavour
             className={cn(
               "group flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1.5 transition",
               isActive
-                ? "border-electric-500/50 bg-electric-500/10"
+                ? "border-champagne-500/50 bg-champagne-500/10"
                 : "border-line-soft bg-obsidian-900/60 hover:border-line-strong",
             )}
           >

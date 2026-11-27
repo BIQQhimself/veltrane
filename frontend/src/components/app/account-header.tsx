@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDownToLine, ArrowUpFromLine, Bell, ChevronDown, Eye, EyeOff, LogOut, Settings, ShieldAlert, ShieldCheck, UserRound, Wallet } from "lucide-react";
+import { ArrowDownToLine, Bell, ChevronDown, Eye, EyeOff, LogOut, Settings, ShieldAlert, ShieldCheck, UserRound, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -69,7 +69,6 @@ export function AccountHeader() {
   const equity = portfolio.data?.equity;
   const hasLive = (equity?.live_balance_usd ?? 0) > 0;
   const balance = hasLive ? equity?.live_balance_usd ?? 0 : equity?.simulated_balance_usd ?? 0;
-  const balanceLabel = hasLive ? "Live balance" : "Simulated balance";
 
   const name = identity?.display_name ?? user?.full_name ?? "Trader";
 
@@ -79,56 +78,45 @@ export function AccountHeader() {
   }
 
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2.5">
-      {/* Balance block: the eye toggle only hides it on screen; the value is fetched either way. */}
-      <div className="hidden items-center gap-2 rounded-xl border border-line-soft bg-obsidian-900/70 px-3 py-1.5 md:flex">
+    <div className="flex items-center gap-1 sm:gap-2">
+      {/* Balance: one pill, the number first. The eye toggle only hides it on screen; the value
+          is fetched either way. */}
+      <div className="flex items-center gap-1.5 rounded-full border border-line-soft bg-white/[0.03] py-1 pl-3 pr-1.5">
         <div className="leading-tight">
-          <p className="text-3xs uppercase tracking-label text-paper-faint">{balanceLabel}</p>
-          <p className="num text-sm text-paper" aria-live="polite">
+          <p className="text-[9px] uppercase tracking-label text-paper-faint">
+            {hasLive ? "Live" : "Simulated"}
+          </p>
+          <p className="num text-[13px] font-medium text-paper" aria-live="polite">
             {portfolio.loading ? "—" : hidden ? "••••••" : money(balance)}
           </p>
         </div>
         <button
           type="button"
           onClick={toggle}
-          className="rounded-md p-1 text-paper-faint transition hover:bg-obsidian-800 hover:text-paper-muted"
+          className="rounded-full p-1 text-paper-faint transition hover:bg-white/[0.06] hover:text-paper-muted"
           aria-label={hidden ? "Show balance" : "Hide balance"}
           aria-pressed={hidden}
         >
           {hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
-        {!hasLive ? (
-          <span className="rounded-full border border-info/30 bg-info/10 px-1.5 py-0.5 text-3xs uppercase tracking-label text-info">
-            Demo
-          </span>
-        ) : null}
-      </div>
-
-      <div className="hidden items-center gap-1.5 lg:flex">
-        <Link
-          href="/app/wallet"
-          className="cta-gold inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-2xs font-medium"
-        >
-          <ArrowDownToLine className="h-3.5 w-3.5" aria-hidden />
-          Deposit
-        </Link>
-        <Link
-          href="/app/wallet#withdraw"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-2xs text-paper-muted transition hover:border-line-strong hover:bg-obsidian-800 hover:text-paper"
-        >
-          <ArrowUpFromLine className="h-3.5 w-3.5" aria-hidden />
-          Withdraw
-        </Link>
       </div>
 
       <Link
+        href="/app/wallet"
+        className="cta-gold hidden h-9 items-center gap-1.5 rounded-full px-3.5 text-2xs font-semibold sm:inline-flex"
+      >
+        <ArrowDownToLine className="h-3.5 w-3.5" aria-hidden />
+        Deposit
+      </Link>
+
+      <Link
         href="/app/notifications"
-        className="relative rounded-lg p-2 text-paper-muted transition hover:bg-obsidian-800 hover:text-paper"
+        className="relative rounded-full p-2 text-paper-muted transition hover:bg-white/[0.06] hover:text-paper"
         aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
       >
         <Bell className="h-4 w-4" />
         {unread > 0 ? (
-          <span className="absolute right-1.5 top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-electric-500 px-1 text-[9px] font-medium text-white">
+          <span className="absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-champagne-400 px-1 text-[9px] font-semibold text-ink-950">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
@@ -141,18 +129,18 @@ export function AccountHeader() {
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           className={cn(
-            "flex items-center gap-2 rounded-xl border border-line-soft bg-obsidian-900/60 py-1 pl-1 pr-2 transition hover:border-line-strong",
-            menuOpen && "border-line-strong",
+            "flex items-center gap-2 rounded-full border border-line-soft bg-white/[0.03] py-1 pl-1 pr-2 transition hover:border-line-strong",
+            menuOpen && "border-line-strong bg-white/[0.06]",
           )}
         >
           <IdentityAvatar name={name} color={identity?.avatar_color} planCode={plan} size={30} />
-          <span className="hidden min-w-0 text-left sm:block">
-            <span className="block max-w-[8.5rem] truncate text-2xs font-medium leading-tight text-paper">{name}</span>
+          <span className="hidden min-w-0 text-left xl:block">
+            <span className="block max-w-[7.5rem] truncate text-2xs font-medium leading-tight text-paper">{name}</span>
             <span className="block text-3xs leading-tight text-paper-faint">
-              {tier.badge} {tier.label} · {identity?.public_id ?? "—"}
+              {tier.badge} {tier.label}
             </span>
           </span>
-          <ChevronDown className={cn("hidden h-3 w-3 text-paper-faint transition sm:block", menuOpen && "rotate-180")} aria-hidden />
+          <ChevronDown className={cn("hidden h-3 w-3 text-paper-faint transition xl:block", menuOpen && "rotate-180")} aria-hidden />
         </button>
 
         {menuOpen ? (
@@ -212,7 +200,7 @@ export function AccountHeader() {
                   href="/admin"
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-electric-300 transition hover:bg-obsidian-800"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-champagne-300 transition hover:bg-obsidian-800"
                 >
                   <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
                   Admin command centre

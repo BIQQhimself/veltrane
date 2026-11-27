@@ -71,9 +71,9 @@ export function TR({
           : undefined
       }
       className={cn(
-        "transition-colors",
-        interactive && "cursor-pointer hover:bg-ink-800/70 focus:bg-ink-800/70 focus:outline-none",
-        selected && "bg-ink-800/80",
+        "transition-colors duration-150",
+        interactive && "cursor-pointer hover:bg-white/[0.035] focus:bg-white/[0.05] focus:outline-none",
+        selected && "bg-white/[0.05]",
         className,
       )}
     >
@@ -96,7 +96,7 @@ export function TD({
   return (
     <td
       className={cn(
-        "whitespace-nowrap px-3 py-3 text-paper-muted sm:px-4",
+        "whitespace-nowrap px-3 py-3.5 text-[13px] text-paper-muted sm:px-4",
         align === "right" && "text-right",
         align === "center" && "text-center",
         mono && "num text-paper",

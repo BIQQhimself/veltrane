@@ -63,13 +63,17 @@ export function Wordmark({
 }) {
   const { theme } = useTheme();
   const name = theme.branding.product_name || "VELTRANE";
-  const mark = theme.branding.logo_mark || "V";
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <BrandMark className={compact ? "h-7 w-7" : "h-8 w-8"} glow={glow} />
       <span className="flex flex-col leading-none">
-        <span className="font-display text-[15px] font-semibold uppercase tracking-wordmark text-paper">
-          {compact ? mark : name}
+        <span
+          className={cn(
+            "font-display font-semibold uppercase tracking-wordmark text-paper",
+            compact ? "text-[13px]" : "text-[15px]",
+          )}
+        >
+          {name}
         </span>
         {compact ? null : (
           <span className="mt-1 text-3xs uppercase tracking-[0.2em] text-paper-faint">Trading intelligence</span>

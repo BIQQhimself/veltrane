@@ -1,21 +1,23 @@
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
-type Size = "sm" | "md" | "lg";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "success" | "quiet";
+type Size = "xs" | "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-b from-champagne-400 to-champagne-600 text-ink-950 shadow-[0_10px_30px_-14px_rgba(200,169,106,0.7)] hover:from-champagne-300 hover:to-champagne-500",
+    "bg-gradient-to-b from-champagne-300 to-champagne-500 text-ink-950 shadow-[0_12px_28px_-16px_rgba(203,182,145,0.85)] hover:from-champagne-200 hover:to-champagne-400 active:from-champagne-400 active:to-champagne-600",
   secondary:
-    "border border-line-strong bg-ink-800 text-paper hover:border-champagne-600/60 hover:bg-ink-750",
-  ghost: "text-paper-muted hover:bg-ink-800 hover:text-paper",
-  danger: "border border-loss/40 bg-loss/10 text-loss hover:bg-loss/20",
-  success: "border border-gain/40 bg-gain/10 text-gain hover:bg-gain/20",
+    "border border-line-strong bg-white/[0.03] text-paper hover:border-line-strong hover:bg-white/[0.06]",
+  ghost: "text-paper-muted hover:bg-white/[0.05] hover:text-paper",
+  quiet: "bg-white/[0.06] text-paper hover:bg-white/[0.1]",
+  danger: "border border-loss/35 bg-loss/10 text-loss hover:border-loss/60 hover:bg-loss/15",
+  success: "border border-gain/35 bg-gain/10 text-gain hover:border-gain/60 hover:bg-gain/15",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs",
+  xs: "h-7 px-2.5 text-2xs",
+  sm: "h-9 px-3.5 text-xs",
   md: "h-10 px-4 text-sm",
   lg: "h-12 px-6 text-sm",
 };
@@ -36,8 +38,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium tracking-wide transition-colors duration-150",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex select-none items-center justify-center gap-2 rounded-control font-medium tracking-wide",
+        "transition duration-150 ease-smooth active:translate-y-px",
+        "disabled:pointer-events-none disabled:opacity-45",
         variants[variant],
         sizes[size],
         fullWidth && "w-full",

@@ -52,8 +52,8 @@ export function AccountHero({
   return (
     <section className="panel relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 opacity-[0.55]">
-        <div className="absolute -left-24 -top-32 h-64 w-64 rounded-full bg-electric-500/10 blur-3xl" />
-        <div className="absolute -right-16 top-0 h-56 w-56 rounded-full bg-gold-400/[0.06] blur-3xl" />
+        <div className="absolute -left-24 -top-32 h-64 w-64 rounded-full bg-champagne-500/[0.07] blur-3xl" />
+        <div className="absolute -right-16 top-0 h-56 w-56 rounded-full bg-champagne-500/[0.05] blur-3xl" />
       </div>
       <div className="relative grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:items-center">
         <div className="min-w-0">
@@ -63,7 +63,7 @@ export function AccountHero({
             {simulated ? <Badge tone="warn">Simulated</Badge> : <Badge tone="info">Live account</Badge>}
           </div>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-3">
-            <p className="num text-3xl font-medium tracking-tight text-paper sm:text-4xl">
+            <p className="num text-[34px] font-medium leading-none tracking-tight text-paper sm:text-[44px]">
               {equity == null ? "—" : money(equity)}
             </p>
             {change !== null ? (
@@ -101,7 +101,7 @@ export function AccountHero({
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Link
               href="/app/terminal"
-              className="cta-gold inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition"
+              className="cta-gold inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold transition"
             >
               Open terminal
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -110,14 +110,14 @@ export function AccountHero({
               <button
                 type="button"
                 onClick={onStartPaper}
-                className="rounded-lg border border-line-strong px-3.5 py-2 text-xs text-paper transition hover:border-electric-600/60"
+                className="rounded-full border border-line-strong px-4 py-2.5 text-xs text-paper transition hover:border-line-strong hover:bg-white/[0.04]"
               >
                 Start paper account
               </button>
             )}
             <Link
               href="/app/portfolio"
-              className="rounded-lg px-2 py-2 text-xs text-paper-muted transition hover:text-paper"
+              className="rounded-full px-3 py-2.5 text-xs text-paper-muted transition hover:text-paper"
             >
               View portfolio →
             </Link>

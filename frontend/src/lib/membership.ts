@@ -85,7 +85,7 @@ export function automationSummary(
   if (tier.automationMode === "none") {
     return {
       title: "Automation not included",
-      detail: "Upgrade to Tier 1 to run strategies automatically.",
+      detail: "Upgrade to Basic or above to run strategies automatically.",
       tone: "info",
     };
   }

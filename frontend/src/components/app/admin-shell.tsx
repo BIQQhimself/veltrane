@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { Wordmark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
+import { KillSwitchControl } from "@/components/app/kill-switch";
 
 const NAV = [
   { href: "/admin", label: "Business overview", icon: Building2 },
@@ -26,28 +27,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      {/* A gold hairline marks the operator environment, so it is never mistaken for a customer view. */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-champagne-700/70 via-champagne-400/80 to-transparent" />
       <header className="sticky top-0 z-30 border-b border-line-soft bg-ink-950/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Wordmark />
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Wordmark compact />
             <span className="hidden h-4 w-px bg-line-strong sm:block" />
-            <span className="hidden text-2xs uppercase tracking-label text-champagne-400 sm:block">Command centre</span>
+            <span className="hidden text-2xs uppercase tracking-[0.18em] text-champagne-400 sm:block">
+              Command centre
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <KillSwitchControl iconOnly />
             <Badge tone="warn">{user?.staff_role ?? "staff"}</Badge>
             <Link
               href="/app"
-              className="flex items-center gap-1.5 rounded-lg border border-line-soft px-2.5 py-1.5 text-2xs text-paper-muted transition hover:border-line-strong hover:text-paper"
+              className="flex items-center gap-1.5 rounded-full border border-line-soft px-3 py-1.5 text-2xs text-paper-muted transition hover:border-line-strong hover:text-paper"
             >
               <ArrowLeft className="h-3 w-3" />
-              Workspace
+              <span className="hidden sm:inline">Workspace</span>
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6 sm:px-6">
-        <aside className="hidden w-52 shrink-0 lg:block">
+      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
+        <aside className="hidden w-56 shrink-0 lg:block">
           <nav className="sticky top-20 space-y-0.5" aria-label="Admin">
             {NAV.map((item) => {
               const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
@@ -58,7 +64,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs transition",
-                    active ? "bg-ink-800 text-paper" : "text-paper-faint hover:bg-ink-850 hover:text-paper-muted",
+                    active
+                      ? "bg-white/[0.06] text-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                      : "text-paper-faint hover:bg-white/[0.03] hover:text-paper-muted",
                   )}
                 >
                   <item.icon className={cn("h-3.5 w-3.5", active && "text-champagne-400")} aria-hidden />
@@ -81,8 +89,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "whitespace-nowrap rounded-lg px-2.5 py-1.5 text-2xs",
-                    active ? "bg-ink-800 text-paper" : "text-paper-faint",
+                    "whitespace-nowrap rounded-full border border-line-soft px-3 py-1.5 text-2xs",
+                    active ? "border-champagne-500/40 bg-white/[0.06] text-paper" : "text-paper-faint",
                   )}
                 >
                   {item.label}

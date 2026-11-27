@@ -182,7 +182,7 @@ export default function AdminAppearancePage() {
                           }}
                           spellCheck={false}
                           aria-label={`${LABELS[key] ?? key} hex value`}
-                          className="num mt-0.5 w-full rounded border border-line-soft bg-obsidian-900 px-1.5 py-0.5 text-3xs text-paper-muted outline-none focus:border-electric-500/60"
+                          className="num mt-0.5 w-full rounded border border-line-soft bg-obsidian-900 px-1.5 py-0.5 text-3xs text-paper-muted outline-none focus:border-champagne-500/60"
                         />
                       </label>
                     </div>

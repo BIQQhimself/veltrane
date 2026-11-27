@@ -116,28 +116,36 @@ const config: Config = {
         mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
-        "3xs": ["0.625rem", { lineHeight: "0.875rem" }],
+        "2xs": ["0.6875rem", { lineHeight: "1.05rem" }],
+        "3xs": ["0.625rem", { lineHeight: "0.9rem" }],
       },
       letterSpacing: {
-        label: "0.14em",
+        label: "0.13em",
         wordmark: "0.34em",
       },
+      transitionTimingFunction: {
+        smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
       borderRadius: {
+        lg: "0.625rem",
         xl: "0.875rem",
         "2xl": "1.125rem",
+        "3xl": "1.5rem",
+        control: "var(--radius-control)",
+        card: "var(--radius-card)",
       },
       boxShadow: {
-        panel: "0 1px 0 0 rgba(255,255,255,0.03) inset, 0 28px 70px -40px rgba(0,0,0,0.95)",
+        panel: "0 1px 0 0 rgba(255,255,255,0.035) inset, 0 30px 70px -46px rgba(0,0,0,0.85)",
+        card: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 18px 40px -30px rgba(0,0,0,0.8)",
         lift: "0 24px 60px -32px rgba(0,0,0,0.9)",
-        glow: "0 0 0 1px rgba(46,123,255,0.35), 0 18px 50px -22px rgba(46,123,255,0.55)",
+        glow: "0 0 0 1px rgba(203,182,145,0.32), 0 18px 50px -22px rgba(203,182,145,0.45)",
         "glow-emerald": "0 0 0 1px rgba(16,185,129,0.35), 0 18px 50px -24px rgba(16,185,129,0.45)",
       },
       backgroundImage: {
         "grid-fade":
-          "radial-gradient(circle at 18% 0%, rgba(46,123,255,0.14), transparent 46%), radial-gradient(circle at 86% 8%, rgba(16,185,129,0.10), transparent 42%)",
+          "radial-gradient(circle at 18% 0%, rgba(203,182,145,0.10), transparent 46%), radial-gradient(circle at 86% 8%, rgba(22,199,132,0.07), transparent 42%)",
         aurora:
-          "radial-gradient(60% 55% at 50% 0%, rgba(46,123,255,0.20), transparent 70%), radial-gradient(45% 40% at 85% 20%, rgba(16,185,129,0.14), transparent 70%)",
+          "radial-gradient(60% 55% at 50% 0%, rgba(203,182,145,0.14), transparent 70%), radial-gradient(45% 40% at 85% 20%, rgba(92,155,255,0.10), transparent 70%)",
         sheen: "linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.06) 45%, transparent 65%)",
       },
       keyframes: {

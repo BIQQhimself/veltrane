@@ -4,12 +4,12 @@ import { cn } from "@/lib/cn";
 type Tone = "neutral" | "gain" | "loss" | "warn" | "info" | "gold" | "outline";
 
 const tones: Record<Tone, string> = {
-  neutral: "border-line-strong bg-ink-750 text-paper-muted",
-  gain: "border-gain/30 bg-gain/10 text-gain",
-  loss: "border-loss/30 bg-loss/10 text-loss",
-  warn: "border-warn/30 bg-warn/10 text-warn",
-  info: "border-info/30 bg-info/10 text-info",
-  gold: "border-champagne-600/40 bg-champagne-500/10 text-champagne-300",
+  neutral: "border-line-strong/70 bg-white/[0.04] text-paper-muted",
+  gain: "border-gain/25 bg-gain/10 text-gain",
+  loss: "border-loss/25 bg-loss/10 text-loss",
+  warn: "border-warn/25 bg-warn/10 text-warn",
+  info: "border-info/25 bg-info/10 text-info",
+  gold: "border-champagne-600/35 bg-champagne-500/10 text-champagne-300",
   outline: "border-line-strong bg-transparent text-paper-muted",
 };
 

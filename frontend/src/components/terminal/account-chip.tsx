@@ -27,30 +27,35 @@ export function AccountChip({
   equityLabel: string;
 }) {
   const active = connections.find((connection) => connection.provider === "deriv" && connection.status === "connected");
-  const accountId = active?.provider_account_id ?? active?.provider_meta?.accounts?.[0]?.account_id ?? null;
   const isVirtual = Boolean(active?.provider_meta?.is_virtual) || active?.provider_account_type === "demo";
   return (
     <div className="flex items-center gap-2">
-      <div className="rounded-lg border border-line-soft bg-obsidian-900/70 px-3 py-1.5 text-right">
-        <p className="text-3xs uppercase tracking-label text-paper-faint">{equityLabel}</p>
-        <p className="num text-sm text-paper">
-          {balance.toLocaleString(undefined, { style: "currency", currency, maximumFractionDigits: 2 })}
-        </p>
+      <div className="flex items-center gap-2 rounded-full border border-line-soft bg-white/[0.03] py-1 pl-2.5 pr-2">
+        <Wallet className="h-3.5 w-3.5 text-paper-faint" aria-hidden />
+        <div className="leading-tight">
+          <p className="text-[9px] uppercase tracking-label text-paper-faint">{equityLabel}</p>
+          <p className="num text-[13px] text-paper">
+            {balance.toLocaleString(undefined, { style: "currency", currency, maximumFractionDigits: 2 })}
+          </p>
+        </div>
+        {simulated ? (
+          <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[9px] uppercase tracking-label text-warn">
+            Sim
+          </span>
+        ) : null}
       </div>
       <Link
         href="/app/accounts"
-        className="hidden items-center gap-2 rounded-lg border border-line-soft bg-obsidian-900/70 px-2.5 py-1.5 transition hover:border-line-strong sm:flex"
+        className="hidden items-center gap-1.5 rounded-full border border-line-soft px-3 py-2 text-3xs text-paper-muted transition hover:border-line-strong hover:text-paper sm:flex"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-electric-500/15 text-electric-200">
-          <Wallet className="h-3.5 w-3.5" aria-hidden />
-        </span>
-        <span className="text-left">
-          <span className="block font-mono text-2xs text-paper">{accountId ?? "No account"}</span>
-          <span className="block text-3xs text-paper-faint">
-            {active ? (isVirtual ? "Deriv demo" : "Deriv live") : "Connect Deriv"}
-          </span>
-        </span>
-        {simulated ? <Badge tone="warn">Sim</Badge> : null}
+        {active ? (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-gain" aria-hidden />
+            {isVirtual ? "Deriv demo" : "Deriv live"}
+          </>
+        ) : (
+          "Connect Deriv"
+        )}
       </Link>
     </div>
   );
@@ -122,7 +127,7 @@ export function PositionsDock({ tab, onTab, open, settled, summary, onOpenContra
               onClick={() => onTab(key)}
               className={cn(
                 "rounded-md px-2.5 py-1.5 text-2xs transition",
-                tab === key ? "bg-electric-500/15 text-electric-200" : "text-paper-faint hover:text-paper-muted",
+                tab === key ? "bg-champagne-500/15 text-champagne-200" : "text-paper-faint hover:text-paper-muted",
               )}
             >
               {label}

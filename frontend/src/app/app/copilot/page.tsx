@@ -63,7 +63,7 @@ export default function CopilotPage() {
             <select
               value={symbol}
               onChange={(event) => setSymbol(event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-line bg-obsidian-900 px-2 py-2 text-xs text-paper outline-none focus:border-electric-500/60"
+              className="mt-1.5 w-full rounded-lg border border-line bg-obsidian-900 px-2 py-2 text-xs text-paper outline-none focus:border-champagne-500/60"
               aria-label="Instrument"
             >
               {(assets.data?.assets ?? []).map((asset) => (
@@ -81,7 +81,7 @@ export default function CopilotPage() {
                   onClick={() => setTimeframe(tf)}
                   className={cn(
                     "rounded px-1 py-1.5 text-3xs transition",
-                    timeframe === tf ? "bg-electric-500/20 text-electric-200" : "text-paper-faint hover:text-paper-muted",
+                    timeframe === tf ? "bg-champagne-500/15 text-champagne-200" : "text-paper-faint hover:text-paper-muted",
                   )}
                 >
                   {tf}
@@ -98,7 +98,7 @@ export default function CopilotPage() {
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-2xs transition",
                     duration === option.seconds
-                      ? "border-electric-500/40 bg-electric-500/10 text-electric-200"
+                      ? "border-champagne-500/40 bg-champagne-500/10 text-champagne-200"
                       : "border-line-soft text-paper-faint hover:border-line-strong hover:text-paper-muted",
                   )}
                 >
@@ -156,7 +156,7 @@ export default function CopilotPage() {
                   <ul className="space-y-1.5">
                     {read.data.rationale.map((line) => (
                       <li key={line} className="flex gap-2 text-2xs leading-relaxed text-paper-muted">
-                        <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-electric-400" aria-hidden />
+                        <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-champagne-400" aria-hidden />
                         {line}
                       </li>
                     ))}
@@ -173,7 +173,7 @@ export default function CopilotPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="panel p-4">
                   <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
-                    <Brain className="h-3.5 w-3.5 text-electric-300" aria-hidden />
+                    <Brain className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
                     How to read this
                   </p>
                   <ul className="mt-2 space-y-1.5 text-3xs leading-relaxed text-paper-faint">
@@ -184,7 +184,7 @@ export default function CopilotPage() {
                 </div>
                 <div className="panel p-4">
                   <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
-                    <Info className="h-3.5 w-3.5 text-electric-300" aria-hidden />
+                    <Info className="h-3.5 w-3.5 text-champagne-300" aria-hidden />
                     What this is not
                   </p>
                   <p className="mt-2 text-3xs leading-relaxed text-paper-faint">{read.data.disclaimer}</p>
@@ -201,7 +201,7 @@ export default function CopilotPage() {
                   <Sparkles className="h-3 w-3" aria-hidden />
                   Want to act on this? The terminal requires your explicit click.
                 </p>
-                <Link href="/app/terminal" className="text-2xs text-electric-300 hover:text-electric-200">
+                <Link href="/app/terminal" className="text-2xs text-champagne-300 hover:text-champagne-200">
                   Open terminal →
                 </Link>
               </div>

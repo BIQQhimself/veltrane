@@ -2,19 +2,20 @@ import * as React from "react";
 import { cn } from "@/lib/cn";
 
 const base =
-  "w-full rounded-lg border border-line-strong bg-ink-900 px-3 text-sm text-paper placeholder:text-paper-faint/70 " +
-  "transition-colors focus:border-champagne-600/70 focus:outline-none focus-visible:outline-none disabled:opacity-50";
+  "w-full rounded-control border border-line-strong bg-obsidian-900/80 px-3.5 text-sm text-paper placeholder:text-paper-faint/70 " +
+  "transition duration-150 ease-smooth hover:border-line-strong " +
+  "focus:border-champagne-500/70 focus:outline-none focus:ring-2 focus:ring-champagne-500/15 focus-visible:outline-none disabled:opacity-50";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {
-    return <input ref={ref} className={cn(base, "h-10", className)} {...props} />;
+    return <input ref={ref} className={cn(base, "h-11", className)} {...props} />;
   },
 );
 
 export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, children, ...props }, ref) {
     return (
-      <select ref={ref} className={cn(base, "h-10 appearance-none pr-8", className)} {...props}>
+      <select ref={ref} className={cn(base, "h-11 appearance-none pr-8", className)} {...props}>
         {children}
       </select>
     );
@@ -23,7 +24,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
   function Textarea({ className, ...props }, ref) {
-    return <textarea ref={ref} className={cn(base, "min-h-24 py-2", className)} {...props} />;
+    return <textarea ref={ref} className={cn(base, "min-h-24 py-2.5", className)} {...props} />;
   },
 );
 
@@ -86,16 +87,17 @@ export function Switch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative mt-0.5 h-5 w-9 shrink-0 rounded-full border transition-colors",
-          checked ? "border-champagne-500/60 bg-champagne-500/70" : "border-line-strong bg-ink-700",
+          "relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors duration-200",
+          checked ? "border-champagne-500/60 bg-champagne-500/80" : "border-line-strong bg-obsidian-700",
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-ink-950 transition-all",
-            checked ? "left-[18px] bg-ink-950" : "left-0.5 bg-paper-faint",
+            "absolute top-0.5 h-4.5 w-4.5 rounded-full transition-all duration-200",
+            checked ? "left-[22px] bg-ink-950" : "left-0.5 bg-paper-faint",
           )}
+          style={{ height: 18, width: 18 }}
         />
       </button>
     </div>
