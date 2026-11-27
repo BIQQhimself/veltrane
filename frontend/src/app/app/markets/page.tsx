@@ -92,7 +92,7 @@ export default function MarketsPage() {
           )}
         </Panel>
 
-        <Panel>
+        <Panel className="xl:sticky xl:top-20">
           <PanelHeader
             title={active}
             subtitle={

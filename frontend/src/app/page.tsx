@@ -292,7 +292,7 @@ export default function MarketingPage() {
             </div>
 
             <div className="relative animate-fade-in">
-              <div className="hero-frame p-4 sm:p-5">
+              <div className="hero-frame p-4 sm:p-5 lg:pb-16">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BrandMark className="h-5 w-5" />
@@ -331,7 +331,7 @@ export default function MarketingPage() {
                   returns nothing. Not a forecast.
                 </p>
               </div>
-              <div className="absolute -bottom-8 -left-8 hidden w-56 rounded-2xl border border-line bg-obsidian-900/95 p-3.5 shadow-lift lg:block">
+              <div className="absolute -bottom-6 -left-6 hidden w-56 rounded-2xl border border-line bg-obsidian-900/95 p-3.5 shadow-lift lg:block">
                 <p className="text-3xs uppercase tracking-label text-paper-faint">Risk engine</p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-gain">
                   <BadgeCheck className="h-3.5 w-3.5" aria-hidden /> 17 checks passed

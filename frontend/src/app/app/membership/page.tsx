@@ -104,14 +104,14 @@ export default function MembershipPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
                 href="/app/billing"
-                className="cta-gold inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-2xs font-medium"
+                className="cta-gold inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-2xs font-semibold"
               >
                 {planCode === "elite" ? "Manage subscription" : "Compare and upgrade"}
                 <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
               <Link
                 href="/app/accounts"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-2 text-2xs text-paper-muted transition hover:bg-obsidian-800 hover:text-paper"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-2 text-2xs text-paper-muted transition hover:bg-white/[0.05] hover:text-paper"
               >
                 Connected accounts
               </Link>
@@ -231,8 +231,12 @@ export default function MembershipPage() {
                   <Link
                     href="/app/billing"
                     className={cn(
-                      "mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-2xs font-medium transition",
-                      current ? "border border-line-strong text-paper-muted hover:bg-obsidian-800" : "cta-gold",
+                      "mt-4 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-2xs font-semibold transition",
+                      current
+                        ? "border border-line-strong text-paper-muted hover:bg-white/[0.05]"
+                        : plan.code === "pro"
+                          ? "cta-gold"
+                          : "border border-line-strong text-paper hover:bg-white/[0.05]",
                     )}
                   >
                     {current ? "Manage" : `Choose ${plan.name}`}
