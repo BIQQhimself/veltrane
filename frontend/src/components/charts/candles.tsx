@@ -41,12 +41,15 @@ type Props = {
   ariaLabel?: string;
 };
 
-/** Bullish green and bearish red, saturated enough to read at a glance on obsidian. */
+/** Shipped defaults. The rendered colours come from the runtime palette (see theme.ts). */
 export const CHART_UP = "#00e07a";
 export const CHART_DOWN = "#ff3b52";
-const GRID = "rgba(255,255,255,0.045)";
-const AXIS_TEXT = "#7d8a9b";
-const EMA_COLOR = "#e3c489";
+const UP = "rgb(var(--vt-chart-up))";
+const DOWN = "rgb(var(--vt-chart-down))";
+const GRID = "rgb(var(--vt-chart-grid))";
+const AXIS_TEXT = "rgb(var(--vt-text-faint))";
+const EMA_COLOR = "rgb(var(--vt-accent-400))";
+const VWAP_COLOR = "rgb(var(--vt-chart-line-500))";
 
 function fmtPrice(value: number) {
   if (!Number.isFinite(value)) return "—";
@@ -227,7 +230,7 @@ export function CandleChart({
   const last = candles.at(-1);
   const prev = candles.at(-2);
   const trendUp = last && prev ? last.close >= prev.close : true;
-  const liveColor = trendUp ? CHART_UP : CHART_DOWN;
+  const liveColor = trendUp ? UP : DOWN;
 
   const emaValues = React.useMemo(
     () => (showEma ? ema(candles.map((c) => c.close), 21) : []),
@@ -281,7 +284,7 @@ export function CandleChart({
   };
 
   const hovered = hover ? candles[hover.index] : null;
-  const crosshairColor = hovered && hovered.close >= hovered.open ? CHART_UP : CHART_DOWN;
+  const crosshairColor = hovered && hovered.close >= hovered.open ? UP : DOWN;
 
   return (
     <div ref={wrapRef} className={cn("relative w-full select-none", className)}>
@@ -298,12 +301,12 @@ export function CandleChart({
       >
         <defs>
           <linearGradient id="chart-area-up" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={CHART_UP} stopOpacity="0.34" />
-            <stop offset="100%" stopColor={CHART_UP} stopOpacity="0" />
+            <stop offset="0%" stopColor={UP} stopOpacity="0.34" />
+            <stop offset="100%" stopColor={UP} stopOpacity="0" />
           </linearGradient>
           <linearGradient id="chart-area-down" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={CHART_DOWN} stopOpacity="0.34" />
-            <stop offset="100%" stopColor={CHART_DOWN} stopOpacity="0" />
+            <stop offset="0%" stopColor={DOWN} stopOpacity="0.34" />
+            <stop offset="100%" stopColor={DOWN} stopOpacity="0" />
           </linearGradient>
         </defs>
 
@@ -340,7 +343,7 @@ export function CandleChart({
                   y={padTop + plotHeight + (volumeHeight - barHeight)}
                   width={bodyWidth}
                   height={barHeight}
-                  fill={up ? CHART_UP : CHART_DOWN}
+                  fill={up ? UP : DOWN}
                   opacity={0.22}
                 />
               );
@@ -351,7 +354,7 @@ export function CandleChart({
           <g>
             {candles.map((candle, index) => {
               const up = candle.close >= candle.open;
-              const color = up ? CHART_UP : CHART_DOWN;
+              const color = up ? UP : DOWN;
               const openY = y(candle.open);
               const closeY = y(candle.close);
               const top = Math.min(openY, closeY);
@@ -409,7 +412,7 @@ export function CandleChart({
                 .map((value, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(2)},${y(value).toFixed(2)}`)
                 .join(" ")}
               fill="none"
-              stroke="#8fbbff"
+              stroke={VWAP_COLOR}
               strokeWidth={1.2}
               strokeDasharray="5 3"
               opacity={0.85}
@@ -417,7 +420,7 @@ export function CandleChart({
             <text
               x={plotWidth - 4}
               y={y(vwapValues[vwapValues.length - 1] as number) - 5}
-              fill="#8fbbff"
+              fill={VWAP_COLOR}
               fontSize={9}
               textAnchor="end"
               fontFamily="var(--font-mono, monospace)"
@@ -469,12 +472,12 @@ export function CandleChart({
               x2={plotWidth}
               y1={y(stopLoss)}
               y2={y(stopLoss)}
-              stroke={CHART_DOWN}
+              stroke={DOWN}
               strokeWidth={1}
               strokeDasharray="4 4"
               opacity={0.8}
             />
-            <text x={6} y={y(stopLoss) - 4} fill={CHART_DOWN} fontSize={9} fontFamily="var(--font-mono, monospace)">
+            <text x={6} y={y(stopLoss) - 4} fill={DOWN} fontSize={9} fontFamily="var(--font-mono, monospace)">
               SL {fmtPrice(stopLoss)}
             </text>
           </g>
@@ -486,12 +489,12 @@ export function CandleChart({
               x2={plotWidth}
               y1={y(takeProfit)}
               y2={y(takeProfit)}
-              stroke={CHART_UP}
+              stroke={UP}
               strokeWidth={1}
               strokeDasharray="4 4"
               opacity={0.8}
             />
-            <text x={6} y={y(takeProfit) - 4} fill={CHART_UP} fontSize={9} fontFamily="var(--font-mono, monospace)">
+            <text x={6} y={y(takeProfit) - 4} fill={UP} fontSize={9} fontFamily="var(--font-mono, monospace)">
               TP {fmtPrice(takeProfit)}
             </text>
           </g>
@@ -505,7 +508,7 @@ export function CandleChart({
               x2={plotWidth}
               y1={y(entryPrice)}
               y2={y(entryPrice)}
-              stroke="#e8edf5"
+              stroke="rgb(var(--vt-text))"
               strokeWidth={1}
               strokeDasharray="2 3"
               opacity={0.7}
@@ -517,13 +520,13 @@ export function CandleChart({
               width={54}
               height={16}
               rx={3}
-              fill="#111a24"
+              fill="rgb(var(--vt-bg-800))"
               stroke="rgba(255,255,255,0.22)"
             />
             <text
               x={29}
               y={y(entryPrice) + 3}
-              fill={entryDirection === "put" || entryDirection === "sell" ? CHART_DOWN : CHART_UP}
+              fill={entryDirection === "put" || entryDirection === "sell" ? DOWN : UP}
               fontSize={9}
               textAnchor="middle"
               fontFamily="var(--font-mono, monospace)"
@@ -550,7 +553,7 @@ export function CandleChart({
             <text
               x={plotWidth + railWidth / 2}
               y={y(livePrice) + 3.5}
-              fill="#04140c"
+              fill="rgb(var(--vt-bg))"
               fontSize={9}
               fontWeight={700}
               textAnchor="middle"
@@ -656,7 +659,7 @@ export function CandleChart({
           ] as const).map(([label, value]) => (
             <span key={label} className="text-paper-faint">
               {label}
-              <span className="ml-1" style={{ color: hovered.close >= hovered.open ? CHART_UP : CHART_DOWN }}>
+              <span className="ml-1" style={{ color: hovered.close >= hovered.open ? UP : DOWN }}>
                 {fmtPrice(value)}
               </span>
             </span>

@@ -27,7 +27,9 @@ never enables real-money trading by default.
 | Growth | Deriv referral link with server-side click and registration attribution; commission counts only when an operator records a verified figure |
 | Performance fees | Elite-only, high-water-mark accounting, realised P&L only, consent records, jurisdiction gate, disabled until legal review is recorded |
 | Web app | Next.js 15 App Router + TypeScript + Tailwind. Twelve workspace screens (overview, terminal, markets, strategies, copilot, accounts, portfolio, analytics, notifications, billing, settings, onboarding), an admin console, and an installable PWA shell |
-| Tests | 302 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
+| Theme engine | The palette and brand are data, not code. An administrator edits 18 colour tokens and the wordmark in `/admin/appearance`; the whole scale (surfaces, text, primary ramp, gain/loss, chart colours) is re-derived from those tokens at runtime and applied through CSS variables, so a rebrand needs no redeploy and no rebuild |
+| Terminal | Fixed-odds trading desk: persistent instrument bar with favourites and keyboard stepping, watchlist, account chip, a single decision panel whose buttons carry payout and outcome, and a positions dock that replaces the old bottom table |
+| Tests | 317 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) covering chart scale, demo-feed invariants, risk-budget labels and the theme derivation |
 
 ## Reviewing this build
 

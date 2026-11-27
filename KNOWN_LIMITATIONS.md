@@ -155,6 +155,20 @@ competent reviewer would find, so it is cheaper to state it here.
     statement. Treat reported commission as an accounting record, not a live feed.
 47. **Performance-fee terms remain disabled** pending legal review (see `SUBSCRIPTIONS.md`), and
     referral commission is not netted against performance fees anywhere.
+48. **A revoked access token stays valid while Redis is down.** Logout writes the token's `jti` to a
+    Redis denylist; if Redis is unreachable the revocation is skipped (the failure is logged, and
+    the request still succeeds) so a stolen access token survives until it expires. The access-token
+    lifetime is short and refresh tokens are revoked in Postgres, but a fail-closed denylist is the
+    correct end state. The test suite needs Redis running for this reason — see `TESTING.md`.
+49. **The theme engine covers tokens, not layout.** An administrator can repaint surfaces, text,
+    action colours, gains/losses and chart colours, and rename the product, but cannot change
+    typography, spacing, component shapes or page structure. A handful of decorative gradients and
+    shadows still carry literal colours and do not follow the palette.
+50. **Theme changes are global, not per-tenant.** One palette applies to every subscriber, including
+    the admin console. There is no per-organisation white-labelling, and no light theme beyond the
+    stored `default_theme` hint.
+51. **Contrast is reported, not enforced.** The appearance console measures body and button contrast
+    and warns below 4.5:1, but publishing a low-contrast palette is still allowed.
 
 ## What this build is good for
 

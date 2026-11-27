@@ -51,6 +51,7 @@ def assets():
     return {
         "assets": binary_engine.asset_universe(),
         "durations": list(binary_engine.ALLOWED_DURATIONS),
+        "min_duration_seconds": binary_engine.MIN_DURATION_SECONDS,
         "min_stake": settings.binary_min_stake,
         "max_stake": settings.binary_max_stake,
         "mode": "paper",

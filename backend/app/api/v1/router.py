@@ -14,12 +14,14 @@ from app.api.v1 import (
     portfolio,
     referrals,
     strategies,
+    theme,
     trading,
 )
 from fastapi import APIRouter
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
+api_router.include_router(theme.router)
 api_router.include_router(auth.router)
 api_router.include_router(billing.router)
 api_router.include_router(connections.router)

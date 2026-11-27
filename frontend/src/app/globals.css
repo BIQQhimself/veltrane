@@ -4,14 +4,55 @@
 
 :root {
   color-scheme: dark;
+
+  /* Fallbacks for the runtime palette. The ThemeProvider overwrites these from GET /theme,
+     which is what lets an administrator repaint the platform without a rebuild. Values are
+     "r g b" triples so Tailwind can still apply an alpha channel. */
+  --vt-bg: 4 6 10;
+  --vt-bg-elev: 7 10 16;
+  --vt-bg-850: 10 14 21;
+  --vt-bg-800: 14 19 27;
+  --vt-bg-750: 18 24 33;
+  --vt-bg-700: 24 32 43;
+  --vt-bg-600: 33 43 56;
+  --vt-line: 27 36 48;
+  --vt-line-soft: 20 26 35;
+  --vt-line-strong: 43 56 70;
+  --vt-text: 232 237 244;
+  --vt-text-muted: 152 166 184;
+  --vt-text-faint: 106 120 139;
+  --vt-button-text: 255 255 255;
+  --vt-primary-100: 235 244 255;
+  --vt-primary-200: 199 221 255;
+  --vt-primary-300: 143 187 255;
+  --vt-primary-400: 92 155 255;
+  --vt-primary-500: 46 123 255;
+  --vt-primary-600: 27 95 224;
+  --vt-primary-700: 22 71 168;
+  --vt-primary-900: 12 36 80;
+  --vt-secondary-200: 220 232 255;
+  --vt-secondary-300: 178 205 255;
+  --vt-secondary-400: 138 178 255;
+  --vt-secondary-500: 92 155 255;
+  --vt-secondary-600: 74 132 230;
+  --vt-accent-300: 240 220 180;
+  --vt-accent-400: 220 192 138;
+  --vt-accent-500: 195 160 104;
+  --vt-chart-up: 0 224 122;
+  --vt-chart-down: 255 59 82;
+  --vt-chart-grid: 20 26 35;
+  --vt-chart-line-500: 92 155 255;
+  --vt-gain: 0 224 122;
+  --vt-loss: 255 59 82;
+  --vt-warn: 240 180 41;
+  --vt-info: 92 155 255;
+
   --grid: rgba(255, 255, 255, 0.028);
   --hairline: rgba(255, 255, 255, 0.06);
-  --electric: #2e7bff;
-  --emerald: #10b981;
 }
 
 * {
-  border-color: theme("colors.line.DEFAULT");
+  border-color: rgb(var(--vt-line));
 }
 
 html,
@@ -20,8 +61,8 @@ body {
 }
 
 body {
-  background-color: theme("colors.obsidian.950");
-  color: theme("colors.paper.DEFAULT");
+  background-color: rgb(var(--vt-bg));
+  color: rgb(var(--vt-text));
   font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -42,14 +83,14 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #1d2734;
   border-radius: 999px;
-  border: 2px solid theme("colors.obsidian.950");
+  border: 2px solid rgb(var(--vt-bg));
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #2a3846;
 }
 
 :focus-visible {
-  outline: 2px solid theme("colors.gold.400");
+  outline: 2px solid rgb(var(--vt-accent-400));
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -58,12 +99,12 @@ body {
   /* Primary call to action: the same champagne-gold treatment as <Button variant="primary">,
      shared by links that cannot use the button element. */
   .cta-gold {
-    background-image: linear-gradient(to bottom, theme("colors.gold.400"), theme("colors.gold.500"));
-    color: theme("colors.ink.950");
+    background-image: linear-gradient(to bottom, rgb(var(--vt-accent-400)), rgb(var(--vt-accent-500)));
+    color: rgb(var(--vt-bg));
     box-shadow: 0 10px 30px -14px rgba(200, 169, 106, 0.7);
   }
   .cta-gold:hover {
-    background-image: linear-gradient(to bottom, theme("colors.gold.300"), theme("colors.gold.400"));
+    background-image: linear-gradient(to bottom, rgb(var(--vt-accent-300)), rgb(var(--vt-accent-400)));
   }
 }
 
@@ -77,7 +118,7 @@ body {
     letter-spacing: -0.015em;
   }
   ::placeholder {
-    color: theme("colors.paper.faint");
+    color: rgb(var(--vt-text-faint));
   }
 }
 
@@ -153,7 +194,7 @@ body {
     border-radius: 1.25rem;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
-      theme("colors.obsidian.900");
+      rgb(var(--vt-bg-elev));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       0 40px 120px -60px rgba(46, 123, 255, 0.55);

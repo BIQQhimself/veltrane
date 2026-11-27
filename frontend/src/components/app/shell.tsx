@@ -194,6 +194,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const unread = notifications.data?.unread_count ?? 0;
   const plan = entitlements?.plan_code ?? subscription?.plan_code ?? "free";
+  const inAdmin = pathname.startsWith("/admin");
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -213,35 +214,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Wordmark />
           </Link>
 
-          <div className="mb-4 rounded-lg border border-line-soft bg-obsidian-850/80 px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <span className="label">Plan</span>
-              <Badge tone="info">{plan}</Badge>
-            </div>
-            <p className="mt-2 flex items-center gap-1.5 text-2xs text-paper-faint">
-              <ShieldCheck className="h-3 w-3 text-gain/80" aria-hidden />
-              {platform?.live_trading_enabled ? "Execution gate open" : "Live execution disabled"}
-            </p>
-          </div>
+          {inAdmin ? null : (
+            <>
+              <div className="mb-4 rounded-lg border border-line-soft bg-obsidian-850/80 px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="label">Plan</span>
+                  <Badge tone="info">{plan}</Badge>
+                </div>
+                <p className="mt-2 flex items-center gap-1.5 text-2xs text-paper-faint">
+                  <ShieldCheck className="h-3 w-3 text-gain/80" aria-hidden />
+                  {platform?.live_trading_enabled ? "Execution gate open" : "Live execution disabled"}
+                </p>
+              </div>
 
-          <nav className="space-y-0.5" aria-label="Primary workspace">
-            {PRIMARY.map((item) => (
-              <NavItem key={item.href} item={item} active={isActive(item.href)} unread={unread} />
-            ))}
-          </nav>
+              <nav className="space-y-0.5" aria-label="Primary workspace">
+                {PRIMARY.map((item) => (
+                  <NavItem key={item.href} item={item} active={isActive(item.href)} unread={unread} />
+                ))}
+              </nav>
 
-          <p className="mt-5 px-3 text-3xs uppercase tracking-label text-paper-faint/70">Account</p>
-          <nav className="mt-2 space-y-0.5" aria-label="Account workspace">
-            {SECONDARY.map((item) => (
-              <NavItem key={item.href} item={item} active={isActive(item.href)} unread={unread} />
-            ))}
-          </nav>
+              <p className="mt-5 px-3 text-3xs uppercase tracking-label text-paper-faint/70">Account</p>
+              <nav className="mt-2 space-y-0.5" aria-label="Account workspace">
+                {SECONDARY.map((item) => (
+                  <NavItem key={item.href} item={item} active={isActive(item.href)} unread={unread} />
+                ))}
+              </nav>
+            </>
+          )}
 
           <div className="mt-auto space-y-2 pt-4">
             {user?.is_staff ? (
               <Link
                 href="/admin"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-electric-300 transition hover:bg-obsidian-800"
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition hover:bg-obsidian-800",
+                  inAdmin ? "bg-obsidian-800 text-electric-200" : "text-electric-300",
+                )}
               >
                 <Gauge className="h-4 w-4" aria-hidden />
                 Admin command centre
@@ -381,29 +389,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <nav className="space-y-0.5" aria-label="Mobile primary">
-              {PRIMARY.map((item) => (
-                <NavItem
-                  key={item.href}
-                  item={item}
-                  active={isActive(item.href)}
-                  unread={unread}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              ))}
-            </nav>
-            <p className="mt-5 px-3 text-3xs uppercase tracking-label text-paper-faint/70">Account</p>
-            <nav className="mt-2 space-y-0.5" aria-label="Mobile account">
-              {SECONDARY.map((item) => (
-                <NavItem
-                  key={item.href}
-                  item={item}
-                  active={isActive(item.href)}
-                  unread={unread}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              ))}
-            </nav>
+            {inAdmin ? null : (
+              <>
+                <nav className="space-y-0.5" aria-label="Mobile primary">
+                  {PRIMARY.map((item) => (
+                    <NavItem
+                      key={item.href}
+                      item={item}
+                      active={isActive(item.href)}
+                      unread={unread}
+                      onNavigate={() => setMobileOpen(false)}
+                    />
+                  ))}
+                </nav>
+                <p className="mt-5 px-3 text-3xs uppercase tracking-label text-paper-faint/70">Account</p>
+                <nav className="mt-2 space-y-0.5" aria-label="Mobile account">
+                  {SECONDARY.map((item) => (
+                    <NavItem
+                      key={item.href}
+                      item={item}
+                      active={isActive(item.href)}
+                      unread={unread}
+                      onNavigate={() => setMobileOpen(false)}
+                    />
+                  ))}
+                </nav>
+              </>
+            )}
             <div className="mt-auto space-y-2 pt-4">
               {user?.is_staff ? (
                 <Link

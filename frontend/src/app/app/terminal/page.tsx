@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   Bot,
   CandlestickChart,
-  ChevronDown,
   Clock,
   Crosshair,
   Eraser,
@@ -19,7 +18,6 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
-  Timer,
   X,
 } from "lucide-react";
 import { api, errorMessage } from "@/lib/api";
@@ -38,6 +36,10 @@ import {
   type DrawingTool,
 } from "@/components/charts/candles";
 import { RiskBudgetStrip } from "@/components/app/risk-budget";
+import { AccountChip, PositionsDock } from "@/components/terminal/account-chip";
+import { InstrumentBar, Watchlist } from "@/components/terminal/instrument-bar";
+import { TradeButtons } from "@/components/terminal/trade-buttons";
+import { useFavourites } from "@/lib/favourites";
 import { DerivTerminal } from "@/components/app/deriv-terminal";
 import type { RiskBudget } from "@/lib/risk-budget";
 import type {
@@ -73,42 +75,6 @@ function fmtPrice(value: number) {
 
 function money(value: number) {
   return value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
-}
-
-function useCountdown(target: string | null) {
-  const [remaining, setRemaining] = React.useState(0);
-  React.useEffect(() => {
-    if (!target) return;
-    const tick = () => setRemaining(Math.max(0, Math.round((new Date(target).getTime() - Date.now()) / 1000)));
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [target]);
-  return remaining;
-}
-
-function ContractCountdown({ expiresAt }: { expiresAt: string }) {
-  const remaining = useCountdown(expiresAt);
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
-  return (
-    <span className={cn("num text-xs", remaining <= 10 ? "text-warn" : "text-paper")}>
-      {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-    </span>
-  );
-}
-
-
-function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { tone: "gain" | "loss" | "neutral" | "warn"; label: string }> = {
-    open: { tone: "warn", label: "Open" },
-    won: { tone: "gain", label: "Won" },
-    lost: { tone: "loss", label: "Lost" },
-    void: { tone: "neutral", label: "Void" },
-    rejected: { tone: "loss", label: "Rejected" },
-  };
-  const entry = map[status] ?? { tone: "neutral" as const, label: status };
-  return <Badge tone={entry.tone}>{entry.label}</Badge>;
 }
 
 export default function TerminalPage() {
@@ -184,6 +150,19 @@ export default function TerminalPage() {
       return classOk && queryOk;
     });
   }, [assetList, assetClass, query]);
+
+  const { favourites, toggle: toggleFavourite } = useFavourites();
+
+  const stepInstrument = React.useCallback(
+    (direction: -1 | 1) => {
+      if (!assetList.length) return;
+      const index = assetList.findIndex((asset) => asset.symbol === symbol);
+      const next = (index + direction + assetList.length) % assetList.length;
+      const candidate = assetList[next];
+      if (candidate) setSymbol(candidate.symbol);
+    },
+    [assetList, symbol, setSymbol],
+  );
 
   const activeAsset = assetList.find((asset) => asset.symbol === symbol);
   const openContracts = (contracts.data?.contracts ?? []).filter((c) => c.status === "open");
@@ -358,7 +337,7 @@ export default function TerminalPage() {
   const bias = copilot.data?.bias ?? "neutral";
 
   return (
-    <div className="space-y-4 pb-24 xl:pb-0">
+    <div className="space-y-3 pb-24 xl:pb-0">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -369,8 +348,7 @@ export default function TerminalPage() {
             <Badge tone="warn">Simulated</Badge>
           </div>
           <p className="mt-1 text-xs text-paper-faint">
-            Call or put, choose a duration, see the payout before you commit. Every contract passes the
-            independent risk engine.
+            One-minute minimum expiry. Every contract passes the independent risk engine before it opens.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -393,309 +371,252 @@ export default function TerminalPage() {
         </div>
       </div>
 
+      <InstrumentBar
+        symbol={symbol}
+        asset={activeAsset}
+        price={livePrice}
+        changePct={changePct}
+        isDemoFeed={isDemoFeed}
+        favourite={favourites.includes(symbol)}
+        onToggleFavourite={() => toggleFavourite(symbol)}
+        onOpenPicker={() => setAssetPickerOpen(true)}
+        onStep={stepInstrument}
+      >
+        <AccountChip
+          connections={connectionList}
+          balance={equity}
+          simulated
+          equityLabel="Paper equity"
+        />
+      </InstrumentBar>
+
+      <Watchlist
+        assets={assetList}
+        favourites={favourites}
+        active={symbol}
+        onSelect={setSymbol}
+        onToggleFavourite={toggleFavourite}
+        loading={assets.loading}
+      />
+
       <RiskBudgetStrip budget={riskBudget.data} />
 
-      <div className="grid gap-3 xl:grid-cols-[236px_minmax(0,1fr)_320px]">
-        {/* Asset rail */}
-        <section className="panel order-3 flex flex-col xl:sticky xl:top-20 xl:order-1 xl:col-start-1 xl:row-start-1 xl:row-span-2 xl:max-h-[calc(100vh-6rem)] xl:self-start xl:overflow-hidden">
-          <div className="shrink-0 border-b border-line-soft p-3">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-paper-faint" aria-hidden />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search assets"
-                aria-label="Search assets"
-                className="w-full rounded-lg border border-line bg-obsidian-900 py-2 pl-8 pr-2 text-xs text-paper outline-none transition focus:border-electric-500/60"
-              />
-            </label>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {["all", "crypto", "forex", "stock", "commodity"].map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setAssetClass(key)}
-                  className={cn(
-                    "rounded px-1.5 py-1 text-3xs uppercase tracking-label transition",
-                    assetClass === key ? "bg-electric-500/15 text-electric-200" : "text-paper-faint hover:text-paper-muted",
-                  )}
-                >
-                  {key === "all" ? "All" : CLASS_LABEL[key]}
-                </button>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_336px]">
+        {/* Chart + positions dock */}
+        <div className="order-1 min-w-0 space-y-3">
+          <section className="panel">
+            <div className="border-b border-line-soft">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                <p className="text-2xs text-paper-faint">
+                  <span className="font-mono text-paper">{symbol}</span> chart ·{" "}
+                  {DURATIONS.find((d) => d.seconds === duration)?.label} expiry
+                </p>
+                <div className="flex shrink-0 items-center gap-1 rounded-lg border border-line-soft bg-obsidian-900/60 p-0.5">
+                  {TIMEFRAMES.map((tf) => (
+                    <button
+                      key={tf}
+                      type="button"
+                      onClick={() => setTimeframe(tf)}
+                      className={cn(
+                        "rounded px-1.5 py-1 text-3xs transition",
+                        timeframe === tf ? "bg-gold-400/15 text-gold-300" : "text-paper-faint hover:text-paper-muted",
+                      )}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t border-line-soft/60 px-3 py-1.5">
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 rounded-md border border-line-soft p-0.5" role="group" aria-label="Chart type">
+                    <button
+                      type="button"
+                      onClick={() => setChartMode("candles")}
+                      aria-pressed={chartMode === "candles"}
+                      title="Candlesticks"
+                      className={cn(
+                        "rounded p-1 transition",
+                        chartMode === "candles" ? "bg-ink-750 text-paper" : "text-paper-faint hover:text-paper-muted",
+                      )}
+                    >
+                      <CandlestickChart className="h-3.5 w-3.5" aria-hidden />
+                      <span className="sr-only">Candlesticks</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartMode("line")}
+                      aria-pressed={chartMode === "line"}
+                      title="Line"
+                      className={cn(
+                        "rounded p-1 transition",
+                        chartMode === "line" ? "bg-ink-750 text-paper" : "text-paper-faint hover:text-paper-muted",
+                      )}
+                    >
+                      <LineChart className="h-3.5 w-3.5" aria-hidden />
+                      <span className="sr-only">Line</span>
+                    </button>
+                  </div>
+                  {([
+                    ["EMA 21", showEma, () => setShowEma((value) => !value)],
+                    ["VWAP", showVwap, () => setShowVwap((value) => !value)],
+                    ["RSI 14", showRsi, () => setShowRsi((value) => !value)],
+                  ] as const).map(([label, active, toggle]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={toggle}
+                      aria-pressed={active}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-3xs transition",
+                        active
+                          ? "border-gold-400/40 bg-gold-400/10 text-gold-300"
+                          : "border-line-soft text-paper-faint hover:text-paper-muted",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setTool(tool === "hline" ? "none" : "hline")}
+                    aria-pressed={tool === "hline"}
+                    title="Horizontal line"
+                    className={cn(
+                      "rounded-md border p-1 transition",
+                      tool === "hline" ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
+                    )}
+                  >
+                    <Crosshair className="h-3.5 w-3.5" aria-hidden />
+                    <span className="sr-only">Draw horizontal line</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTool(tool === "trend" ? "none" : "trend")}
+                    aria-pressed={tool === "trend"}
+                    title="Trend line"
+                    className={cn(
+                      "rounded-md border p-1 transition",
+                      tool === "trend" ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
+                    )}
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
+                    <span className="sr-only">Draw trend line</span>
+                  </button>
+                  {drawings.length ? (
+                    <button
+                      type="button"
+                      onClick={() => persistDrawings([])}
+                      title="Clear drawings"
+                      className="rounded-md border border-line-soft p-1 text-paper-faint transition hover:text-loss"
+                    >
+                      <Eraser className="h-3.5 w-3.5" aria-hidden />
+                      <span className="sr-only">Clear drawings</span>
+                    </button>
+                  ) : null}
+                  {tool !== "none" ? (
+                    <button
+                      type="button"
+                      onClick={() => setTool("none")}
+                      className="rounded-md border border-line-soft p-1 text-paper-faint transition hover:text-paper"
+                      title="Stop drawing"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                      <span className="sr-only">Stop drawing</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              {candles.loading && !candles.data ? (
+                <div className="shimmer m-4 h-[300px] rounded-lg" />
+              ) : (
+                <CandleChart
+                  candles={candles.data?.candles ?? []}
+                  height={360}
+                  mode={chartMode}
+                  showEma={showEma}
+                  showVwap={showVwap}
+                  showRsi={showRsi}
+                  showCrosshair
+                  drawings={drawings}
+                  tool={tool}
+                  onDraw={addDrawing}
+                  livePrice={livePrice}
+                  entryPrice={
+                    openContracts.find((c) => c.symbol === symbol)?.entry_price ??
+                    openPositions.find((p) => p.symbol === symbol)?.avg_entry_price ??
+                    null
+                  }
+                  entryDirection={
+                    openContracts.find((c) => c.symbol === symbol)?.direction ??
+                    (openPositions.find((p) => p.symbol === symbol)?.side as "buy" | "sell" | undefined) ??
+                    null
+                  }
+                  stopLoss={openPositions.find((p) => p.symbol === symbol)?.stop_loss ?? null}
+                  takeProfit={openPositions.find((p) => p.symbol === symbol)?.take_profit ?? null}
+                  ariaLabel={`${symbol} price chart`}
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 border-t border-line-soft p-3 sm:grid-cols-4">
+              {[
+                ["Bias", bias === "neutral" ? "Neutral" : bias === "call" ? "Call" : "Put", copilot.data ? `${copilot.data.confidence}% conf.` : "—"],
+                ["RSI (15m)", copilot.data?.rsi != null ? copilot.data.rsi.toFixed(1) : "—", copilot.data?.momentum ?? "—"],
+                ["ATR", copilot.data ? `${copilot.data.atr_pct.toFixed(2)}%` : "—", "14-bar volatility"],
+                ["Open stake", summary ? money(summary.open_stake) : "—", `${openContracts.length} contracts`],
+              ].map(([label, value, hint]) => (
+                <div key={label} className="rounded-lg border border-line-soft bg-obsidian-900/50 px-2.5 py-2">
+                  <p className="text-3xs uppercase tracking-label text-paper-faint">{label}</p>
+                  <p className="num mt-0.5 text-sm text-paper">{value}</p>
+                  <p className="truncate text-3xs text-paper-faint">{hint}</p>
+                </div>
               ))}
             </div>
-          </div>
-          <div className="max-h-[420px] min-h-0 flex-1 overflow-y-auto xl:max-h-none">
-            {assets.loading ? (
-              <div className="space-y-2 p-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="shimmer h-10 rounded-lg" />
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <p className="p-4 text-xs text-paper-faint">No assets match that search.</p>
-            ) : (
-              <ul className="divide-y divide-line-soft">
-                {filtered.map((asset) => {
-                  const active = asset.symbol === symbol;
-                  const assetPayout = Number(asset.payouts?.[String(duration)] ?? 0);
-                  return (
-                    <li key={asset.symbol}>
-                      <button
-                        type="button"
-                        onClick={() => setSymbol(asset.symbol)}
-                        aria-current={active ? "true" : undefined}
-                        className={cn(
-                          "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition",
-                          active ? "bg-electric-500/10" : "hover:bg-obsidian-800",
-                        )}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-mono text-xs text-paper">{asset.symbol}</span>
-                          <span className="block truncate text-3xs text-paper-faint">
-                            {asset.name} · {CLASS_LABEL[asset.asset_class] ?? asset.asset_class}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-right">
-                          <span className="num block text-xs text-gain">{assetPayout}%</span>
-                          <span className="block text-3xs text-paper-faint">{DURATIONS.find((d) => d.seconds === duration)?.label}</span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-          <p className="shrink-0 border-t border-line-soft px-3 py-2 text-3xs leading-relaxed text-paper-faint">
-            Indices are not offered. Payouts are platform modelling parameters for the simulated book.
-          </p>
-        </section>
 
-        {/* Chart */}
-        <section className="panel order-1 min-w-0 xl:col-start-2 xl:row-start-1 xl:self-start">
-          <div className="border-b border-line-soft">
-            <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setAssetPickerOpen(true)}
-                  className="group flex min-w-0 items-center gap-2 rounded-lg border border-line-soft bg-obsidian-900/60 px-2.5 py-1.5 transition hover:border-line-strong"
-                  aria-label="Change instrument"
-                >
-                  <span className="font-mono text-sm text-paper">{symbol}</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-paper-faint transition group-hover:text-paper" aria-hidden />
-                </button>
-                <div className="min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("num text-lg font-medium", changePct >= 0 ? "text-gain" : "text-loss")}>
-                      {fmtPrice(livePrice)}
-                    </span>
-                    <span className={cn("num text-3xs", changePct >= 0 ? "text-gain" : "text-loss")}>
-                      {changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
-                    </span>
+            {copilot.data ? (
+              <div className="border-t border-line-soft px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-electric-300" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-2xs text-paper-muted">
+                      <span className="text-paper">Copilot · {copilot.data.model}</span>{" "}
+                      <span className="text-paper-faint">
+                        (deterministic technical read, not advice)
+                      </span>
+                    </p>
+                    <ul className="mt-1.5 space-y-1">
+                      {copilot.data.rationale.slice(0, 2).map((line) => (
+                        <li key={line} className="text-2xs leading-relaxed text-paper-faint">
+                          · {line}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-2xs text-warn/80">{copilot.data.invalidation}</p>
                   </div>
-                  <p className="truncate text-3xs text-paper-faint">
-                    {activeAsset?.name ?? "—"} · {CLASS_LABEL[activeAsset?.asset_class ?? ""] ?? "—"}
-                    {isDemoFeed ? " · simulated feed" : ""}
-                  </p>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1 rounded-lg border border-line-soft bg-obsidian-900/60 p-0.5">
-                {TIMEFRAMES.map((tf) => (
-                  <button
-                    key={tf}
-                    type="button"
-                    onClick={() => setTimeframe(tf)}
-                    className={cn(
-                      "rounded px-1.5 py-1 text-3xs transition",
-                      timeframe === tf ? "bg-gold-400/15 text-gold-300" : "text-paper-faint hover:text-paper-muted",
-                    )}
-                  >
-                    {tf}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-2 border-t border-line-soft/60 px-3 py-1.5">
-              <div className="flex items-center gap-1">
-                <div className="flex items-center gap-0.5 rounded-md border border-line-soft p-0.5" role="group" aria-label="Chart type">
-                  <button
-                    type="button"
-                    onClick={() => setChartMode("candles")}
-                    aria-pressed={chartMode === "candles"}
-                    title="Candlesticks"
-                    className={cn(
-                      "rounded p-1 transition",
-                      chartMode === "candles" ? "bg-ink-750 text-paper" : "text-paper-faint hover:text-paper-muted",
-                    )}
-                  >
-                    <CandlestickChart className="h-3.5 w-3.5" aria-hidden />
-                    <span className="sr-only">Candlesticks</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartMode("line")}
-                    aria-pressed={chartMode === "line"}
-                    title="Line"
-                    className={cn(
-                      "rounded p-1 transition",
-                      chartMode === "line" ? "bg-ink-750 text-paper" : "text-paper-faint hover:text-paper-muted",
-                    )}
-                  >
-                    <LineChart className="h-3.5 w-3.5" aria-hidden />
-                    <span className="sr-only">Line</span>
-                  </button>
-                </div>
-                {([
-                  ["EMA 21", showEma, () => setShowEma((value) => !value)],
-                  ["VWAP", showVwap, () => setShowVwap((value) => !value)],
-                  ["RSI 14", showRsi, () => setShowRsi((value) => !value)],
-                ] as const).map(([label, active, toggle]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={toggle}
-                    aria-pressed={active}
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-3xs transition",
-                      active
-                        ? "border-gold-400/40 bg-gold-400/10 text-gold-300"
-                        : "border-line-soft text-paper-faint hover:text-paper-muted",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setTool(tool === "hline" ? "none" : "hline")}
-                  aria-pressed={tool === "hline"}
-                  title="Horizontal line"
-                  className={cn(
-                    "rounded-md border p-1 transition",
-                    tool === "hline" ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
-                  )}
-                >
-                  <Crosshair className="h-3.5 w-3.5" aria-hidden />
-                  <span className="sr-only">Draw horizontal line</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTool(tool === "trend" ? "none" : "trend")}
-                  aria-pressed={tool === "trend"}
-                  title="Trend line"
-                  className={cn(
-                    "rounded-md border p-1 transition",
-                    tool === "trend" ? "border-gold-400/40 bg-gold-400/10 text-gold-300" : "border-line-soft text-paper-faint hover:text-paper-muted",
-                  )}
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden />
-                  <span className="sr-only">Draw trend line</span>
-                </button>
-                {drawings.length ? (
-                  <button
-                    type="button"
-                    onClick={() => persistDrawings([])}
-                    title="Clear drawings"
-                    className="rounded-md border border-line-soft p-1 text-paper-faint transition hover:text-loss"
-                  >
-                    <Eraser className="h-3.5 w-3.5" aria-hidden />
-                    <span className="sr-only">Clear drawings</span>
-                  </button>
-                ) : null}
-                {tool !== "none" ? (
-                  <button
-                    type="button"
-                    onClick={() => setTool("none")}
-                    className="rounded-md border border-line-soft p-1 text-paper-faint transition hover:text-paper"
-                    title="Stop drawing"
-                  >
-                    <X className="h-3.5 w-3.5" aria-hidden />
-                    <span className="sr-only">Stop drawing</span>
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </div>
+            ) : null}
+          </section>
 
-          <div className="relative">
-            {candles.loading && !candles.data ? (
-              <div className="shimmer m-4 h-[300px] rounded-lg" />
-            ) : (
-              <CandleChart
-                candles={candles.data?.candles ?? []}
-                height={360}
-                mode={chartMode}
-                showEma={showEma}
-                showVwap={showVwap}
-                showRsi={showRsi}
-                showCrosshair
-                drawings={drawings}
-                tool={tool}
-                onDraw={addDrawing}
-                livePrice={livePrice}
-                entryPrice={
-                  openContracts.find((c) => c.symbol === symbol)?.entry_price ??
-                  openPositions.find((p) => p.symbol === symbol)?.avg_entry_price ??
-                  null
-                }
-                entryDirection={
-                  openContracts.find((c) => c.symbol === symbol)?.direction ??
-                  (openPositions.find((p) => p.symbol === symbol)?.side as "buy" | "sell" | undefined) ??
-                  null
-                }
-                stopLoss={openPositions.find((p) => p.symbol === symbol)?.stop_loss ?? null}
-                takeProfit={openPositions.find((p) => p.symbol === symbol)?.take_profit ?? null}
-                ariaLabel={`${symbol} price chart`}
-              />
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 border-t border-line-soft p-3 sm:grid-cols-4">
-            {[
-              ["Bias", bias === "neutral" ? "Neutral" : bias === "call" ? "Call" : "Put", copilot.data ? `${copilot.data.confidence}% conf.` : "—"],
-              ["RSI (15m)", copilot.data?.rsi != null ? copilot.data.rsi.toFixed(1) : "—", copilot.data?.momentum ?? "—"],
-              ["ATR", copilot.data ? `${copilot.data.atr_pct.toFixed(2)}%` : "—", "14-bar volatility"],
-              ["Open stake", summary ? money(summary.open_stake) : "—", `${openContracts.length} contracts`],
-            ].map(([label, value, hint]) => (
-              <div key={label} className="rounded-lg border border-line-soft bg-obsidian-900/50 px-2.5 py-2">
-                <p className="text-3xs uppercase tracking-label text-paper-faint">{label}</p>
-                <p className="num mt-0.5 text-sm text-paper">{value}</p>
-                <p className="truncate text-3xs text-paper-faint">{hint}</p>
-              </div>
-            ))}
-          </div>
-
-          {copilot.data ? (
-            <div className="border-t border-line-soft px-4 py-3">
-              <div className="flex items-start gap-2">
-                <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-electric-300" aria-hidden />
-                <div className="min-w-0">
-                  <p className="text-2xs text-paper-muted">
-                    <span className="text-paper">Copilot · {copilot.data.model}</span>{" "}
-                    <span className="text-paper-faint">
-                      (deterministic technical read, not advice)
-                    </span>
-                  </p>
-                  <ul className="mt-1.5 space-y-1">
-                    {copilot.data.rationale.slice(0, 2).map((line) => (
-                      <li key={line} className="text-2xs leading-relaxed text-paper-faint">
-                        · {line}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-1.5 text-2xs text-warn/80">{copilot.data.invalidation}</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </section>
+          <PositionsDock
+            tab={sheetTab}
+            onTab={setSheetTab}
+            open={openContracts}
+            settled={settledContracts}
+            summary={summary ?? undefined}
+            onOpenContract={setDetailContract}
+            loading={contracts.loading}
+          />
+        </div>
 
         {/* Ticket */}
-        <section className="panel order-2 flex flex-col xl:order-3 xl:sticky xl:top-20 xl:col-start-3 xl:row-start-1 xl:self-start">
+        <section className="panel order-2 flex flex-col xl:sticky xl:top-20 xl:self-start">
           <div className="border-b border-line-soft px-4 py-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-paper">Trade ticket</h2>
@@ -1060,32 +981,16 @@ export default function TerminalPage() {
               </div>
             </dl>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDirection("call");
-                  setConfirmOpen(true);
-                }}
-                className="group flex flex-col items-center rounded-xl border border-gain/40 bg-gain/10 py-3 transition hover:bg-gain/20"
-              >
-                <ArrowUpRight className="h-4 w-4 text-gain" aria-hidden />
-                <span className="mt-1 text-xs font-medium uppercase tracking-label text-gain">Call</span>
-                <span className="num text-3xs text-gain/70">+{payout.toFixed(0)}%</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDirection("put");
-                  setConfirmOpen(true);
-                }}
-                className="group flex flex-col items-center rounded-xl border border-loss/40 bg-loss/10 py-3 transition hover:bg-loss/20"
-              >
-                <ArrowDownRight className="h-4 w-4 text-loss" aria-hidden />
-                <span className="mt-1 text-xs font-medium uppercase tracking-label text-loss">Put</span>
-                <span className="num text-3xs text-loss/70">+{payout.toFixed(0)}%</span>
-              </button>
-            </div>
+            <TradeButtons
+              stake={stake}
+              payoutPct={payout}
+              durationLabel={DURATIONS.find((option) => option.seconds === duration)?.label ?? "1m"}
+              busy={busy}
+              onPick={(next) => {
+                setDirection(next);
+                setConfirmOpen(true);
+              }}
+            />
 
             {lastRejection ? (
               <div className="rounded-lg border border-loss/30 bg-loss/[0.07] p-2.5">
@@ -1113,160 +1018,6 @@ export default function TerminalPage() {
           </div>
           )}
         </section>
-
-      <section className="panel order-4 xl:col-span-2 xl:col-start-2 xl:row-start-2">
-        <div className="flex items-center justify-between border-b border-line-soft px-4 py-2.5">
-          <div className="flex gap-1" role="tablist" aria-label="Contracts">
-            {[
-              ["open", `Open (${openContracts.length})`],
-              ["history", `Settled (${settledContracts.length})`],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={sheetTab === key}
-                onClick={() => setSheetTab(key as "open" | "history")}
-                className={cn(
-                  "rounded-md px-2.5 py-1.5 text-2xs transition",
-                  sheetTab === key ? "bg-electric-500/15 text-electric-200" : "text-paper-faint hover:text-paper-muted",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {summary ? (
-            <div className="hidden items-center gap-4 text-2xs sm:flex">
-              <span className="text-paper-faint">
-                Win rate <span className="num text-paper">{summary.win_rate_pct ?? "—"}%</span>
-              </span>
-              <span className="text-paper-faint">
-                Net{" "}
-                <span className={cn("num", summary.net_pnl >= 0 ? "text-gain" : "text-loss")}>
-                  {money(summary.net_pnl)}
-                </span>
-              </span>
-              <span className="text-paper-faint">
-                Staked <span className="num text-paper">{money(summary.staked_total)}</span>
-              </span>
-            </div>
-          ) : null}
-        </div>
-
-        {sheetTab === "open" ? (
-          openContracts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-              <Timer className="h-6 w-6 text-paper-faint" aria-hidden />
-              <p className="mt-2 text-xs text-paper-muted">No open contracts</p>
-              <p className="mt-1 max-w-sm text-3xs text-paper-faint">
-                Pick a direction above. The stake is held until expiry and then settled automatically
-                against the price at that moment.
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-line-soft">
-              {openContracts.map((contract) => (
-                <li key={contract.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-lg border",
-                        contract.direction === "call"
-                          ? "border-gain/40 bg-gain/10 text-gain"
-                          : "border-loss/40 bg-loss/10 text-loss",
-                      )}
-                    >
-                      {contract.direction === "call" ? (
-                        <ArrowUpRight className="h-4 w-4" aria-hidden />
-                      ) : (
-                        <ArrowDownRight className="h-4 w-4" aria-hidden />
-                      )}
-                    </span>
-                    <div>
-                      <p className="font-mono text-xs text-paper">{contract.symbol}</p>
-                      <p className="text-3xs text-paper-faint">
-                        {contract.direction.toUpperCase()} · {money(contract.stake)} · {contract.payout_pct}% ·{" "}
-                        {contract.duration_seconds / 60}m
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-3xs text-paper-faint">Entry</p>
-                      <p className="num text-xs text-paper">{fmtPrice(contract.entry_price)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-3xs text-paper-faint">Expires in</p>
-                      <ContractCountdown expiresAt={contract.expires_at} />
-                    </div>
-                    <Badge tone="warn">Open</Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : settledContracts.length === 0 ? (
-          <p className="px-4 py-8 text-center text-xs text-paper-faint">No settled contracts yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left">
-              <thead>
-                <tr className="border-b border-line-soft text-3xs uppercase tracking-label text-paper-faint">
-                  <th className="px-4 py-2 font-normal">Contract</th>
-                  <th className="px-4 py-2 font-normal">Direction</th>
-                  <th className="px-4 py-2 text-right font-normal">Stake</th>
-                  <th className="px-4 py-2 text-right font-normal">Spot → return</th>
-                  <th className="px-4 py-2 text-right font-normal">Net</th>
-                  <th className="px-4 py-2 text-right font-normal">Result</th>
-                  <th className="px-4 py-2 text-right font-normal">Record</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line-soft">
-                {settledContracts.map((contract) => (
-                  <tr key={contract.id} className="text-xs hover:bg-obsidian-800/40">
-                    <td className="px-4 py-2.5">
-                      <p className="font-mono text-paper">{contract.symbol}</p>
-                      <p className="text-3xs text-paper-faint">
-                        {new Date(contract.opened_at).toLocaleString([], {
-                          month: "short",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={contract.direction === "call" ? "text-gain" : "text-loss"}>
-                        {contract.direction.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="num px-4 py-2.5 text-right text-paper">{money(contract.stake)}</td>
-                    <td className="num px-4 py-2.5 text-right text-paper-muted">
-                      {fmtPrice(contract.entry_price)} → {contract.exit_price ? fmtPrice(contract.exit_price) : "—"}
-                    </td>
-                    <td className={cn("num px-4 py-2.5 text-right", contract.net_pnl >= 0 ? "text-gain" : "text-loss")}>
-                      {money(contract.net_pnl)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <StatusPill status={contract.status} />
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setDetailContract(contract)}
-                        className="text-3xs text-electric-300 underline decoration-electric-500/40 underline-offset-2 hover:text-electric-200"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
       </div>
 
       <Dialog

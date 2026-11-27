@@ -3,12 +3,13 @@
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
+// Strokes read the runtime palette so an administrator's colours reach every chart.
 const TONES = {
-  gold: { stroke: "#e3c489", fill: "rgba(227,196,137,0.16)" },
-  gain: { stroke: "#00e07a", fill: "rgba(0,224,122,0.16)" },
-  loss: { stroke: "#ff3b52", fill: "rgba(255,59,82,0.16)" },
-  info: { stroke: "#8fbbff", fill: "rgba(143,187,255,0.16)" },
-  platinum: { stroke: "#c6cedb", fill: "rgba(198,206,219,0.10)" },
+  gold: { stroke: "rgb(var(--vt-accent-400))", fill: "rgb(var(--vt-accent-400))", opacity: 0.16 },
+  gain: { stroke: "rgb(var(--vt-gain))", fill: "rgb(var(--vt-gain))", opacity: 0.16 },
+  loss: { stroke: "rgb(var(--vt-loss))", fill: "rgb(var(--vt-loss))", opacity: 0.16 },
+  info: { stroke: "rgb(var(--vt-chart-line-500))", fill: "rgb(var(--vt-chart-line-500))", opacity: 0.16 },
+  platinum: { stroke: "rgb(var(--vt-text-muted))", fill: "rgb(var(--vt-text-muted))", opacity: 0.1 },
 } as const;
 
 export type ChartTone = keyof typeof TONES;
@@ -66,7 +67,7 @@ export function AreaChart({
       >
         <defs>
           <linearGradient id={`grad-${id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={colors.fill} />
+            <stop offset="0%" stopColor={colors.fill} stopOpacity={colors.opacity} />
             <stop offset="100%" stopColor="rgba(0,0,0,0)" />
           </linearGradient>
         </defs>

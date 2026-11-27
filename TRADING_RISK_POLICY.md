@@ -45,7 +45,15 @@ version that evaluated them. Rule codes below are the ones emitted by `app/risk/
 | `connection_permission` | Connection allows trading for this mode | on |
 | `demo_execution_limit` | Simulated executions, counting paper fills and contracts on a venue demo account against one daily allowance | 5 / day (entitlement) |
 
+| `duration` | Fixed-odds expiry must be one of the offered terms, and never shorter than one minute | 60 / 300 / 900 / 1800 / 3600 s |
+
 Two details are easy to get wrong and are pinned by tests:
+
+- **A sub-minute expiry is refused twice, on purpose.** The request schema rejects anything below
+  60 seconds with a field-level validation error, and the engine returns `duration_too_short` for a
+  term that clears the schema but not the floor. Terms that are not offered at all (for example 90
+  seconds) return `invalid_duration`. Both paths are covered in `tests/test_theme_and_duration.py`
+  and `tests/test_binary.py`.
 
 - **Notional is rounded before it is compared.** A stake of exactly the minimum arrives as
   `9.999999999999998` after `stake / price * price`, so it would otherwise fail the minimum-notional

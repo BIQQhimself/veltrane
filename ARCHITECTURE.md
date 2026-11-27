@@ -109,6 +109,22 @@ The risk engine has **no import** from `app.trading` or `app.strategies`; it con
 * Charts are dependency-light SVG components (`components/charts/*`) so the visual language stays consistent and the bundle stays small.
 * Design tokens in `app/globals.css` (CSS variables) → Tailwind theme. Midnight navy/charcoal base, champagne-gold accents, platinum neutrals.
 
+### 6.1 Runtime theme engine
+
+The palette is data. `GET /theme` (public) returns the effective tokens and branding; `GET/PUT
+/admin/theme` (support role) reads and writes them. The row lives in `system_settings` under
+`ui.theme`, is validated against a fixed token list of six-digit hex colours, and falls back to the
+shipped palette if the row is missing or invalid — a bad save can never leave the product unstyled.
+
+The frontend derives the rest. `lib/theme.ts` takes the 18 base tokens and computes every stop the
+Tailwind palette needs (surface ramp, text ramp, primary/accent ramps, gain/loss/warn), returning CSS
+custom properties (`--vt-*`). `ThemeProvider` writes them to `document.documentElement` on load and
+on preview, so the whole UI — including SVG charts, which read `rgb(var(--vt-chart-up))` and friends
+instead of literal hex — repaints without a rebuild or redeploy. Tokens are never interpolated into
+a stylesheet string, only assigned as custom-property values, so a colour value cannot carry CSS or
+script. `lib/theme.ts` also exports contrast helpers, and the admin console refuses to *claim*
+accessibility: it shows the measured body and button contrast and warns below 4.5:1.
+
 ## 7. Data flow: paper trading loop
 
 1. User starts a paper session against a strategy version and a connected (or demo) instrument.

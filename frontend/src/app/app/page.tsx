@@ -7,7 +7,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bot,
-  CircleDollarSign,
   Clock,
   Gauge,
   Layers,
@@ -27,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { RiskBudgetRows } from "@/components/app/risk-budget";
+import { AccountHero } from "@/components/app/account-hero";
 import { contractReturn, contractStake } from "@/lib/contracts";
 import { budgetLabel, budgetTone, type RiskBudget } from "@/lib/risk-budget";
 import { TradeDetailDialog } from "@/components/app/trade-detail";
@@ -170,14 +170,24 @@ export default function OverviewPage() {
         </div>
       </div>
 
+      <AccountHero
+        planCode={plan}
+        equityLabel={equity?.simulated_source === "paper_session" ? "Paper session equity" : "Account value"}
+        equity={equity ? equity.simulated_balance_usd : null}
+        netPnl={equity ? equity.realized_pnl_net : null}
+        curve={curve}
+        openTrades={openContracts.length + (portfolio.data?.positions.length ?? 0)}
+        demoUsed={demoUsed}
+        demoLimit={demoLimit}
+        riskLabel={riskLabel}
+        riskTone={riskTone}
+        simulated
+        paperReady={Boolean(portfolio.data?.paper_session)}
+        onStartPaper={startPaperSession}
+      />
+
       {/* Metrics */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          label="Simulated equity"
-          value={equity ? money(equity.simulated_balance_usd) : "—"}
-          hint={equity?.simulated_source === "paper_session" ? "Paper session equity" : "No paper session yet"}
-          icon={CircleDollarSign}
-        />
+      <div className="grid gap-3 sm:grid-cols-3">
         <Metric
           label="Realised net P&L"
           value={equity ? signedMoney(equity.realized_pnl_net) : "—"}

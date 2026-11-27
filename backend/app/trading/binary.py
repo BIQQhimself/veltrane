@@ -28,6 +28,8 @@ from app.services import audit, market_data, notifications, usage
 from app.trading import engine as trading_engine
 from sqlalchemy.orm import Session
 
+# One minute is the floor: sub-minute contracts are not offered, whatever the client sends.
+MIN_DURATION_SECONDS = 60
 ALLOWED_DURATIONS: tuple[int, ...] = (60, 300, 900, 1800, 3600)
 
 # Platform modelling parameters for a simulated fixed-odds book. They are not a
@@ -94,11 +96,27 @@ def asset_universe() -> list[dict]:
     return rows
 
 
+def validate_duration(duration_seconds: int) -> int:
+    """Single gate for every duration that reaches the contract book.
+
+    The floor is checked first so a 30-second request is refused as *too short* rather
+    than as "not one of the options", which reads like a UI bug to the trader.
+    """
+    if duration_seconds < MIN_DURATION_SECONDS:
+        raise bad_request(
+            "duration_too_short",
+            f"The shortest contract is {MIN_DURATION_SECONDS // 60} minute"
+            f"{'' if MIN_DURATION_SECONDS == 60 else 's'}.",
+        )
+    if duration_seconds not in ALLOWED_DURATIONS:
+        raise bad_request("invalid_duration", f"Duration must be one of {list(ALLOWED_DURATIONS)} seconds.")
+    return duration_seconds
+
+
 def quote(symbol: str, duration_seconds: int) -> dict:
     if symbol not in {r["symbol"] for r in asset_universe()}:
         raise not_found("instrument_not_found", "This asset is not offered for binary contracts.")
-    if duration_seconds not in ALLOWED_DURATIONS:
-        raise bad_request("invalid_duration", f"Duration must be one of {list(ALLOWED_DURATIONS)} seconds.")
+    validate_duration(duration_seconds)
     snapshot = market_data.get_ticker(symbol)
     now = _utcnow()
     spec = market_data.instrument_spec(symbol) or {}
@@ -111,6 +129,8 @@ def quote(symbol: str, duration_seconds: int) -> dict:
         "ask": snapshot.ask,
         "payout_pct": _payout(symbol, duration_seconds),
         "duration_seconds": duration_seconds,
+        "min_duration_seconds": MIN_DURATION_SECONDS,
+        "allowed_durations": list(ALLOWED_DURATIONS),
         "expires_at": (now + timedelta(seconds=duration_seconds)).isoformat(),
         "min_stake": settings.binary_min_stake,
         "max_stake": settings.binary_max_stake,
@@ -145,8 +165,7 @@ def open_contract(
     universe = {r["symbol"]: r for r in asset_universe()}
     if symbol not in universe:
         raise not_found("instrument_not_found", "This asset is not offered for binary contracts.")
-    if duration_seconds not in ALLOWED_DURATIONS:
-        raise bad_request("invalid_duration", f"Duration must be one of {list(ALLOWED_DURATIONS)} seconds.")
+    validate_duration(duration_seconds)
 
     key = idempotency_key or f"bin:{user.org_id}:{uuid.uuid4().hex}"
     existing = (

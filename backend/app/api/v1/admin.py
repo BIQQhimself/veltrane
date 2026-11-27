@@ -14,6 +14,7 @@ from app.api.schemas import (
     PlanUpdateRequest,
     RefundRequest,
     RiskPolicyUpdate,
+    ThemeUpdate,
     TicketReply,
     UserAdminUpdate,
 )
@@ -58,6 +59,7 @@ from app.services import (
     strategy_service,
 )
 from app.services import email as email_service
+from app.services import theme as theme_service
 from app.services.email import deliver_queued
 from app.services.email_templates import CAMPAIGN_TEMPLATES
 from app.services.scheduler import scheduler_state
@@ -1013,3 +1015,30 @@ def cancel_campaign(
     campaign.scheduled_at = None
     db.commit()
     return {"campaign": email_service.campaign_dict(campaign)}
+
+
+# ---------------------------------------------------------------- appearance
+@router.get("/theme")
+def get_theme_settings(staff: User = Depends(require_support), db: Session = Depends(get_db)):
+    return {
+        "theme": theme_service.get_theme(db),
+        "tokens": theme_service.tokens(),
+        "branding_defaults": theme_service.DEFAULT_BRANDING,
+    }
+
+
+@router.put("/theme")
+def update_theme_settings(
+    payload: ThemeUpdate,
+    staff: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    theme = theme_service.set_theme(
+        db,
+        user=staff,
+        colors=payload.colors,
+        branding=payload.branding,
+        reset=payload.reset,
+    )
+    db.commit()
+    return {"theme": theme}

@@ -5,12 +5,15 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 302 tests, ~110 s
+.venv/bin/python -m pytest                  # 317 tests, ~4 min
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
 
 The suite runs against **real PostgreSQL and real Redis** (database `veltrane_test`, Redis db 9).
+Both must be running before you start: session revocation and login rate limiting live in Redis, so
+`test_security.py::test_logout_revokes_session` fails if Redis is absent. That failure is the suite
+telling you the environment is incomplete, not a flaky test.
 Nothing is mocked at the database boundary, so SQL, constraints, JSONB behaviour and transaction
 semantics are all exercised. Redis is flushed between tests; the schema is recreated once per
 session.
@@ -42,7 +45,8 @@ code as Stripe.
 | `test_deriv_provider.py` | The adapter in isolation: PAT auth, identity, pricing, execution and reconnection against the mock gateway |
 | `test_deriv_live_market_data.py` | Public Deriv market data end to end. Skipped unless `VELTRANE_DERIV_LIVE_TESTS=1`, because it needs the real public socket |
 | `test_deriv_autotrade.py` | The scheduled runner: deterministic EMA-cross series, approval-mode signals, autonomous execution on a demo account, kill-switch refusal, and a risk rejection that is recorded as rejected rather than executed |
-| `test_binary.py` | Fixed-odds contracts: quote, open, settle, payout, expiry, and that a paper binary never touches live equity |
+| `test_binary.py` | Fixed-odds contracts: quote, open, settle, payout, expiry, and that a paper binary never touches live equity. Also the expiry-term contract: a sub-minute duration is refused by the request schema, a term that is not offered returns `invalid_duration` |
+| `test_theme_and_duration.py` | The runtime palette and the expiry floor: defaults returned when nothing is stored, an administrator's colours round-tripping, unknown tokens and malformed hex refused, branding length limits, the support-role gate, an audit row per publish, reset restoring the shipped palette, and `validate_duration` accepting only the offered terms |
 | `test_paper_session.py` | Paper session provisioning, per-session isolation, stop, and balance accounting |
 | `test_market_data.py` | The demo feed's shape and continuity, instrument specs, market open/closed behaviour |
 | `test_migrations.py` | `alembic upgrade head` produces the same schema the ORM declares |
@@ -77,6 +81,12 @@ These are not aspirations; each is checked.
     (`test_deriv_integration.py`).
 15. A fixed-odds position reports its stake as exposure, not the underlying price, so a handful of
     small contracts cannot exhaust the account exposure limit (`test_deriv_integration.py`).
+16. A palette the administrator saves is what subscribers receive, and only colour tokens in the
+    known list are accepted — a stored value can never become CSS or script
+    (`test_theme_and_duration.py`).
+17. An expiry shorter than one minute is refused at the schema boundary *and* by the engine, and a
+    term that is not offered is refused with `invalid_duration` (`test_binary.py`,
+    `test_theme_and_duration.py`).
 
 ## Static export build (Render)
 
@@ -135,7 +145,13 @@ neutral at 50, values stay inside 0–100, and the series aligns to the candle i
 overview can never say "within limits" while a budget is breached.
 `src/lib/validation.test.ts` (9 tests) pins the sign-up rules that the API also enforces (an
 address needs a dotted domain, and the five password rules are reported in the API's order) and
-the mapping from a 422 body to the input that should carry the message. Component and end-to-end browser
+the mapping from a 422 body to the input that should carry the message.
+`src/lib/theme.test.ts` (8 tests) pins the palette derivation: every Tailwind stop the components
+use is produced from the base tokens, a changed base colour moves the whole ramp in the same
+direction, invalid input falls back to the shipped colour instead of emitting a broken value, and
+the shipped text/background pairing stays above 4.5:1 contrast.
+`src/lib/favourites.test.ts` (4 tests) pins the device-local watchlist: toggling adds and removes,
+the list caps at twelve and drops the oldest, and instruments the venue no longer offers disappear. Component and end-to-end browser
 tests are still outstanding; see KNOWN_LIMITATIONS.
 
 ```bash

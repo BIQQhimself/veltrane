@@ -78,9 +78,15 @@ def test_contract_rejected_when_stake_exceeds_equity_share(client, trader):
 
 
 def test_contract_rejected_for_unknown_duration(client, trader):
-    response = open_contract(client, trader["headers"], duration_seconds=42)
+    # 90 seconds clears the one-minute floor but is not an offered term.
+    response = open_contract(client, trader["headers"], duration_seconds=90)
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "invalid_duration"
+
+
+def test_contract_below_the_one_minute_floor_is_refused_by_the_schema(client, trader):
+    response = open_contract(client, trader["headers"], duration_seconds=42)
+    assert response.status_code == 422
 
 
 def test_contract_rejected_for_index_symbol(client, trader):
