@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowDownToLine, Bell, ChevronDown, Eye, EyeOff, LogOut, Settings, ShieldAlert, ShieldCheck, UserRound, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
@@ -53,7 +52,6 @@ function useHiddenBalance() {
 export function AccountHeader() {
   const { user, identity, entitlements, subscription, logout, platform } = useAuth();
   const { automation } = usePresence();
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const { hidden, toggle } = useHiddenBalance();
 
@@ -74,7 +72,8 @@ export function AccountHeader() {
 
   async function signOut() {
     await logout();
-    router.push("/login");
+    // A full load, so the sign-in page arrives with its own metadata and no workspace state.
+    window.location.assign("/login");
   }
 
   return (

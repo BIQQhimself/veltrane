@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { PresenceProvider } from "@/lib/presence";
 import { AppShell } from "@/components/app/shell";
@@ -10,11 +9,10 @@ import { Skeleton } from "@/components/ui/data";
 
 function Gate({ children, admin }: { children: React.ReactNode; admin?: boolean }) {
   const { user, loading, error } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
+    if (!loading && !user) window.location.replace("/login");
+  }, [loading, user]);
 
   if (loading || !user) {
     return (

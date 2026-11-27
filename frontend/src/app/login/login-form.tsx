@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
 export function LoginForm() {
-  const router = useRouter();
   const { login, verifyMfa } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +15,12 @@ export function LoginForm() {
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function enterWorkspace() {
+    // A full document load, so the workspace boots from the server with the new session and its own
+    // page metadata, instead of carrying the sign-in title into the app.
+    window.location.assign("/app");
+  }
 
   async function submitCredentials(event: React.FormEvent) {
     event.preventDefault();
@@ -27,7 +31,7 @@ export function LoginForm() {
       if (result.mfaRequired && result.mfaToken) {
         setMfaToken(result.mfaToken);
       } else {
-        router.push("/app");
+        enterWorkspace();
       }
     } catch (err) {
       setError(errorMessage(err));
@@ -43,7 +47,7 @@ export function LoginForm() {
     setError(null);
     try {
       await verifyMfa(mfaToken, code.trim());
-      router.push("/app");
+      enterWorkspace();
     } catch (err) {
       setError(errorMessage(err));
     } finally {

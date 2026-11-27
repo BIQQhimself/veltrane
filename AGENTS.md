@@ -172,6 +172,12 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   including the 60-second contract floor. A seed payload under a minute is refused with
   `min_duration` and leaves the account with no history.
 
+## Page titles and the auth boundary
+
+- Route metadata (`export const metadata`) only reaches the tab on a full document load. Client-side
+  navigation between `/login` and `/app` leaves the previous title in place, so signing in, signing
+  out and the gate's expired-session redirect all use `window.location`, not `router.push`.
+
 ## Two failure modes worth remembering
 
 - **Float boundaries in risk rules.** `stake / price * price` does not round-trip. Round notional
