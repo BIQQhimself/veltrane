@@ -697,7 +697,6 @@ export default function MarketingPage() {
                   ["Pricing", "#pricing"],
                   ["Risk policy", "/risk"],
                   ["Security", "/security"],
-                  ["Status", "/status"],
                 ],
               },
               {
