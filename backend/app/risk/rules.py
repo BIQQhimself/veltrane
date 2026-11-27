@@ -423,11 +423,31 @@ RULES = (
 
 
 def check_binary_terms(intent: OrderIntent, ctx: RiskContext, rules: dict) -> RuleResult:
-    """Binary-specific contract terms: duration whitelist, payout and stake bounds."""
+    """Binary-specific contract terms: duration whitelist, payout and stake bounds.
+
+    The duration whitelist is whatever the venue actually offers. A venue contract carries
+    its own ``<value><unit>`` term and the accepted list; the platform's paper book carries
+    a fixed seconds list. Nothing is rounded to a neighbouring duration.
+    """
     terms = rules.get("binary_terms") or {}
+    term = str(terms.get("term") or "")
+    if not term:
+        value = int(terms.get("duration") or 0)
+        unit = str(terms.get("duration_unit") or "")
+        term = f"{value}{unit}" if value and unit else ""
+    allowed_terms = tuple(terms.get("allowed_terms") or ())
     duration = int(terms.get("duration_seconds") or 0)
     allowed = tuple(terms.get("allowed_durations") or ())
-    if duration not in allowed:
+    if allowed_terms:
+        if term not in allowed_terms:
+            return _r(
+                "binary_terms",
+                False,
+                f"Contract duration {term or 'unknown'} is not offered for this asset. "
+                f"Choose one of {list(allowed_terms)}.",
+                {"term": term, "allowed_terms": list(allowed_terms), "term_source": terms.get("term_source")},
+            )
+    elif duration not in allowed:
         return _r(
             "binary_terms",
             False,
@@ -435,11 +455,14 @@ def check_binary_terms(intent: OrderIntent, ctx: RiskContext, rules: dict) -> Ru
             {"duration_seconds": duration, "allowed": list(allowed)},
         )
     payout = float(terms.get("payout_pct") or 0)
-    if not 1 <= payout <= 95:
+    # Implausibility guard, not a venue rule: a fixed-odds payout near or above the stake
+    # means the proposal is stale, duplicated or mispriced. The venue's own ceiling sits
+    # around 95.6 %, so a tighter bound would refuse legitimate contracts.
+    if not 1 <= payout <= 98:
         return _r(
             "binary_terms",
             False,
-            f"Payout {payout}% is outside the permitted 1-95% band.",
+            f"Payout {payout}% is outside the permitted 1-98% band.",
             {"payout_pct": payout},
         )
     stake = float(intent.quantity) * float(ctx.market.price or 0)
@@ -459,9 +482,16 @@ def check_binary_terms(intent: OrderIntent, ctx: RiskContext, rules: dict) -> Ru
             f"Stake {stake:.2f} exceeds the {max_stake:.2f} per-contract cap.",
             {"stake": stake, "max_stake": max_stake},
         )
+    label = term or f"{duration}s"
     return _r(
         "binary_terms",
         True,
-        f"{duration}s contract accepted at {payout:.0f}% payout for a {stake:.2f} stake.",
-        {"duration_seconds": duration, "payout_pct": payout, "stake": stake},
+        f"{label} contract accepted at {payout:.0f}% payout for a {stake:.2f} stake.",
+        {
+            "term": term,
+            "duration_seconds": terms.get("duration_seconds"),
+            "payout_pct": payout,
+            "stake": stake,
+            "term_source": terms.get("term_source"),
+        },
     )

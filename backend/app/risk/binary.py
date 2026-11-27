@@ -83,11 +83,27 @@ BINARY_RULES = (
 
 @dataclass(frozen=True)
 class BinaryTerms:
-    duration_seconds: int
+    """Terms the risk engine checks a fixed-odds contract against.
+
+    ``duration_seconds`` is ``None`` when the venue defines the length itself (a tick
+    contract has no fixed wall-clock duration). ``allowed_terms`` carries the venue's own
+    ``<value><unit>`` strings; ``allowed_durations`` remains for the platform's paper book,
+    whose terms are fixed by the platform.
+    """
+
+    duration_seconds: int | None
     payout_pct: float
     min_stake: float
     max_stake: float
-    allowed_durations: tuple[int, ...]
+    allowed_durations: tuple[int, ...] = ()
+    duration: int = 0
+    duration_unit: str = "s"
+    allowed_terms: tuple[str, ...] = ()
+    term_source: str = "platform"
+
+    @property
+    def term(self) -> str:
+        return f"{self.duration}{self.duration_unit}" if self.duration else ""
 
     def as_dict(self) -> dict:
         return {
@@ -96,6 +112,11 @@ class BinaryTerms:
             "min_stake": self.min_stake,
             "max_stake": self.max_stake,
             "allowed_durations": list(self.allowed_durations),
+            "duration": self.duration,
+            "duration_unit": self.duration_unit,
+            "term": self.term,
+            "allowed_terms": list(self.allowed_terms),
+            "term_source": self.term_source,
         }
 
 

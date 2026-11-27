@@ -107,6 +107,18 @@ session manager (`app/services/deriv_sessions.py`) requests an OTP per account, 
 never shared across tenants, and closed explicitly or on process shutdown. Failures are recorded
 as auth events and surfaced on the connection.
 
+**Contract catalogue.** `GET /deriv/contracts?symbol=R_100` is the platform's own answer to
+"what can I trade here, right now". It reads Deriv's `contracts_for`, normalises each published
+duration band (Deriv mixes units inside one band: `min_contract_duration: "15s"` with
+`max_contract_duration: "1d"`), walks the ladder inside it and keeps a term only after the
+proposal engine has priced it. The result is cached for five minutes and a venue failure is
+reported as `available: false` rather than as an empty menu — an empty menu and an unreachable
+venue mean different things to a trader. Only `CALL` and `PUT` are surfaced; the digit families
+are collected by the provider but not offered, because settlement for them is not implemented.
+The same catalogue is the whitelist the risk engine checks: `app/services/contract_catalogue.py`
+feeds `BinaryTerms.allowed_terms`, so the interface, the agent and the executor all work from one
+list.
+
 **Execution.** `app/trading/deriv_execution.py` runs every contract through the same independent
 risk engine as any other venue, then through the execution gate (platform switch, live
 authorisation, connection permission, session state). Fixed-odds contracts have no traded price,
@@ -116,6 +128,13 @@ side, contract type, stake and duration; an idempotency key derived from those t
 double submission of the same intent, while a genuinely different contract is priced and assessed
 on its own. A contract opened on a demo account counts against the subscriber's daily simulated
 execution allowance, exactly like a paper fill.
+
+**Settlement.** A fixed-odds contract settles from the price at its expiry, not from the price at
+the moment the worker happens to run. When no authoritative expiry price exists for that
+instrument and instant, the contract is **voided** and the stake returned: substituting the live
+ticker would invent a result and quietly rewrite the subscriber's history. The void is recorded
+with a reason in the audit trail and the notification says the contract was voided, not won or
+lost.
 
 **Venue error mapping.** Deriv's status codes are translated rather than passed through:
 `401` becomes `invalid_token` (or `app_id_required` when the response names the App-ID header),

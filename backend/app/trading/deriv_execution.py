@@ -26,7 +26,15 @@ from app.providers.base import CredentialBundle, ProviderError
 from app.providers.deriv import DerivProvider
 from app.risk import binary as binary_risk
 from app.risk.types import OrderIntent
-from app.services import audit, deriv_sessions, execution_gate, market_data, notifications, usage
+from app.services import (
+    audit,
+    contract_catalogue,
+    deriv_sessions,
+    execution_gate,
+    market_data,
+    notifications,
+    usage,
+)
 from app.trading import engine as trading_engine
 from sqlalchemy.orm import Session
 
@@ -50,19 +58,65 @@ def _credentials(db: Session, connection: Connection) -> CredentialBundle:
     return load_credentials(db, connection)
 
 
-def _terms(proposal: dict, duration: int, duration_unit: str) -> binary_risk.BinaryTerms:
+def _terms(
+    proposal: dict,
+    duration: int,
+    duration_unit: str,
+    *,
+    allowed_terms: tuple[str, ...] = (),
+    term_source: str = "proposal",
+) -> binary_risk.BinaryTerms:
+    """Risk terms built from the venue's own proposal, never from a local conversion table.
+
+    A tick contract has no wall-clock duration, so ``duration_seconds`` stays ``None`` for
+    ``t`` rather than being invented. When the contract catalogue is available its verified
+    terms form the whitelist; when it is not, the single term Deriv just priced is the only
+    thing known to be acceptable, and ``term_source`` records that weaker provenance.
+    """
     stake_min = float(((proposal.get("validation_params") or {}).get("stake") or {}).get("min") or 0.0)
     amount = float(proposal.get("ask_price") or 0.0)
     payout = float(proposal.get("payout") or 0.0)
     payout_pct = round((payout / amount - 1) * 100, 4) if amount else 0.0
-    duration_seconds = duration if duration_unit == "s" else duration * 60
+    term = f"{duration}{duration_unit}"
+    terms = allowed_terms or (term,)
     return binary_risk.BinaryTerms(
-        duration_seconds=max(1, duration_seconds),
+        duration_seconds=contract_catalogue.term_seconds(duration, duration_unit),
         payout_pct=payout_pct,
         min_stake=stake_min,
         max_stake=1_000_000.0,  # Deriv enforces its own maximum; the platform cap applies too.
-        allowed_durations=(duration_seconds,),
+        duration=duration,
+        duration_unit=duration_unit,
+        allowed_terms=tuple(terms),
+        term_source=term_source if allowed_terms else "proposal",
     )
+
+
+def _catalogue_terms(
+    provider: DerivProvider,
+    symbol: str,
+    currency: str,
+    contract_type: str,
+) -> tuple[str, ...]:
+    """Verified duration menu for this symbol, or an empty tuple when discovery failed.
+
+    An empty result is not permission to invent terms: the venue's own proposal still has
+    to accept whatever is requested, and that acceptance is recorded as the term source.
+    """
+    try:
+        catalogue = contract_catalogue.get(symbol, currency, provider=provider)
+    except Exception:  # noqa: BLE001 - discovery must not take trading down
+        log.warning("contract catalogue unavailable for %s", symbol, exc_info=True)
+        return ()
+    return contract_catalogue.terms_for(catalogue, contract_type)
+
+
+def _assert_offered(term: str, allowed: tuple[str, ...], symbol: str) -> None:
+    if allowed and term not in allowed:
+        raise bad_request(
+            "unsupported_duration",
+            f"Deriv does not currently offer {term} on {symbol}. Choose one of {list(allowed)}.",
+            {"term": term, "allowed": list(allowed), "symbol": symbol},
+        )
 
 
 VENUE_MARKET_ASSET_CLASS = {
@@ -134,7 +188,11 @@ def preview(db: Session, *, user: User, connection: Connection, payload: dict) -
     stake = float(payload.get("stake") or 0)
     duration = int(payload.get("duration") or 5)
     duration_unit = payload.get("duration_unit") or "t"
+    contract_type = (payload.get("contract_type") or ("CALL" if (payload.get("side") or "buy") == "buy" else "PUT")).upper()
+    currency = payload.get("currency") or connection.provider_currency or "USD"
     gate = execution_gate.evaluate(db, user=user, connection=connection)
+    allowed = _catalogue_terms(provider, symbol, currency, contract_type)
+    _assert_offered(f"{duration}{duration_unit}", allowed, symbol)
     try:
         proposal = provider.proposal(
             CredentialBundle(),
@@ -142,17 +200,18 @@ def preview(db: Session, *, user: User, connection: Connection, payload: dict) -
                 "symbol": symbol,
                 "stake": stake,
                 "side": payload.get("side") or "buy",
-                "contract_type": payload.get("contract_type"),
+                "contract_type": contract_type,
                 "duration": duration,
                 "duration_unit": duration_unit,
-                "currency": payload.get("currency") or connection.provider_currency or "USD",
+                "currency": currency,
             },
         )
     except ProviderError as exc:
         raise bad_request(exc.code, exc.message) from exc
+    terms = _terms(proposal, duration, duration_unit, allowed_terms=allowed, term_source="venue")
     return {
         "proposal": proposal,
-        "terms": _terms(proposal, duration, duration_unit).as_dict(),
+        "terms": terms.as_dict(),
         "gate": gate.as_dict(),
         "scope": gate.scope,
         "is_demo": gate.scope == execution_gate.DEMO,
@@ -272,6 +331,9 @@ def open_contract(
             f"Deriv's last tick for {symbol} is {int(snapshot.age_seconds)}s old. Trading is paused on stale data.",
         )
 
+    allowed = _catalogue_terms(provider, symbol, currency, contract_type)
+    _assert_offered(f"{duration}{duration_unit}", allowed, symbol)
+
     try:
         proposal = provider.proposal(
             credentials,
@@ -288,7 +350,7 @@ def open_contract(
     except ProviderError as exc:
         raise bad_request(exc.code, exc.message) from exc
 
-    terms = _terms(proposal, duration, duration_unit)
+    terms = _terms(proposal, duration, duration_unit, allowed_terms=allowed, term_source="venue")
     quantity = stake / snapshot.price if snapshot.price else 0.0
     intent = OrderIntent(
         org_id=user.org_id,

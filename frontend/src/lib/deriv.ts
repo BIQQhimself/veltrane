@@ -34,11 +34,31 @@ export type DerivProposal = {
 };
 
 export type DerivTerms = {
-  duration_seconds: number;
+  duration_seconds: number | null;
   payout_pct: number;
   min_stake: number;
   max_stake: number;
   allowed_durations: number[];
+  term?: string;
+  allowed_terms?: string[];
+  term_source?: string;
+};
+
+export type DerivContractFamily = {
+  terms: string[];
+  unverified_terms?: string[];
+  expiry_types?: string[];
+};
+
+export type DerivContracts = {
+  symbol: string;
+  currency: string | null;
+  available: boolean;
+  contracts: Record<string, DerivContractFamily>;
+  source: string;
+  fetched_at?: string;
+  error?: { code: string; message: string } | null;
+  note?: string;
 };
 
 export type DerivGateCheck = { check: string; passed: boolean; message: string };
@@ -191,6 +211,58 @@ export type DerivSymbols = {
   markets: Record<string, DerivSymbol[]>;
 };
 
+export type DerivTerm = { term: string; value: number; unit: string; label: string };
+
+const UNIT_ORDER = ["t", "s", "m", "h", "d"];
+const UNIT_NAMES: Record<string, [string, string]> = {
+  t: ["tick", "ticks"],
+  s: ["sec", "sec"],
+  m: ["min", "min"],
+  h: ["hour", "hours"],
+  d: ["day", "days"],
+};
+
+/** Parse a venue term such as ``30s``. Anything else is refused rather than guessed at. */
+export function parseTerm(raw: string): DerivTerm | null {
+  const match = /^(\d+)([tsmhd])$/.exec(raw.trim());
+  if (!match) return null;
+  const value = Number(match[1]);
+  const unit = match[2] as string;
+  const [one, many] = UNIT_NAMES[unit] ?? ["", ""];
+  return { term: raw.trim(), value, unit, label: `${value} ${value === 1 ? one : many}` };
+}
+
+/**
+ * The venue's own duration menu. The list is whatever Deriv published for this symbol, so a
+ * duration that the venue does not offer can never appear in the interface.
+ */
+export function venueTermOptions(
+  contracts: Record<string, { terms?: string[] }> | undefined,
+): DerivTerm[] {
+  if (!contracts) return [];
+  const seen = new Set<string>();
+  const parsed: DerivTerm[] = [];
+  for (const item of [...(contracts.CALL?.terms ?? []), ...(contracts.PUT?.terms ?? [])]) {
+    const term = parseTerm(item);
+    if (!term || seen.has(term.term)) continue;
+    seen.add(term.term);
+    parsed.push(term);
+  }
+  const rank = (unit: string) => UNIT_ORDER.indexOf(unit);
+  return parsed.sort((a, b) => rank(a.unit) - rank(b.unit) || a.value - b.value);
+}
+
+export type DerivTermGroup = { unit: string; label: string; items: DerivTerm[] };
+
+/** Group a menu for a grouped select control. */
+export function groupTerms(options: DerivTerm[]): DerivTermGroup[] {
+  return UNIT_ORDER.map((unit) => ({
+    unit,
+    label: UNIT_NAMES[unit]?.[1] ?? unit,
+    items: options.filter((item) => item.unit === unit),
+  })).filter((group) => group.items.length > 0);
+}
+
 export function derivConnections(connections: Connection[]): Connection[] {
   return connections.filter(
     (connection) => connection.provider === "deriv" && connection.status !== "revoked",
@@ -199,6 +271,10 @@ export function derivConnections(connections: Connection[]): Connection[] {
 
 export function fetchSymbols(refresh = false, signal?: AbortSignal) {
   return api<DerivSymbols>("/deriv/symbols", { query: { refresh }, signal });
+}
+
+export function fetchContracts(symbol: string, refresh = false, signal?: AbortSignal) {
+  return api<DerivContracts>("/deriv/contracts", { query: { symbol, refresh }, signal });
 }
 
 export function fetchTicker(symbol: string, signal?: AbortSignal) {

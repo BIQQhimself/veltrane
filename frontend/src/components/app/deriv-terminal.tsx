@@ -16,6 +16,7 @@ import {
   closeContract,
   decideSignal,
   fetchAutomation,
+  fetchContracts,
   fetchSignals,
   fetchStatus,
   fetchSymbols,
@@ -23,19 +24,13 @@ import {
   openContract,
   openSession,
   previewContract,
+  groupTerms,
   saveAutomation,
+  venueTermOptions,
   type DerivAutomation,
   type DerivPreview,
   type DerivSignal,
 } from "@/lib/deriv";
-
-const DURATIONS = [
-  { value: 1, unit: "t", label: "1 tick" },
-  { value: 5, unit: "t", label: "5 ticks" },
-  { value: 15, unit: "m", label: "15 min" },
-  { value: 1, unit: "h", label: "1 hour" },
-  { value: 1, unit: "d", label: "1 day" },
-];
 
 type Props = { connections: Connection[] };
 
@@ -45,7 +40,7 @@ export function DerivTerminal({ connections }: Props) {
   const [symbol, setSymbol] = React.useState("R_100");
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [stake, setStake] = React.useState("10");
-  const [durationIndex, setDurationIndex] = React.useState(1);
+  const [term, setTerm] = React.useState("5t");
   const [busy, setBusy] = React.useState(false);
   const [preview, setPreview] = React.useState<DerivPreview | null>(null);
   const [risk, setRisk] = React.useState<RiskDecision | null>(null);
@@ -60,6 +55,7 @@ export function DerivTerminal({ connections }: Props) {
     [activeConnectionId],
   );
   const ticker = useApi((signal) => fetchTicker(symbol, signal), [symbol]);
+  const catalogue = useApi((signal) => fetchContracts(symbol, false, signal), [symbol]);
   const automation = useApi(
     (signal) =>
       activeConnectionId ? fetchAutomation(activeConnectionId, signal) : Promise.resolve({ automation: null }),
@@ -78,7 +74,8 @@ export function DerivTerminal({ connections }: Props) {
 
   useInterval(() => ticker.refetch(), 5000);
 
-  const duration = DURATIONS[durationIndex] ?? { value: 5, unit: "t", label: "5 ticks" };
+  const options = React.useMemo(() => venueTermOptions(catalogue.data?.contracts), [catalogue.data]);
+  const duration = options.find((item) => item.term === term) ?? options[0] ?? null;
   const isDemo = Boolean(status.data?.connection.is_demo);
   const scope = status.data?.gate.scope ?? "blocked";
 
@@ -102,6 +99,7 @@ export function DerivTerminal({ connections }: Props) {
   const venueOpen = Boolean(activeSymbol?.exchange_is_open) && !activeSymbol?.suspended;
 
   function request() {
+    if (!duration) throw new Error("The venue has not published a duration for this market yet.");
     return {
       symbol,
       side,
@@ -298,16 +296,30 @@ export function DerivTerminal({ connections }: Props) {
             <span className="label mb-1 block">Expiry</span>
             <Select
               aria-label="Contract expiry"
-              value={durationIndex}
-              onChange={(event) => setDurationIndex(Number(event.target.value))}
+              value={duration?.term ?? ""}
+              onChange={(event) => setTerm(event.target.value)}
+              disabled={options.length === 0}
               className="h-9 text-xs"
             >
-              {DURATIONS.map((item, index) => (
-                <option key={item.label} value={index}>
-                  {item.label}
-                </option>
-              ))}
+              {options.length === 0 ? (
+                <option value="">{catalogue.loading ? "Loading…" : "Unavailable"}</option>
+              ) : (
+                groupTerms(options).map((group) => (
+                  <optgroup key={group.unit} label={group.label}>
+                    {group.items.map((item) => (
+                      <option key={item.term} value={item.term}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              )}
             </Select>
+            {options.length === 0 && !catalogue.loading ? (
+              <span className="mt-1 block text-3xs text-warn">
+                Durations come from the venue. Nothing is offered until it answers.
+              </span>
+            ) : null}
           </label>
         </div>
 

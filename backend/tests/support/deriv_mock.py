@@ -276,6 +276,29 @@ def _public_reply(state: MockState, message: dict) -> dict:
                 },
             ],
         }
+    if "contracts_for" in message:
+        symbol = message["contracts_for"]
+        return {
+            **base,
+            "msg_type": "contracts_for",
+            "contracts_for": {
+                "underlying_symbol": symbol,
+                "available": [
+                    {
+                        "contract_type": contract_type,
+                        "min_contract_duration": low,
+                        "max_contract_duration": high,
+                        "expiry_type": expiry,
+                    }
+                    for contract_type in ("CALL", "PUT", "DIGITODD")
+                    for low, high, expiry in (
+                        ("1t", "10t", "tick"),
+                        ("15s", "1d", "intraday"),
+                        ("1d", "365d", "daily"),
+                    )
+                ],
+            },
+        }
     if "ticks_history" in message:
         if message.get("style") == "candles" and state.candle_override:
             count = int(message.get("count") or len(state.candle_override))

@@ -443,3 +443,46 @@ def test_signal_rejection_keeps_it_out_of_the_venue(client, trader, deriv_env, d
     db.expire_all()
     assert db.get(AutoTradeSignal, signal.id).status == "rejected"
     assert deriv_env.state.contracts == {}
+
+
+# ------------------------------------------------------------------ duration whitelist
+def test_preview_offers_only_durations_the_venue_publishes(client, trader, deriv_env):
+    connection_id = _connect(client, trader).json()["id"]
+
+    response = client.post(
+        f"{BASE}/deriv/connections/{connection_id}/preview",
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 30, "duration_unit": "s"},
+        headers=trader["headers"],
+    )
+    assert response.status_code == 200, response.text
+    terms = response.json()["terms"]
+    assert terms["term"] == "30s"
+    assert "30s" in terms["allowed_terms"]
+    assert "5t" in terms["allowed_terms"]
+    assert terms["term_source"] == "venue"
+
+
+def test_preview_rejects_a_duration_the_venue_does_not_offer(client, trader, deriv_env):
+    connection_id = _connect(client, trader).json()["id"]
+
+    response = client.post(
+        f"{BASE}/deriv/connections/{connection_id}/preview",
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 37, "duration_unit": "s"},
+        headers=trader["headers"],
+    )
+    assert response.status_code == 400, response.text
+    body = response.json()["detail"]
+    assert body["code"] == "unsupported_duration"
+    assert "30s" in body["details"]["allowed"]
+
+
+def test_tick_contract_carries_no_invented_seconds(client, trader, deriv_env):
+    connection_id = _connect(client, trader).json()["id"]
+
+    response = client.post(
+        f"{BASE}/deriv/connections/{connection_id}/preview",
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 5, "duration_unit": "t"},
+        headers=trader["headers"],
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["terms"]["duration_seconds"] is None

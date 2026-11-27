@@ -65,20 +65,38 @@ competent reviewer would find, so it is cheaper to state it here.
     record of a real strategy trading real markets. Every demo row is flagged `is_demo` and labelled
     "simulated" in the interface.
 
+17. **The duration menu costs a round trip of proposals.** Building a catalogue for one symbol
+    asks Deriv to price every ladder term inside every published band (roughly forty proposals),
+    so the first call for a symbol takes seconds and is cached for five minutes. The catalogue is
+    built per symbol, not per connection, and a venue hiccup simply yields `available: false` for
+    that symbol until the cache expires — the terminal then offers no duration and refuses to
+    trade, which is the intended failure mode but is a visible wait for the trader.
+18. **Only `CALL` and `PUT` are offered, though more is discoverable.** Deriv publishes
+    `DIGITEVEN`, `DIGITODD` and others for the same symbols. They are collected by the provider
+    and deliberately withheld from the menu: there is no settlement path for them, and offering a
+    contract the platform cannot settle honestly would be worse than not offering it.
+19. **A missing expiry price voids a contract.** Settlement refuses to reprice at "now", so a
+    contract whose expiry price cannot be resolved is voided and the stake returned. That is the
+    conservative choice, but it means a data gap produces a void rather than a result, and voids
+    will need an operator report before the numbers can be reconciled against the venue.
+20. **The venue terminal has not been used by a real trader.** The duration menu, preview and
+    order path are covered against the protocol mock only. Nothing in this build has submitted a
+    real-money contract, and the platform switch stays off.
+
 ## Billing
 
-17. **Stripe is untested against a live account.** The webhook verification path is shared with the
+21. **Stripe is untested against a live account.** The webhook verification path is shared with the
     mock provider and covered by tests, but no real Stripe event has been received.
-18. **SPay cannot be integrated yet.** Its published documentation exposes no server-side
+22. **SPay cannot be integrated yet.** Its published documentation exposes no server-side
     transaction lookup and no signed payment or renewal notifications, only a browser callback.
     Activating a plan on that signal would let any visitor grant themselves a paid tier, so the
     adapter is not written. Details and the two ways to unblock it are in `INTEGRATIONS.md`.
-19. **No crypto payment processor or bank transfer rail.** The abstraction is ready; the adapters
+23. **No crypto payment processor or bank transfer rail.** The abstraction is ready; the adapters
     are not written.
-20. **No dunning sequence.** A failed payment notifies once and starts a 7-day grace period.
-21. **Tax is a single line item** with no jurisdiction rules. Real invoicing needs a tax engine.
-22. **Performance fees are disabled by design** and require a legal review that has not happened.
-23. **One historical registration 500 in production was never explained by a traceback.** No log
+24. **No dunning sequence.** A failed payment notifies once and starts a 7-day grace period.
+25. **Tax is a single line item** with no jurisdiction rules. Real invoicing needs a tax engine.
+26. **Performance fees are disabled by design** and require a legal review that has not happened.
+27. **One historical registration 500 in production was never explained by a traceback.** No log
     access was available. The endpoint now survives the two failure classes reachable in that path
     (a lost duplicate-insert race returns `409`, and a failing verification email is isolated in a
     savepoint) and reports a retryable `503` when the database is briefly unavailable, so the same
@@ -87,87 +105,87 @@ competent reviewer would find, so it is cheaper to state it here.
 
 ## Security and operations
 
-24. **No independent security review or penetration test.**
-25. **MFA is optional**, including for staff. It should be mandatory before launch.
-26. **No WAF, CAPTCHA or IP reputation.** Rate limits and lockout are the only brute-force controls.
-27. **Redis loss re-enables revoked access tokens** until they expire (≤ 15 minutes).
-28. **No point-in-time recovery.** Nightly logical backups only; worst-case loss is 24 hours.
-29. **Email is an outbox.** Without SMTP settings nothing is delivered, so verification links must be
+28. **No independent security review or penetration test.**
+29. **MFA is optional**, including for staff. It should be mandatory before launch.
+30. **No WAF, CAPTCHA or IP reputation.** Rate limits and lockout are the only brute-force controls.
+31. **Redis loss re-enables revoked access tokens** until they expire (≤ 15 minutes).
+32. **No point-in-time recovery.** Nightly logical backups only; worst-case loss is 24 hours.
+33. **Email is an outbox.** Without SMTP settings nothing is delivered, so verification links must be
     read from the database in development.
-30. **Migrations are checked for schema parity, not for data safety.**
+34. **Migrations are checked for schema parity, not for data safety.**
     `tests/test_migrations.py` runs `alembic upgrade head` against a scratch database and compares
     it to the ORM metadata, so a missing column is caught. It does not test backfills, long-running
     locks or downgrades on a populated database, and most other tests still build their schema with
     `create_all`.
-31. **No load or performance testing.** No numbers exist for throughput or latency under load, and
+35. **No load or performance testing.** No numbers exist for throughput or latency under load, and
     none are claimed. The one background thread added for the paper scheduler has not been profiled
     against a large number of open sessions.
-32. **No anomaly detection** beyond static fraud signals (multiple accounts per IP, repeated failed
+36. **No anomaly detection** beyond static fraud signals (multiple accounts per IP, repeated failed
     payments, unusual order bursts).
 
 ## Regulatory and commercial
 
-33. **No regulatory review.** Operating a trading tool for retail users has jurisdiction-specific
+37. **No regulatory review.** Operating a trading tool for retail users has jurisdiction-specific
     obligations (advice versus tooling, marketing claims, performance-fee rules). None of that work
     is done.
-34. **No terms of service or privacy policy drafted here.** The registration endpoint records
+38. **No terms of service or privacy policy drafted here.** The registration endpoint records
     acceptance of a version string; the documents themselves do not exist in this repository.
-35. **No trademark or domain clearance** for the VELTRANE name.
-36. **No support staffing model.** The ticket workflow exists; the humans do not.
-37. **Cost estimates in DEPLOYMENT.md are list-price arithmetic**, not quotes.
+39. **No trademark or domain clearance** for the VELTRANE name.
+40. **No support staffing model.** The ticket workflow exists; the humans do not.
+41. **Cost estimates in DEPLOYMENT.md are list-price arithmetic**, not quotes.
 
 ## Deployment (Render free tier)
 
-38. **The Render blueprint is prepared, not deployed.** `render.yaml` defines the free-tier
+42. **The Render blueprint is prepared, not deployed.** `render.yaml` defines the free-tier
     topology (static site + web service + Postgres) and `DEPLOYMENT_RENDER.md` documents the
     custom-domain and HTTPS steps for `corvex.fun`. Nothing in this repository has been deployed to
     Render and no domain has been connected.
-39. **Email delivery is implemented but unverified.** `backend/app/services/email.py` supports a
+43. **Email delivery is implemented but unverified.** `backend/app/services/email.py` supports a
     local outbox (default: records and sends nothing) and Resend. No Resend account has been
     configured here, so no message has been delivered to a real inbox and no `email.delivered`
     webhook has been observed. Until that happens, verification and reset mail in a real
     deployment depends on the operator setting `VELTRANE_EMAIL_PROVIDER=resend` and a verified
     sender. The outbox never marks anything sent that the provider did not accept.
-40. **Free Render Postgres expires 30 days after creation** and has no managed backups. It is
+44. **Free Render Postgres expires 30 days after creation** and has no managed backups. It is
     suitable for a preview, not for data you would miss.
-41. **No Redis on the free tier by default.** Rate limiting and market-data caching become
+45. **No Redis on the free tier by default.** Rate limiting and market-data caching become
     per-process. Kill switches, entitlements and the live-trading gates are database-backed and
     unaffected, but a multi-instance deployment would need shared Redis for limiter accuracy.
-42. **Free web services sleep when idle.** The paper-session scheduler only ticks while the
+46. **Free web services sleep when idle.** The paper-session scheduler only ticks while the
     instance is awake, and the first request after a sleep waits 30–60 seconds (the browser client
     retries `502/503/504` twice before showing an error).
-43. **The live-trading master switch is a staff control, not a launch action.** An Owner/Admin can
+47. **The live-trading master switch is a staff control, not a launch action.** An Owner/Admin can
     disable live trading at any time, but cannot enable it unless the operator has also set
     `VELTRANE_LIVE_TRADING_ENABLED=true`, and no verified live adapter exists.
 
-44. **Deriv OAuth has not been exercised against Deriv.** The authorisation-code + PKCE flow,
+48. **Deriv OAuth has not been exercised against Deriv.** The authorisation-code + PKCE flow,
     state handling, account switch and encrypted credential creation are covered by tests against
     the local protocol mock, but no real Deriv application has completed the round trip. Deriv
     issues no refresh token, so an expired token requires the user to reconnect; there is no
     background renewal.
-45. **One Deriv connection follows one account by design.** A user holding both a demo and a live
+49. **One Deriv connection follows one account by design.** A user holding both a demo and a live
     Deriv account switches between them on a single connection. This is a deliberate product
     rule, not an oversight, but it means a user cannot run demo and live strategies on the same
     Deriv authorisation at the same time.
-46. **Referral commission is manual.** VELTRANE measures what it can observe (clicks,
+50. **Referral commission is manual.** VELTRANE measures what it can observe (clicks,
     registrations, OAuth starts, connections) and labels everything else unverified. There is no
     Deriv partner API integration; an operator copies the verified figure from the partner
     statement. Treat reported commission as an accounting record, not a live feed.
-47. **Performance-fee terms remain disabled** pending legal review (see `SUBSCRIPTIONS.md`), and
+51. **Performance-fee terms remain disabled** pending legal review (see `SUBSCRIPTIONS.md`), and
     referral commission is not netted against performance fees anywhere.
-48. **A revoked access token stays valid while Redis is down.** Logout writes the token's `jti` to a
+52. **A revoked access token stays valid while Redis is down.** Logout writes the token's `jti` to a
     Redis denylist; if Redis is unreachable the revocation is skipped (the failure is logged, and
     the request still succeeds) so a stolen access token survives until it expires. The access-token
     lifetime is short and refresh tokens are revoked in Postgres, but a fail-closed denylist is the
     correct end state. The test suite needs Redis running for this reason — see `TESTING.md`.
-49. **The theme engine covers tokens, not layout.** An administrator can repaint surfaces, text,
+53. **The theme engine covers tokens, not layout.** An administrator can repaint surfaces, text,
     action colours, gains/losses and chart colours, and rename the product, but cannot change
     typography, spacing, component shapes or page structure. A handful of decorative gradients and
     shadows still carry literal colours and do not follow the palette.
-50. **Theme changes are global, not per-tenant.** One palette applies to every subscriber, including
+54. **Theme changes are global, not per-tenant.** One palette applies to every subscriber, including
     the admin console. There is no per-organisation white-labelling, and no light theme beyond the
     stored `default_theme` hint.
-51. **Contrast is reported, not enforced.** The appearance console measures body and button contrast
+55. **Contrast is reported, not enforced.** The appearance console measures body and button contrast
     and warns below 4.5:1, but publishing a low-contrast palette is still allowed.
 
 ## What this build is good for

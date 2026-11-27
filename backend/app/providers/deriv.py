@@ -320,6 +320,18 @@ class DerivProvider(BaseAdapter):
             raise _to_provider_error(exc) from exc
         return list(payload.get("active_symbols") or [])
 
+    def contracts_for(self, symbol: str) -> dict[str, Any]:
+        """Contract families and duration bands Deriv currently offers for ``symbol``.
+
+        Public call: no account, no credentials, no side effects. The response is the
+        authority for what the terminal may offer, so it is never cached beyond its TTL
+        or amended locally.
+        """
+        try:
+            return fetch_public({"contracts_for": symbol}, url=self.public_ws_url)
+        except DerivError as exc:
+            raise _to_provider_error(exc) from exc
+
     # ------------------------------------------------------------------ pricing
     def proposal(self, credentials: CredentialBundle, request: dict[str, Any]) -> dict[str, Any]:
         """Contract price. Uses the public gateway: no account is touched."""

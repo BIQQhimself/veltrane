@@ -197,3 +197,39 @@ def test_late_settlement_uses_the_price_at_expiry(client, trader, db):
     db.expire_all()
     row = db.get(BinaryContract, contract_id)
     assert float(row.exit_price) == pytest.approx(expected)
+
+
+def test_missing_expiry_price_voids_the_contract_instead_of_repricing_at_now(
+    client, trader, db, monkeypatch
+):
+    """No authoritative price means no result.
+
+    Substituting the live ticker would silently invent a settlement, so the contract is
+    voided, the stake is returned and no Trade row claims a profit or a loss.
+    """
+    from app.db.models import Trade
+    from app.services import market_data
+
+    body = open_contract(client, trader["headers"], stake=100.0, duration_seconds=60).json()
+    contract_id = body["contract"]["id"]
+    row = db.get(BinaryContract, contract_id)
+    row.expires_at = datetime.now(UTC) - timedelta(minutes=5)
+    db.commit()
+    stake_before = float(row.stake)
+
+    monkeypatch.setattr(market_data, "price_at", lambda *args, **kwargs: None)
+    settled = client.post(f"{BASE}/binary/settle", headers=trader["headers"]).json()
+    assert settled["count"] == 1
+
+    db.expire_all()
+    row = db.get(BinaryContract, contract_id)
+    assert row.status == "void"
+    assert row.exit_price is None
+    assert float(row.net_pnl) == 0.0
+    assert row.trade_id is None
+    assert db.query(Trade).filter(Trade.paper_session_id == row.paper_session_id).count() == 0
+
+    audit_rows = client.get(f"{BASE}/notifications", headers=trader["headers"]).json()
+    titles = [item["title"] for item in audit_rows["notifications"]]
+    assert any("settled" in title.lower() for title in titles)
+    assert stake_before > 0

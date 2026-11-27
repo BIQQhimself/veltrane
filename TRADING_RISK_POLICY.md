@@ -44,16 +44,23 @@ version that evaluated them. Rule codes below are the ones emitted by `app/risk/
 | `strategy_approved` | Strategy version approved for the mode in use | on |
 | `connection_permission` | Connection allows trading for this mode | on |
 | `demo_execution_limit` | Simulated executions, counting paper fills and contracts on a venue demo account against one daily allowance | 5 / day (entitlement) |
+| `binary_terms` | Fixed-odds expiry must be a term the venue published *and* priced; stake and payout inside the offered bounds | venue menu, verified per term |
 
-| `duration` | Fixed-odds expiry must be one of the offered terms, and never shorter than one minute | 60 / 300 / 900 / 1800 / 3600 s |
+Three details are easy to get wrong and are pinned by tests:
 
-Two details are easy to get wrong and are pinned by tests:
-
-- **A sub-minute expiry is refused twice, on purpose.** The request schema rejects anything below
-  60 seconds with a field-level validation error, and the engine returns `duration_too_short` for a
-  term that clears the schema but not the floor. Terms that are not offered at all (for example 90
-  seconds) return `invalid_duration`. Both paths are covered in `tests/test_theme_and_duration.py`
-  and `tests/test_binary.py`.
+- **Durations come from the venue, not from a constant.** `GET /deriv/contracts` reads Deriv's
+  `contracts_for`, walks the duration ladder inside each published band and keeps only the terms
+  the proposal engine actually prices. The menu therefore contains real Deriv terms — 15 s, 30 s
+  and 5 ticks are all normal — and never a duration invented to fill a gap. A term outside the
+  menu is rejected with `unsupported_duration` before any order leaves the process, and the
+  terminal can only render what the catalogue returned.
+- **The platform's own paper book keeps a one-minute floor.** That book prices its own contracts,
+  so `duration_seconds` below 60 is refused by the request schema and `duration_too_short` by the
+  engine. The venue path is different on purpose: Deriv's tick and seconds contracts are real
+  products, so the floor there is "whatever the venue published".
+- **A tick term never gains a seconds figure.** `duration_seconds` is `None` for `1t`-style
+  contracts. Converting ticks to seconds would be a fabricated number, and settlement, the audit
+  trail and the duplicate-order window all key off the term instead.
 
 - **Notional is rounded before it is compared.** A stake of exactly the minimum arrives as
   `9.999999999999998` after `stake / price * price`, so it would otherwise fail the minimum-notional

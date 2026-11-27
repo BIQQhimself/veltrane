@@ -126,20 +126,16 @@ const RISK_RULES = [
 
 const PLANS = [
   {
-    name: "Free",
-    price: "$0",
-    cadence: "forever",
-    blurb: "Read-only connections, portfolio analytics and simulated trading.",
-    features: ["2 connected accounts", "5 simulated executions a day", "Market monitoring", "No real-money execution"],
-    cta: "Start free",
-    highlight: false,
-  },
-  {
     name: "Basic",
     price: "$19",
     cadence: "per month",
-    blurb: "Core strategies and guardrailed automation.",
-    features: ["3 connected accounts", "50 simulated executions a day", "Two-strategy library", "Paper automation"],
+    blurb: "Live trading and an agent that works while the platform is open.",
+    features: [
+      "Live trading after explicit authorisation",
+      "Agent in session mode",
+      "600 trades a day",
+      "3 connected accounts",
+    ],
     cta: "Choose Basic",
     highlight: false,
   },
@@ -147,8 +143,13 @@ const PLANS = [
     name: "Pro",
     price: "$49",
     cadence: "per month",
-    blurb: "Backtesting, customisation and advanced analytics.",
-    features: ["8 connected accounts", "250 simulated executions a day", "Backtesting and walk-forward", "Eligible for live after authorisation"],
+    blurb: "The agent keeps trading when you close the platform.",
+    features: [
+      "Autonomous background trading",
+      "1,200 trades a day",
+      "Backtesting and walk-forward",
+      "8 connected accounts",
+    ],
     cta: "Choose Pro",
     highlight: true,
   },
@@ -156,8 +157,13 @@ const PLANS = [
     name: "Elite",
     price: "$149",
     cadence: "per month",
-    blurb: "Full library, portfolio optimisation, priority support.",
-    features: ["25 connected accounts", "1,000 simulated executions a day", "Portfolio optimisation", "Optional performance-fee agreement"],
+    blurb: "Full library, portfolio optimisation, no platform trade cap.",
+    features: [
+      "No platform trade cap",
+      "Portfolio optimisation",
+      "25 connected accounts",
+      "Optional performance-fee agreement",
+    ],
     cta: "Choose Elite",
     highlight: false,
   },
@@ -578,10 +584,11 @@ export default function MarketingPage() {
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-paper-muted">
                 Every plan includes the full risk engine and the audit trail. Higher tiers unlock more
-                instruments, more simulation and deeper analysis — never a bypass of a safety control.
+                automation, more accounts and deeper analysis — never a bypass of a safety control.
+                Live trading always needs its own explicit authorisation, on every tier.
               </p>
             </div>
-            <div className="mt-10 grid gap-4 lg:grid-cols-4">
+            <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {PLANS.map((plan) => (
                 <article
                   key={plan.name}

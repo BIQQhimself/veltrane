@@ -45,7 +45,10 @@ code as Stripe.
 | `test_deriv_provider.py` | The adapter in isolation: PAT auth, identity, pricing, execution and reconnection against the mock gateway |
 | `test_deriv_live_market_data.py` | Public Deriv market data end to end. Skipped unless `VELTRANE_DERIV_LIVE_TESTS=1`, because it needs the real public socket |
 | `test_deriv_autotrade.py` | The scheduled runner: deterministic EMA-cross series, approval-mode signals, autonomous execution on a demo account, kill-switch refusal, and a risk rejection that is recorded as rejected rather than executed |
-| `test_binary.py` | Fixed-odds contracts: quote, open, settle, payout, expiry, and that a paper binary never touches live equity. Also the expiry-term contract: a sub-minute duration is refused by the request schema, a term that is not offered returns `invalid_duration` |
+| `test_binary.py` | Fixed-odds contracts: quote, open, settle, payout, expiry, and that a paper binary never touches live equity. Also the expiry-term contract: a sub-minute duration is refused by the request schema, a term that is not offered returns `invalid_duration`, and a contract with no authoritative expiry price is voided rather than repriced at "now" |
+| `test_binary_terms.py` | The `binary_terms` rule in isolation: a venue term inside the published menu passes, a term outside it is refused with the allowed list in the detail, a tick term carries no seconds figure, and an empty menu fails closed |
+| `test_contract_catalogue.py` | Contract discovery: term parsing, mixed-unit bands (`15s`–`1d`), unsupported contract families dropped, ladder terms kept inside their band, only venue-priced terms advertised, unreachable venue reported as unavailable (not as an empty menu), caching with an explicit refresh, and the `/deriv/contracts` endpoint |
+| `src/lib/deriv-terms.test.ts` | The terminal's duration menu: term parsing, CALL/PUT union without duplicates, ladder ordering, malformed venue entries dropped, grouping for the grouped select |
 | `test_theme_and_duration.py` | The runtime palette and the expiry floor: defaults returned when nothing is stored, an administrator's colours round-tripping, unknown tokens and malformed hex refused, branding length limits, the support-role gate, an audit row per publish, reset restoring the shipped palette, and `validate_duration` accepting only the offered terms |
 | `test_paper_session.py` | Paper session provisioning, per-session isolation, stop, and balance accounting |
 | `test_market_data.py` | The demo feed's shape and continuity, instrument specs, market open/closed behaviour |
@@ -84,9 +87,15 @@ These are not aspirations; each is checked.
 16. A palette the administrator saves is what subscribers receive, and only colour tokens in the
     known list are accepted — a stored value can never become CSS or script
     (`test_theme_and_duration.py`).
-17. An expiry shorter than one minute is refused at the schema boundary *and* by the engine, and a
-    term that is not offered is refused with `invalid_duration` (`test_binary.py`,
-    `test_theme_and_duration.py`).
+17. On the platform's own paper book, an expiry shorter than one minute is refused at the schema
+    boundary *and* by the engine, and a term that is not offered is refused with `invalid_duration`
+    (`test_binary.py`, `test_theme_and_duration.py`).
+18. On a venue, the offered durations are whatever the venue published and priced: a duration the
+    venue did not offer is refused with `unsupported_duration` before any order leaves the process,
+    and the interface can only render terms from that same catalogue
+    (`test_contract_catalogue.py`, `test_deriv_integration.py`, `test_binary_terms.py`).
+19. A contract whose expiry price cannot be resolved is voided with no P&L and no trade row, so a
+    data gap can never be recorded as a win or a loss (`test_binary.py`).
 
 ## Static export build (Render)
 

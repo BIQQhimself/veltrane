@@ -5,36 +5,43 @@
 Prices are stored in the `plans` table and editable from the admin console. The figures below are
 the seeded defaults.
 
-| Tier | Price / month | Connections | Open positions | Demo executions / day | Backtests / day | Live trading |
-| --- | --- | --- | --- | --- | --- | --- |
-| Free | $0 | 2 | 3 | 5 | 0 | no |
-| Basic | $19 | 3 | 5 | 50 | 0 | no |
-| Pro | $49 | 8 | 15 | 250 | 25 | eligible |
-| Elite | $149 | 25 | 50 | 1000 | 200 | eligible |
+Three paid tiers plus a free sandbox account. The free account is not a sales tier: it exists so a
+visitor can see the platform work without a card, and it never executes a real-money order.
+
+| Tier | Price / month | Connections | Open positions | Trades / day | Agent mode | Backtests / day | Live trading |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Free | $0 | 2 | 3 | 5 (demo only) | off | 0 | no |
+| Basic | $19 | 3 | 5 | 600 | while the platform is open | 0 | eligible |
+| Pro | $49 | 8 | 15 | 1,200 | background, platform closed | 25 | eligible |
+| Elite | $149 | 25 | 50 | no platform cap | background, platform closed | 200 | eligible |
+
+"Trades / day" is one shared counter per account: a demo execution and an automated signal draw
+from the same budget, so a plan cannot be gamed by switching between the two.
 
 Feature flags per tier (server-side, `app/db/constants.py::Entitlement`):
 
 | Entitlement | Free | Basic | Pro | Elite |
 | --- | --- | --- | --- | --- |
-| `strategy_library` | core read-only | core | full | full |
+| `strategy_library` | trend only | 2 strategies | 3 strategies | full |
 | `backtesting` | – | – | ✓ | ✓ |
 | `strategy_customization` | – | – | ✓ | ✓ |
 | `advanced_analytics` | – | – | ✓ | ✓ |
-| `automation` | – | ✓ | ✓ | ✓ |
+| `automation` | – | ✓ (session) | ✓ (background) | ✓ (background) |
 | `portfolio_optimization` | – | – | – | ✓ |
 | `priority_support` | – | – | – | ✓ |
 | `api_access` | – | – | ✓ | ✓ |
 | `performance_fees` | – | – | – | eligible |
-| `live_trading` | – | – | – | eligible |
+| `live_trading` | – | eligible | eligible | eligible |
 
 Free is explicitly **read-only and simulation only**. It is not a trial that can be nudged into
-live execution: the entitlement is absent, and the live-authorisation endpoint refuses Free and
-Basic regardless of how the request is formed.
+live execution: the entitlement is absent, and the live-authorisation endpoint refuses a free
+account regardless of how the request is formed.
 
-Pro and Elite carry `live_trading: true`, which makes a user *eligible*. It does not authorise
-anything. Live
-execution additionally needs the separate authorisation flow described in
-[TRADING_RISK_POLICY.md](TRADING_RISK_POLICY.md#5-live-trading-authorisation).
+Basic, Pro and Elite carry `live_trading: true`, which makes an account *eligible*. It authorises
+nothing. Live execution additionally needs the platform live switch, the explicit multi-step
+authorisation, a passed safety checklist and a clean risk decision, as described in
+[TRADING_RISK_POLICY.md](TRADING_RISK_POLICY.md#5-live-trading-authorisation). The difference
+between the tiers is how much the agent may do unattended, not whether a safety control applies.
 
 ## Where entitlements are enforced
 

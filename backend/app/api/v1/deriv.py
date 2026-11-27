@@ -17,7 +17,15 @@ from app.core.errors import bad_request, forbidden, not_found
 from app.db.constants import AuditAction
 from app.db.models import Connection, User
 from app.db.session import get_db
-from app.services import audit, automation_limits, deriv_oauth, deriv_sessions, execution_gate, referrals
+from app.services import (
+    audit,
+    automation_limits,
+    contract_catalogue,
+    deriv_oauth,
+    deriv_sessions,
+    execution_gate,
+    referrals,
+)
 from app.services.connections import get_connection, load_credentials
 from app.trading import deriv_execution
 from fastapi import APIRouter, Depends, Query, Request
@@ -91,6 +99,24 @@ def symbols(refresh: bool = Query(default=False)):
         "count": len(rows),
         "markets": markets,
     }
+
+
+@router.get("/contracts")
+def contracts(
+    symbol: str = Query(min_length=1, max_length=32),
+    currency: str = Query(default="USD", min_length=3, max_length=8),
+    refresh: bool = Query(default=False),
+    user: User = Depends(get_current_user),
+):
+    """Contract families and durations Deriv actually offers for ``symbol`` right now.
+
+    This is the single source of truth for the duration selector and for the agent: both
+    read the same discovered menu. When Deriv cannot be reached the response says so and
+    carries no menu, so no surface can fall back to a hardcoded list.
+    """
+    adapter = deriv_sessions.adapter()
+    catalogue = contract_catalogue.get(symbol, currency, provider=adapter, refresh=refresh)
+    return catalogue
 
 
 @router.get("/candles")

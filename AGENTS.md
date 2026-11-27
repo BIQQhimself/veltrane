@@ -98,6 +98,27 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
   validator, so an account seeded on those domains can never sign in. `REVIEW_ACCESS.md` is the
   reviewer-facing brief; keep it in step with the script's SPECS list.
 
+## Session notes (Nov 2026 — durations come from the venue, three paid tiers)
+
+- **Never hardcode a duration menu.** `app/services/contract_catalogue.py` reads Deriv's
+  `contracts_for`, walks the ladder inside each published band and keeps only terms the proposal
+  engine prices. `GET /deriv/contracts?symbol=...` serves it; `deriv_execution._assert_offered`
+  enforces it on preview *and* submit, including the autonomous runner. The terminal renders only
+  what that endpoint returned (`venueTermOptions`/`groupTerms` in `src/lib/deriv.ts`).
+- **A tick term has no `duration_seconds`.** `None` is deliberate; converting ticks to seconds
+  would invent a number and break settlement, the duplicate window and the audit trail.
+- **A missing expiry price voids the contract** and returns the stake. Repricing at "now" would
+  fabricate a result in a subscriber's history.
+- **Payout sanity band is 1–98 %**, not 95 %: Deriv's own ceiling sits near 95.6 %, so a tighter
+  bound refused legitimate contracts. The band is an implausibility guard, not a venue rule.
+- **Plans are Free (sandbox) / Basic $19 / Pro $49 / Elite $149.** All three paid tiers are
+  live-*eligible*; authorisation, the platform switch, the checklist and the risk engine still
+  gate every live order. `SUBSCRIPTIONS.md` is the source of truth.
+- **Free tier still exists** as a read-only sandbox (5 demo executions/day) — it is what
+  `seed_testers.py` and the acceptance tests use.
+- Backend `355 passed`; frontend `63 passed`; `VELTRANE_STATIC_EXPORT=1 npm run build` exports
+  cleanly. Rebuild `out/` after touching `page.tsx` or the deployed palette goes stale.
+
 ## Runtime topology in this sandbox (learned the hard way)
 
 - **The API must listen on `0.0.0.0:12001`.** Port 12001 is the only port the platform's reverse

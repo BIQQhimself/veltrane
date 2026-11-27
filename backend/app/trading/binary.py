@@ -186,6 +186,10 @@ def open_contract(
         min_stake=settings.binary_min_stake,
         max_stake=settings.binary_max_stake,
         allowed_durations=ALLOWED_DURATIONS,
+        duration=duration_seconds,
+        duration_unit="s",
+        allowed_terms=tuple(f"{value}s" for value in ALLOWED_DURATIONS),
+        term_source="platform",
     )
 
     # quantity = stake / price so the shared notional rules measure committed capital.
@@ -351,22 +355,26 @@ def settle_due(db: Session, *, org_id: str) -> list[BinaryContract]:
     settled: list[BinaryContract] = []
     for contract in due:
         expiry_price = market_data.price_at(contract.instrument_symbol, contract.expires_at)
-        snapshot = market_data.get_ticker(contract.instrument_symbol)
-        exit_price = expiry_price if expiry_price and expiry_price > 0 else float(snapshot.price)
         entry_price = float(contract.entry_price)
-        if abs(exit_price - entry_price) < 1e-12:
-            status = "void"
-            net = 0.0
-            credit = float(contract.stake)
+        void_reason = None
+        if not expiry_price or expiry_price <= 0:
+            # No authoritative price for the expiry instant. Substituting the current ticker
+            # would invent a result, so the contract is voided and the stake returned.
+            status, net, credit, exit_price = "void", 0.0, float(contract.stake), None
+            void_reason = "settlement_price_unavailable"
         else:
-            won = exit_price > entry_price if contract.direction == "call" else exit_price < entry_price
-            status = "won" if won else "lost"
-            if won:
-                net = round(float(contract.stake) * float(contract.payout_pct) / 100.0, 2)
-                credit = float(contract.stake) + net
+            exit_price = float(expiry_price)
+            if abs(exit_price - entry_price) < 1e-12:
+                status, net, credit = "void", 0.0, float(contract.stake)
             else:
-                net = -float(contract.stake)
-                credit = 0.0
+                won = exit_price > entry_price if contract.direction == "call" else exit_price < entry_price
+                status = "won" if won else "lost"
+                if won:
+                    net = round(float(contract.stake) * float(contract.payout_pct) / 100.0, 2)
+                    credit = float(contract.stake) + net
+                else:
+                    net = -float(contract.stake)
+                    credit = 0.0
 
         contract.status = status
         contract.exit_price = exit_price
@@ -378,43 +386,49 @@ def settle_due(db: Session, *, org_id: str) -> list[BinaryContract]:
             session.cash_balance = float(session.cash_balance) + credit
             session.equity = float(session.cash_balance) + _open_stake_total(db, org_id)
 
-        trade = Trade(
-            org_id=contract.org_id,
-            order_id=None,
-            position_id=None,
-            paper_session_id=contract.paper_session_id,
-            mode="paper",
-            instrument_symbol=contract.instrument_symbol,
-            side="long" if contract.direction == "call" else "short",
-            quantity=float(contract.stake),
-            entry_price=entry_price,
-            exit_price=exit_price,
-            notional=float(contract.stake),
-            fees=0.0,
-            funding=0.0,
-            slippage_est_bps=0.0,
-            slippage_actual_bps=0.0,
-            gross_pnl=net,
-            net_pnl=net,
-            entry_reason=contract.entry_reason,
-            exit_reason=f"binary_expiry:{status}",
-            risk_snapshot={
-                "instrument_type": "binary",
-                "direction": contract.direction,
-                "stake": float(contract.stake),
-                "payout_pct": float(contract.payout_pct),
-                "duration_seconds": contract.duration_seconds,
-                "expiry_price": exit_price,
-                "price_source": contract.price_source,
-                "is_demo": True,
-            },
-            is_demo=True,
-            opened_at=contract.opened_at,
-            closed_at=now,
-        )
-        db.add(trade)
-        db.flush()
-        contract.trade_id = trade.id
+        if exit_price is None:
+            # Nothing authoritative to settle against: the contract stays void with the
+            # stake returned and no Trade row, rather than a fabricated exit price.
+            contract.trade_id = None
+        else:
+            trade = Trade(
+                org_id=contract.org_id,
+                order_id=None,
+                position_id=None,
+                paper_session_id=contract.paper_session_id,
+                mode="paper",
+                instrument_symbol=contract.instrument_symbol,
+                side="long" if contract.direction == "call" else "short",
+                quantity=float(contract.stake),
+                entry_price=entry_price,
+                exit_price=exit_price,
+                notional=float(contract.stake),
+                fees=0.0,
+                funding=0.0,
+                slippage_est_bps=0.0,
+                slippage_actual_bps=0.0,
+                gross_pnl=net,
+                net_pnl=net,
+                entry_reason=contract.entry_reason,
+                exit_reason=f"binary_expiry:{status}",
+                risk_snapshot={
+                    "instrument_type": "binary",
+                    "direction": contract.direction,
+                    "stake": float(contract.stake),
+                    "payout_pct": float(contract.payout_pct),
+                    "duration_seconds": contract.duration_seconds,
+                    "expiry_price": exit_price,
+                    "price_source": contract.price_source,
+                    "is_demo": True,
+                    "void_reason": void_reason,
+                },
+                is_demo=True,
+                opened_at=contract.opened_at,
+                closed_at=now,
+            )
+            db.add(trade)
+            db.flush()
+            contract.trade_id = trade.id
         audit.record(
             db,
             action=AuditAction.TRADE_CLOSED,
@@ -427,6 +441,7 @@ def settle_due(db: Session, *, org_id: str) -> list[BinaryContract]:
                 "entry_price": entry_price,
                 "exit_price": exit_price,
                 "is_demo": True,
+                "void_reason": void_reason,
             },
         )
         notifications.notify(
@@ -436,8 +451,8 @@ def settle_due(db: Session, *, org_id: str) -> list[BinaryContract]:
             severity=Severity.SUCCESS if net > 0 else (Severity.INFO if net == 0 else Severity.WARNING),
             title=f"Simulated contract settled: {contract.instrument_symbol} {contract.direction.upper()}",
             body=(
-                f"{status.upper()} at {exit_price} (entry {entry_price}). "
-                f"Net {net:+.2f} USD after costs. Paper settlement only."
+                f"{status.upper()} at {exit_price if exit_price is not None else 'no authoritative expiry price'} "
+                f"(entry {entry_price}). Net {net:+.2f} USD after costs. Paper settlement only."
             ),
             data={"binary_contract_id": contract.id, "is_demo": True},
         )
