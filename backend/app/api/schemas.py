@@ -17,6 +17,12 @@ class RegisterRequest(BaseModel):
     # Opaque id from the referral link the visitor arrived through. Optional.
     referral_visitor_id: str = Field(default="", max_length=64)
 
+    @field_validator("email", "full_name", mode="before")
+    @classmethod
+    def _trim(cls, v: Any) -> Any:
+        """Trim before the length/format rules run, so "  A  " is judged as "A"."""
+        return v.strip() if isinstance(v, str) else v
+
     @field_validator("accept_terms")
     @classmethod
     def _terms(cls, v: bool) -> bool:

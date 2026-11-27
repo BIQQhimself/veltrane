@@ -208,3 +208,33 @@ export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return "Something went wrong.";
 }
+
+type ValidationEntry = { loc?: unknown; msg?: unknown };
+
+function fieldOf(loc: unknown): string | null {
+  if (!Array.isArray(loc)) return null;
+  for (let i = loc.length - 1; i >= 0; i -= 1) {
+    const part = loc[i];
+    if (typeof part === "string" && part !== "body" && part !== "query" && part !== "path") return part;
+  }
+  return null;
+}
+
+/**
+ * Field-level messages from a 422, keyed by input name, so a form can mark the input that
+ * failed instead of repeating "Request validation failed." Pydantic prefixes its own
+ * messages with "Value error, "; that prefix is noise in a form.
+ */
+export function fieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError)) return {};
+  const details = error.details as { errors?: unknown } | null | undefined;
+  const entries = Array.isArray(details?.errors) ? (details?.errors as ValidationEntry[]) : [];
+  const out: Record<string, string> = {};
+  for (const entry of entries) {
+    const field = fieldOf(entry.loc);
+    if (!field || out[field]) continue;
+    const message = typeof entry.msg === "string" ? entry.msg.replace(/^Value error,\s*/, "") : "";
+    if (message) out[field] = message;
+  }
+  return out;
+}

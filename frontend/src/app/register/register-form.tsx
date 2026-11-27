@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, MailCheck } from "lucide-react";
-import { errorMessage } from "@/lib/api";
+import { ApiError, errorMessage, fieldErrors } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { visitorId } from "@/lib/referral";
+import { PASSWORD_HINT, PASSWORD_RULES, emailProblem, normalizeEmail, passwordIssues } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
 
@@ -37,17 +38,39 @@ export function RegisterForm() {
   const [accept, setAccept] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<Record<string, string>>({});
   const [done, setDone] = useState<{ email: string; debugToken?: string } | null>(null);
+
+  function clearField(name: string) {
+    setFields((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    setBusy(true);
     setError(null);
+    setFields({});
+
+    // Cheap checks first: the API rejects these too, but only after a round trip.
+    const problems: Record<string, string> = {};
+    const emailIssue = emailProblem(email);
+    if (emailIssue) problems.email = emailIssue;
+    if (passwordIssues(password).length > 0) problems.password = "The password does not meet all the rules below.";
+    if (Object.keys(problems).length > 0) {
+      setFields(problems);
+      return;
+    }
+
+    setBusy(true);
     try {
       const result = await register({
-        email,
+        email: normalizeEmail(email),
         password,
-        full_name: fullName,
+        full_name: fullName.trim(),
         country,
         accept_terms: accept,
         terms_version: "terms-2026-01",
@@ -56,7 +79,13 @@ export function RegisterForm() {
       });
       setDone(result);
     } catch (err) {
-      setError(errorMessage(err));
+      // 422 answers carry the failing field; 409 and weak-password answers name one field
+      // in their code. Anything else stays a form-level message.
+      const perField = fieldErrors(err);
+      if (err instanceof ApiError && err.code === "email_in_use") perField.email = err.message;
+      if (err instanceof ApiError && err.code === "weak_password") perField.password = err.message;
+      if (Object.keys(perField).length > 0) setFields(perField);
+      else setError(errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -94,24 +123,32 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={submit} className="mt-8 space-y-4">
-      <Field label="Full name" htmlFor="full_name">
+      <Field label="Full name" htmlFor="full_name" error={fields.full_name}>
         <Input
           id="full_name"
           autoComplete="name"
           required
           minLength={2}
           value={fullName}
-          onChange={(event) => setFullName(event.target.value)}
+          aria-invalid={Boolean(fields.full_name)}
+          onChange={(event) => {
+            setFullName(event.target.value);
+            clearField("full_name");
+          }}
         />
       </Field>
-      <Field label="Email" htmlFor="email">
+      <Field label="Email" htmlFor="email" error={fields.email}>
         <Input
           id="email"
           type="email"
           autoComplete="email"
           required
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          aria-invalid={Boolean(fields.email)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            clearField("email");
+          }}
           placeholder="you@example.com"
         />
       </Field>
@@ -124,7 +161,7 @@ export function RegisterForm() {
           ))}
         </Select>
       </Field>
-      <Field label="Password" htmlFor="password" hint="At least 12 characters. Length beats complexity.">
+      <Field label="Password" htmlFor="password" hint={PASSWORD_HINT} error={fields.password}>
         <Input
           id="password"
           type="password"
@@ -132,9 +169,26 @@ export function RegisterForm() {
           required
           minLength={12}
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          aria-invalid={Boolean(fields.password)}
+          aria-describedby="password-rules"
+          onChange={(event) => {
+            setPassword(event.target.value);
+            clearField("password");
+          }}
         />
       </Field>
+      {password ? (
+        <ul id="password-rules" className="space-y-1 text-xs text-paper-faint" aria-live="polite">
+          {PASSWORD_RULES.map((rule) => {
+            const met = rule.test(password);
+            return (
+              <li key={rule.id} className={met ? "text-gain" : "text-paper-faint"}>
+                {met ? "✓" : "•"} {rule.label}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <label className="flex items-start gap-3 text-xs leading-relaxed text-paper-muted">
         <input
           type="checkbox"

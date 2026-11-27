@@ -27,7 +27,7 @@ never enables real-money trading by default.
 | Growth | Deriv referral link with server-side click and registration attribution; commission counts only when an operator records a verified figure |
 | Performance fees | Elite-only, high-water-mark accounting, realised P&L only, consent records, jurisdiction gate, disabled until legal review is recorded |
 | Web app | Next.js 15 App Router + TypeScript + Tailwind. Twelve workspace screens (overview, terminal, markets, strategies, copilot, accounts, portfolio, analytics, notifications, billing, settings, onboarding), an admin console, and an installable PWA shell |
-| Tests | 287 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
+| Tests | 302 backend tests against real PostgreSQL and Redis, plus a frontend unit suite (Vitest) started with the chart scale and demo-feed invariants |
 
 ## Reviewing this build
 

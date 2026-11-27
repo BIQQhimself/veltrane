@@ -36,19 +36,31 @@ def password_needs_rehash(password_hash: str) -> bool:
         return True
 
 
+PASSWORD_MIN_LENGTH = 12
+PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{};:,.<>?/~`"
+
+
 def password_strength_errors(password: str) -> list[str]:
     errors = []
-    if len(password) < 12:
-        errors.append("at least 12 characters")
+    if len(password) < PASSWORD_MIN_LENGTH:
+        errors.append(f"at least {PASSWORD_MIN_LENGTH} characters")
     if not any(c.islower() for c in password):
         errors.append("a lowercase letter")
     if not any(c.isupper() for c in password):
         errors.append("an uppercase letter")
     if not any(c.isdigit() for c in password):
         errors.append("a number")
-    if not any(c in "!@#$%^&*()-_=+[]{};:,.<>?/~`" for c in password):
+    if not any(c in PASSWORD_SYMBOLS for c in password):
         errors.append("a symbol")
     return errors
+
+
+def password_policy() -> dict:
+    """Public description of the rules above, so the UI cannot advertise a weaker policy."""
+    return {
+        "min_length": PASSWORD_MIN_LENGTH,
+        "requires": ["lowercase", "uppercase", "number", "symbol"],
+    }
 
 
 def _now() -> datetime:

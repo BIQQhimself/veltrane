@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app import __version__
 from app.core.config import settings
+from app.core.security import password_policy
 from app.db.models import Trade, User
 from app.db.session import get_db
 from app.providers.registry import provider_catalog
@@ -49,6 +50,8 @@ def public_config(db: Session = Depends(get_db)):
             "from_address": settings.email_from,
         },
         "deriv_oauth_configured": bool(settings.deriv_oauth_client_id),
+        # Describes the enforced rules so the sign-up form can state them exactly.
+        "password_policy": password_policy(),
         "paper_costs": {
             "taker_fee_bps": settings.paper_taker_fee_bps,
             "spread_bps": settings.paper_spread_bps,

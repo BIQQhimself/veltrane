@@ -6,6 +6,7 @@ import { api, errorMessage } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 import { dateTime, titleCase } from "@/lib/format";
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/validation";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KeyValue, Skeleton } from "@/components/ui/data";
@@ -415,7 +416,7 @@ export default function SettingsPage() {
           </Panel>
 
           <Panel>
-            <PanelHeader title="Password" subtitle="At least 12 characters" />
+            <PanelHeader title="Password" subtitle={PASSWORD_HINT} />
             <PanelBody>
               <form onSubmit={changePassword} className="space-y-3">
                 <Field label="Current password" htmlFor="current_password">
@@ -428,12 +429,12 @@ export default function SettingsPage() {
                     required
                   />
                 </Field>
-                <Field label="New password" htmlFor="new_password">
+                <Field label="New password" htmlFor="new_password" hint={PASSWORD_HINT}>
                   <Input
                     id="new_password"
                     type="password"
                     autoComplete="new-password"
-                    minLength={12}
+                    minLength={PASSWORD_MIN_LENGTH}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     required

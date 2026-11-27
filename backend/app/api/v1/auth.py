@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, timedelta
 
 from app.api import serializers
@@ -16,7 +17,7 @@ from app.api.schemas import (
     VerifyEmailRequest,
 )
 from app.core.config import settings
-from app.core.errors import bad_request, unauthorized
+from app.core.errors import bad_request, conflict, unauthorized, unavailable
 from app.core.rate_limit import enforce
 from app.core.security import create_token, decode_token, new_csrf_token
 from app.db.models import User
@@ -25,7 +26,10 @@ from app.services import auth as auth_service
 from app.services import entitlements, platform_switch, referrals
 from app.services.live_authorization import live_state
 from fastapi import APIRouter, Depends, Request, Response
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -76,19 +80,32 @@ def _issue(response: Response, issued: dict, user: User) -> dict:
 @router.post("/register", status_code=201)
 def register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     enforce(request, "register", limit=5, window=3600)
-    user, debug_token = auth_service.register(
-        db,
-        email=str(payload.email),
-        password=payload.password,
-        full_name=payload.full_name,
-        country=payload.country,
-        terms_version=payload.terms_version,
-        ip=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-    )
-    if payload.referral_visitor_id:
-        referrals.attribute_registration(db, user=user, visitor_id=payload.referral_visitor_id)
-    db.commit()
+    try:
+        user, debug_token = auth_service.register(
+            db,
+            email=str(payload.email),
+            password=payload.password,
+            full_name=payload.full_name,
+            country=payload.country,
+            terms_version=payload.terms_version,
+            ip=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+        if payload.referral_visitor_id:
+            referrals.attribute_registration(db, user=user, visitor_id=payload.referral_visitor_id)
+        db.commit()
+    except IntegrityError as exc:
+        # Two sign-ups racing on the same address: the unique index is the authority, and the
+        # loser gets the same answer as a sequential duplicate instead of an internal error.
+        db.rollback()
+        if "email" in str(exc.orig).lower():
+            raise conflict("email_in_use", "An account with that email already exists.") from None
+        log.error("register_integrity_error", extra={"extra_fields": {"path": request.url.path}})
+        raise conflict("registration_conflict", "That account could not be created. Please try again.") from None
+    except OperationalError:
+        db.rollback()
+        log.error("register_db_unavailable", extra={"extra_fields": {"path": request.url.path}})
+        raise unavailable("database_unavailable", "The service is briefly unavailable. Please try again.") from None
     body = {
         "status": "registered",
         "message": "Account created. Check your email to verify your address.",

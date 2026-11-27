@@ -130,13 +130,26 @@ async def app_error_handler(request: Request, exc: AppError):
 
 @app.exception_handler(RequestValidationError)
 async def validation_handler(request: Request, exc: RequestValidationError):
+    errors = [{"loc": e.get("loc"), "msg": e.get("msg")} for e in exc.errors()]
+    # Field names only: rejected values can contain passwords and personal data, so the
+    # log records where the request failed, never what was sent.
+    log.info(
+        "validation_error",
+        extra={
+            "extra_fields": {
+                "path": request.url.path,
+                "method": request.method,
+                "fields": sorted({str(e["loc"][-1]) for e in errors if e["loc"]}),
+            }
+        },
+    )
     return JSONResponse(
         status_code=422,
         content={
             "detail": {
                 "code": "validation_error",
                 "message": "Request validation failed.",
-                "details": {"errors": [{"loc": e.get("loc"), "msg": e.get("msg")} for e in exc.errors()][:20]},
+                "details": {"errors": errors[:20]},
             }
         },
     )

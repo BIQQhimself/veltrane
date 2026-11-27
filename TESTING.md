@@ -5,7 +5,7 @@
 ```bash
 cd backend
 createdb veltrane_test                      # once
-.venv/bin/python -m pytest                  # 235 tests, ~80 s
+.venv/bin/python -m pytest                  # 302 tests, ~110 s
 .venv/bin/python -m pytest -k risk -q       # one slice
 .venv/bin/python -m pytest tests/test_trading.py -x --pdb
 ```
@@ -24,6 +24,7 @@ code as Stripe.
 | File | Focus |
 | --- | --- |
 | `test_auth_and_system.py` | Registration, verification, login, MFA, refresh rotation, logout, password reset |
+| `test_registration_hardening.py` | The sign-up contract: 422 field locators for addresses the browser accepts but the API refuses, no rejected values in logs, trimming before length checks, a lost duplicate-insert race returning 409, and a failing verification email never costing the account |
 | `test_billing.py` | Plans, checkout, webhook verification and replay, plan change, cancellation, invoices |
 | `test_connections.py` | Provider listing, connection creation, credential encryption, sync, error handling, no secret leakage |
 | `test_scheduler.py` | The unattended paper runner: due-session selection, tick effects, error isolation, and that it never touches live state |
@@ -131,7 +132,10 @@ cross-instrument quote from flattening a chart, the time-axis tick spacing inclu
 clock times to dates on multi-day ranges, and the VWAP and Wilder RSI helpers (flat windows are
 neutral at 50, values stay inside 0–100, and the series aligns to the candle index).
 `src/lib/risk-budget.test.ts` (5 tests) pins the wording and tone of the risk-posture badge so the
-overview can never say "within limits" while a budget is breached. Component and end-to-end browser
+overview can never say "within limits" while a budget is breached.
+`src/lib/validation.test.ts` (9 tests) pins the sign-up rules that the API also enforces (an
+address needs a dotted domain, and the five password rules are reported in the API's order) and
+the mapping from a 422 body to the input that should carry the message. Component and end-to-end browser
 tests are still outstanding; see KNOWN_LIMITATIONS.
 
 ```bash

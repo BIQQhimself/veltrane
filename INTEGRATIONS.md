@@ -158,10 +158,50 @@ provider are excluded from live portfolio equity.
 | --- | --- | --- |
 | Signed mock (local/CI only) | `mock` | working, deliberately disabled in production |
 | Stripe Checkout + webhooks | `stripe` | implemented, not exercised against a live Stripe account |
+| SPay (Nigeria) | `spay` | **evaluated, not implemented — blocked on server-side verification** |
 
 Crypto payment processors and bank transfer rails are not implemented. The abstraction
 (`app/services/billing.py`) takes a provider name and dispatches, so adding one means writing a
 verification function and a normaliser, not changing the subscription model.
+
+### SPay — evaluation result (2026-11)
+
+Requested for NGN card, transfer and USSD subscriptions. Reviewed against the published
+documentation at <https://spay.readme.io>. Findings:
+
+| Requirement | Documented by SPay? | Evidence |
+| --- | --- | --- |
+| Nigerian card payments | Yes | Accept Payments lists "Pay with Cards" as a payment option |
+| Bank transfer and USSD | Yes | Accept Payments lists "Pay with USSD" and "Pay with Transfer" |
+| Monthly recurring card subscriptions | Yes, via dashboard-created subscription links | Subscription: "A created subscription link has recurring functionality built into it" |
+| Plans and hosted payment links | Yes, created in the SPay dashboard, not via API | Payment Link: "This feature enables business owners who do not own websites receive single or recurring payments" |
+| NGN only | Yes | Accept Payments: `currency` — "Allowed values is: NGN." |
+| Test mode | Yes | Test Payment page + `testcheckout.spaybusiness.com` in the sample code |
+| Server-side transaction verification | **No** | The only documented confirmation is the browser `callback`; no verify endpoint is published, and the docs contain no API reference section ("No API Endpoints") |
+| Authenticated payment/renewal notifications (webhooks) | **No** | No webhook page exists; the documented outcome of a payment is "you will receive a mail and their details will also reflect on your dashboard" |
+| Failed renewal handling | **No** | Not documented; no API for renewal state |
+| Cancellation | **No** | Not documented; no API |
+| Refund support | **No** | Not documented |
+
+**Why this blocks implementation.** Two non-negotiable rules in this repository are "a frontend
+payment-succeeded message is never trusted" and "entitlements change only after a
+signature-verified provider event is persisted". SPay documents neither a verification endpoint
+nor signed notifications, so there is no way to satisfy them: the only signal SPay publishes is a
+JavaScript callback running in the customer's browser, which any visitor can fabricate with
+developer tools. Granting a plan on that signal would hand out paid tiers for free.
+
+**What is needed before this can be built** (either one unblocks it):
+
+1. SPay supplies server-side documentation and test credentials for: transaction lookup by
+   reference, webhook signing (secret + algorithm), subscription/renewal status, cancellation and
+   refund. Then a `SpayProvider` fits the existing `BillingProvider` interface: `create_checkout`
+   returns the hosted link, `verify_*` implements the lookup, and `process_webhook` reuses the
+   existing idempotency table.
+2. Written approval of a lower-assurance design (for example: activation only after an operator
+   confirms each payment in the SPay dashboard). That is a business decision, not a technical one.
+
+Until one of those exists, `VELTRANE_BILLING_PROVIDER` stays `off` and no NGN price, plan limit or
+entitlement has been changed.
 
 ## Email — outbox and Resend
 

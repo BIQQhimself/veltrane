@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -25,6 +26,8 @@ from app.services import audit, billing, notifications
 from app.services import email as email_service
 from app.services.email_templates import password_reset, verification
 from sqlalchemy.orm import Session
+
+log = logging.getLogger(__name__)
 
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
@@ -75,13 +78,22 @@ def register(
 
     billing.ensure_free_subscription(db, org.id)
     token, plaintext = _issue_one_time_token(db, user, purpose="verify_email", hours=48)
-    message = email_service.queue_rendered(
-        db,
-        to_email=email,
-        rendered=verification(user.full_name, f"{settings.web_base_url.rstrip('/')}/verify?token={plaintext}"),
-    )
-    db.flush()
-    email_service.send_now(db, message)
+    # A savepoint keeps a mail failure (a rejected provider call, or a statement error that
+    # would otherwise poison the transaction) from aborting the registration itself.
+    try:
+        with db.begin_nested():
+            message = email_service.queue_rendered(
+                db,
+                to_email=email,
+                rendered=verification(user.full_name, f"{settings.web_base_url.rstrip('/')}/verify?token={plaintext}"),
+            )
+            db.flush()
+            email_service.send_now(db, message)
+    except Exception as exc:  # noqa: BLE001 - the account must exist even when mail fails
+        log.warning(
+            "verification_email_failed",
+            extra={"extra_fields": {"error_class": type(exc).__name__}},
+        )
     audit.record(
         db,
         action=AuditAction.USER_REGISTERED,
