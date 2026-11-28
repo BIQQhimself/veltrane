@@ -184,6 +184,9 @@ class Entitlement:
 
     MAX_CONNECTIONS = "max_connections"
     MAX_OPEN_POSITIONS = "max_open_positions"
+    # Combined paper/demo + live allowance. Switching environments never doubles it.
+    MAX_DAILY_EXECUTIONS = "max_daily_executions"
+    # Kept so existing overrides and admin tooling still resolve; superseded by the combined key.
     MAX_DAILY_DEMO_EXECUTIONS = "max_daily_demo_executions"
     STRATEGY_LIBRARY = "strategy_library"
     BACKTESTING = "backtesting"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from app.db.models import Order, PaperSession
 from app.services import scheduler
 
@@ -115,3 +116,8 @@ def test_scheduler_state_is_reportable(client, db, pro_trader):
         "email_last_summary",
         "email_last_error",
     } == set(state)
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

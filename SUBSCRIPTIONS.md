@@ -10,7 +10,7 @@ visitor can see the platform work without a card, and it never executes a real-m
 
 | Tier | Price / month | Connections | Open positions | Trades / day | Agent mode | Backtests / day | Live trading |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Free | $0 | 2 | 3 | 5 (demo only) | off | 0 | no |
+| Free | $0 | 2 | 3 | 0 (no execution) | off | 0 | no |
 | Basic | $19 | 3 | 5 | 600 | while the platform is open | 0 | eligible |
 | Pro | $49 | 8 | 15 | 1,200 | background, platform closed | 25 | eligible |
 | Elite | $149 | 25 | 50 | 2,400 | background, platform closed | 200 | eligible |
@@ -21,11 +21,30 @@ the plan row is editable from the admin console, and the tier exists so an accou
 a VELTRANE-imposed daily ceiling. "No VELTRANE cap" is not "no limits": every deterministic risk
 rule still applies, and the venue's own API rate limits and contract sizes bound execution.
 
-"Trades / day" is one allowance per account covering both environments: a demo execution, an
-automated signal and a real-money contract all draw on it. Demo executions are metered by the
-`demo_executions` counter and real-money ones by `live_executions`; the risk engine enforces the
-allowance separately for each (`demo_execution_limit`, `live_execution_limit`), so a plan cannot
-be gamed by switching between the two and a paid plan does not leave live trading unbounded.
+"Trades / day" is **one** allowance per account covering both environments. A simulated (demo or
+paper) execution, an automated signal and a real-money contract all draw on the same counter, so
+switching between simulation and live cannot buy a second allowance. The count is
+`executions_today` and the ceiling is `daily_execution_cap`, both resolved server-side from the
+plan; the risk engine rule `check_daily_execution_allowance` rejects the order at the cap.
+
+Free has a cap of **0**. It is not a small trial allowance: the account can connect, sync and
+analyse, and every execution path (terminal, automation, API) returns a rejection that names the
+plan. That is enforced by the risk engine, not by a hidden button — see
+[TRADING_RISK_POLICY.md](TRADING_RISK_POLICY.md).
+
+A VIP cap of `-1` means "no VELTRANE-imposed ceiling". Every other deterministic rule still
+applies: position size, exposure, leverage, daily loss, drawdown, duplicate orders, stale data and
+the kill switches.
+
+Changing the catalog in code does not silently rewrite the live database. Startup only creates
+plans that are missing (`ensure_plans`), so an administrator's price or limit edit survives a
+restart. Pushing catalog changes to existing rows is deliberate:
+
+```bash
+cd backend
+.venv/bin/python -m app.scripts.sync_plans           # show the diff
+.venv/bin/python -m app.scripts.sync_plans --apply   # write it
+```
 
 Feature flags per tier (server-side, `app/db/constants.py::Entitlement`):
 
@@ -42,9 +61,10 @@ Feature flags per tier (server-side, `app/db/constants.py::Entitlement`):
 | `performance_fees` | – | – | – | eligible | eligible |
 | `live_trading` | – | eligible | eligible | eligible | eligible |
 
-Free is explicitly **read-only and simulation only**. It is not a trial that can be nudged into
-live execution: the entitlement is absent, and the live-authorisation endpoint refuses a free
-account regardless of how the request is formed.
+Free is explicitly **read-only**. It is not a trial that can be nudged into execution: the
+`live_trading` entitlement is absent, the execution allowance is zero, and both the
+live-authorisation endpoint and the risk engine refuse a free account regardless of how the
+request is formed.
 
 Basic, Pro, Elite and VIP carry `live_trading: true`, which makes an account *eligible*. It authorises
 nothing. Live execution additionally needs the platform live switch, the explicit multi-step

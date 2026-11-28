@@ -303,6 +303,7 @@ def open_contract(
     session.cash_balance = float(session.cash_balance) - contract.stake
     session.equity = float(session.cash_balance) + _open_stake_total(db, user.org_id)
     usage.increment_usage(db, user.org_id, "demo_executions", 1, meta={"binary_contract_id": contract.id})
+    usage.increment_usage(db, user.org_id, "executions", 1, meta={"binary_contract_id": contract.id, "mode": "demo"})
     notifications.notify(
         db,
         org_id=user.org_id,

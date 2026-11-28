@@ -104,10 +104,11 @@ def test_elite_is_capped_and_vip_is_uncapped(client, trader, db):
 
 
 def test_every_plan_matches_the_published_allowance(db):
-    expected = {"free": 5, "basic": 600, "pro": 1200, "elite": 2400, "vip": 0}
+    # Owner-approved matrix: Free cannot execute; VIP is stored as -1 (uncapped).
+    expected = {"free": 0, "basic": 600, "pro": 1200, "elite": 2400, "vip": -1}
     plans = {plan.code: plan for plan in db.query(Plan).all()}
     for code, allowance in expected.items():
-        assert plans[code].limits["max_daily_demo_executions"] == allowance, code
+        assert plans[code].limits["max_daily_executions"] == allowance, code
     assert set(expected) <= set(plans)
 
 

@@ -545,9 +545,15 @@ def open_contract(
     if is_demo:
         # Demo executions are metered so a free account cannot run the strategy engine for free.
         usage.increment_usage(db, user.org_id, "demo_executions", 1, meta={"order_id": order.id, "provider": "deriv"})
+        usage.increment_usage(
+            db, user.org_id, "executions", 1, meta={"order_id": order.id, "provider": "deriv", "mode": "demo"}
+        )
     else:
         # The plan's daily allowance covers real money too; the risk engine reads this counter.
         usage.increment_usage(db, user.org_id, "live_executions", 1, meta={"order_id": order.id, "provider": "deriv"})
+        usage.increment_usage(
+            db, user.org_id, "executions", 1, meta={"order_id": order.id, "provider": "deriv", "mode": "live"}
+        )
     order.filled_qty = result.get("filled_qty") or 0
     # A fixed-odds contract has no traded price: the stake is the cost and the payout is the
     # terminal value, so the reference price stored on the order is the underlying spot.

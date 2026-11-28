@@ -90,6 +90,18 @@ def _today_start() -> datetime:
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
+def executions_today(db: Session, org_id: str) -> int:
+    """Combined paper/demo + live executions used today.
+
+    The dedicated counter is authoritative for new rows; summing the per-environment counters
+    keeps days that straddle a deploy (rows metered before the combined counter existed) correct.
+    """
+    combined = int(usage.get_usage(db, org_id, "executions"))
+    if combined:
+        return combined
+    return int(usage.get_usage(db, org_id, "demo_executions")) + int(usage.get_usage(db, org_id, "live_executions"))
+
+
 def active_policy(db: Session, org_id: str) -> RiskPolicy | None:
     org_policy = (
         db.query(RiskPolicy)
@@ -219,8 +231,7 @@ def risk_budget(db: Session, user: User) -> dict:
     drawdown_pct = ((peak - equity) / peak * 100.0) if peak > 0 else 0.0
     daily_loss = -(realized_today + min(unrealised, 0.0))
 
-    demo_limit = entitlements.numeric_limit(db, user.org_id, Entitlement.MAX_DAILY_DEMO_EXECUTIONS)
-    demo_used = int(usage.get_usage(db, user.org_id, "demo_executions"))
+    execution_cap = entitlements.daily_execution_cap(db, user.org_id)
 
     budgets = [
         _budget("Daily loss", daily_loss, equity * float(rules["daily_loss_limit_pct"]) / 100.0, "usd"),
@@ -234,8 +245,10 @@ def risk_budget(db: Session, user: User) -> dict:
         _budget("Open positions", float(len(positions)), float(rules["max_open_positions"]), "count"),
         _budget("Consecutive losses", float(consecutive_losses), float(rules["max_consecutive_losses"]), "count"),
     ]
-    if demo_limit is not None:
-        budgets.append(_budget("Demo executions today", float(demo_used), float(demo_limit), "count"))
+    if execution_cap is not None:
+        budgets.append(
+            _budget("Executions today", float(executions_today(db, user.org_id)), float(execution_cap), "count")
+        )
 
     switches = kill_switch.state_for(db, user.org_id, user_id=user.id)
     blocked = [b["label"] for b in budgets if b["state"] == "blocked"]
@@ -331,8 +344,8 @@ def build_context(
             is not None
         )
 
-    demo_limit = entitlements.numeric_limit(db, user.org_id, Entitlement.MAX_DAILY_DEMO_EXECUTIONS)
-    executions_today = int(usage.get_usage(db, user.org_id, "demo_executions"))
+    execution_cap = entitlements.daily_execution_cap(db, user.org_id)
+    executions_today_count = executions_today(db, user.org_id)
     live_executions_today = int(usage.get_usage(db, user.org_id, "live_executions"))
 
     peak = 0.0
@@ -410,9 +423,9 @@ def build_context(
             source=snapshot.source,
         ),
         duplicate_exists=duplicate,
-        executions_today=executions_today,
+        executions_today=executions_today_count,
         live_executions_today=live_executions_today,
-        daily_execution_limit=demo_limit,
+        daily_execution_limit=execution_cap,
         # Venue connections report the session themselves; the platform's calendar only
         # covers instruments in its own registry.
         market_open=(market_data.is_market_open(intent.symbol) if market_open is None else bool(market_open)),
@@ -595,6 +608,7 @@ def submit_order(db: Session, *, user: User, request: OrderRequest, source: str 
             },
         )
         usage.increment_usage(db, user.org_id, "demo_executions", 1, meta={"last_order_id": order.id})
+        usage.increment_usage(db, user.org_id, "executions", 1, meta={"last_order_id": order.id, "mode": "paper"})
         audit.record(
             db,
             action=AuditAction.ORDER_FILLED,

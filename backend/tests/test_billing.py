@@ -48,7 +48,10 @@ def test_plan_catalog_matches_brief(client):
     assert by_code["basic"]["price_monthly"] == 19
     assert by_code["pro"]["price_monthly"] == 49
     assert by_code["elite"]["price_monthly"] == 149
-    assert "no real-money execution" in " ".join(by_code["free"]["features"]).lower()
+    free_features = " ".join(by_code["free"]["features"]).lower()
+    # Free connects and observes only; the owner-approved matrix allows no execution at all.
+    assert "no trade execution" in free_features
+    assert by_code["free"]["limits"]["max_daily_executions"] == 0
     assert by_code["elite"]["limits"]["max_connections"] > by_code["pro"]["limits"]["max_connections"]
     assert by_code["pro"]["limits"]["backtesting"] is True
     assert by_code["free"]["limits"]["backtesting"] is False

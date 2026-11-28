@@ -260,8 +260,12 @@ export default function OnboardingPage() {
             <p className="label">Current plan</p>
             <p className="text-sm text-paper">{titleCase(plan)}</p>
             <p className="text-2xs text-paper-faint">
-              Connections limit {entitlements?.limits?.max_connections ?? "—"} · demo executions{" "}
-              {entitlements?.limits?.max_daily_demo_executions ?? "unlimited"} per day
+              Connections limit {entitlements?.limits?.max_connections ?? "—"} · daily executions{" "}
+              {(() => {
+                const cap = entitlements?.limits?.max_daily_executions;
+                if (cap === null || cap === undefined) return "unlimited";
+                return cap === 0 ? "not included on this plan" : `${cap} per day`;
+              })()}
             </p>
           </PanelBody>
         </Panel>

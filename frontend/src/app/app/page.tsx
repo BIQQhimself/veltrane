@@ -111,8 +111,12 @@ export default function OverviewPage() {
   const killEngaged = Boolean((state.data?.kill_switches as Record<string, { engaged?: boolean }> | undefined)?.org?.engaged);
   const riskLabel = budgetLabel(riskBudget.data, killEngaged);
   const riskTone = budgetTone(riskBudget.data, killEngaged);
-  const demoLimit = Number(entitlements?.limits?.max_daily_demo_executions ?? 5);
-  const demoUsed = usage?.demo_executions_today ?? 0;
+  const executionCap =
+    usage?.daily_execution_cap ??
+    (entitlements?.limits?.max_daily_executions as number | undefined) ??
+    0;
+  const executionsUsed = usage?.executions_today ?? 0;
+  const executionBlocked = executionCap !== null && executionsUsed >= executionCap;
   const plan = entitlements?.plan_code ?? "free";
 
   const startPaperSession = async () => {
@@ -185,8 +189,8 @@ export default function OverviewPage() {
         netPnl={equity ? equity.realized_pnl_net : null}
         curve={curve}
         openTrades={openContracts.length + (portfolio.data?.positions.length ?? 0)}
-        demoUsed={demoUsed}
-        demoLimit={demoLimit}
+        executionsUsed={executionsUsed}
+        executionCap={executionCap}
         riskLabel={riskLabel}
         riskTone={riskTone}
         simulated
@@ -212,10 +216,16 @@ export default function OverviewPage() {
           icon={Timer}
         />
         <Metric
-          label="Demo executions"
-          value={`${demoUsed} / ${demoLimit}`}
-          hint={demoUsed >= demoLimit ? "Daily cap reached — upgrade for more" : "Resets at 00:00 UTC"}
-          tone={demoUsed >= demoLimit ? "loss" : "info"}
+          label="Executions today"
+          value={executionCap === null ? `${executionsUsed} / uncapped` : `${executionsUsed} / ${executionCap}`}
+          hint={
+            executionCap === 0
+              ? "Your plan does not include execution"
+              : executionBlocked
+                ? "Daily allowance reached — resets 00:00 UTC"
+                : "Demo and live share this allowance"
+          }
+          tone={executionBlocked ? "loss" : "info"}
           icon={Target}
         />
       </div>
@@ -580,8 +590,8 @@ export default function OverviewPage() {
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line-soft bg-obsidian-900/40 px-4 py-3">
         <p className="flex items-center gap-1.5 text-3xs text-paper-faint">
           <Gauge className="h-3 w-3" aria-hidden />
-          Data source: {state.data?.data_source_mode ?? "—"} · {state.data?.demo_executions_today ?? 0} demo
-          executions today
+          Data source: {state.data?.data_source_mode ?? "—"} · {executionsUsed} execution
+          {executionsUsed === 1 ? "" : "s"} today
         </p>
         <p className="text-3xs text-paper-faint">
           Simulated results are not predictions. VELTRANE never holds your funds.

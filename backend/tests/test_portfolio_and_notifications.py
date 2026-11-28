@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from tests.conftest import BASE, place_order
 
 
@@ -176,3 +177,8 @@ def test_performance_drawdown_is_measured_on_equity(client, trader, db):
     assert body["starting_equity"] == base
     assert body["curve"][-1]["equity"] == base + 500.0
     assert body["stats"]["max_drawdown_pct"] == round(1500 / (base + 2000) * 100, 2)
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

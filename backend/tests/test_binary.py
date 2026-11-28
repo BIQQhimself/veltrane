@@ -101,14 +101,17 @@ def test_idempotent_contract_submission(client, trader):
     assert second["contract"]["id"] == first["contract"]["id"]
 
 
-def test_demo_execution_limit_applies_to_contracts(client, trader):
-    for i in range(5):
-        body = open_contract(client, trader["headers"], stake=10.0, duration_seconds=60).json()
-        assert body["approved"] is True, (i, body)
-    sixth = open_contract(client, trader["headers"], stake=10.0, duration_seconds=60).json()
-    assert sixth["approved"] is False
-    codes = {r["code"] for r in sixth["risk_decision"]["failed_rules"]}
-    assert "demo_execution_limit" in codes
+def test_combined_allowance_applies_to_contracts(client, trader, db):
+    """Simulated contracts draw on the same 600-a-day allowance as everything else."""
+    from app.services import usage
+
+    usage.increment_usage(db, trader["org_id"], "executions", 600)
+    db.commit()
+
+    body = open_contract(client, trader["headers"], stake=10.0, duration_seconds=60).json()
+    assert body["approved"] is False
+    codes = {r["code"] for r in body["risk_decision"]["failed_rules"]}
+    assert "daily_execution_limit" in codes
 
 
 def test_settlement_marks_contract_and_writes_trade(client, trader, db):
@@ -233,3 +236,8 @@ def test_missing_expiry_price_voids_the_contract_instead_of_repricing_at_now(
     titles = [item["title"] for item in audit_rows["notifications"]]
     assert any("settled" in title.lower() for title in titles)
     assert stake_before > 0
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

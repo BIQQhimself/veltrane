@@ -183,10 +183,17 @@ def test_duplicate_order_rejected():
     assert "duplicate_order" in codes(assessment)
 
 
-def test_demo_execution_limit():
-    assessment = engine.evaluate(intent(), context(executions_today=5, daily_execution_limit=5))
+def test_combined_execution_allowance_blocks_at_the_cap():
+    assessment = engine.evaluate(intent(), context(executions_today=600, daily_execution_limit=600))
     assert not assessment.approved
-    assert "demo_execution_limit" in codes(assessment)
+    assert "daily_execution_limit" in codes(assessment)
+
+
+def test_a_plan_with_no_allowance_cannot_execute():
+    """Free stores 0, which means "may not trade", not "unlimited"."""
+    assessment = engine.evaluate(intent(), context(executions_today=0, daily_execution_limit=0))
+    assert not assessment.approved
+    assert "daily_execution_limit" in codes(assessment)
 
 
 def test_live_execution_limit_uses_the_plan_allowance():
@@ -198,18 +205,18 @@ def test_live_execution_limit_uses_the_plan_allowance():
         org_live_entitlement=True,
         connection_trade_permission=True,
         connection_read_only=False,
-        live_executions_today=600,
+        executions_today=600,
         daily_execution_limit=600,
     )
     blocked = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=59_000.0), live_ctx)
-    assert "live_execution_limit" in codes(blocked)
+    assert "daily_execution_limit" in codes(blocked)
     assert not blocked.approved
 
     under = engine.evaluate(
         intent(mode="live", strategy_status="live", stop_loss=59_000.0),
-        live_ctx.with_extra(live_executions_today=599),
+        live_ctx.with_extra(executions_today=599),
     )
-    assert "live_execution_limit" not in codes(under)
+    assert "daily_execution_limit" not in codes(under)
 
 
 def test_an_uncapped_plan_has_no_live_cap():
@@ -220,11 +227,11 @@ def test_an_uncapped_plan_has_no_live_cap():
         org_live_entitlement=True,
         connection_trade_permission=True,
         connection_read_only=False,
-        live_executions_today=50_000,
+        executions_today=50_000,
         daily_execution_limit=None,
     )
     assessment = engine.evaluate(intent(mode="live", strategy_status="live", stop_loss=59_000.0), live_ctx)
-    assert "live_execution_limit" not in codes(assessment)
+    assert "daily_execution_limit" not in codes(assessment)
 
 
 def test_stop_loss_validation_for_live():
@@ -300,7 +307,7 @@ def test_all_failures_reported_not_just_first():
     assessment = engine.evaluate(intent(), ctx)
     failed = codes(assessment)
     assert len(failed) >= 4
-    assert {"kill_switch", "duplicate_order", "demo_execution_limit"}.issubset(set(failed))
+    assert {"kill_switch", "duplicate_order", "daily_execution_limit"}.issubset(set(failed))
 
 
 def test_evaluation_is_deterministic():

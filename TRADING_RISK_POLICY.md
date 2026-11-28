@@ -43,8 +43,7 @@ version that evaluated them. Rule codes below are the ones emitted by `app/risk/
 | `drawdown_limit` | Peak-to-trough on the account | 15 % |
 | `strategy_approved` | Strategy version approved for the mode in use | on |
 | `connection_permission` | Connection allows trading for this mode | on |
-| `demo_execution_limit` | Simulated executions, counting paper fills and contracts on a venue demo account against one daily allowance | 5 / day (entitlement) |
-| `live_execution_limit` | Real-money contracts against the same plan allowance, counted separately from simulated ones | plan allowance (entitlement) |
+| `daily_execution_allowance` | Every execution — paper fill, venue demo contract and real-money contract — against one per-account daily counter | plan allowance (entitlement); Free = 0 |
 | `binary_terms` | Fixed-odds expiry must be a term the venue published *and* priced; stake and payout inside the offered bounds | venue menu, verified per term |
 
 Three details are easy to get wrong and are pinned by tests:
@@ -92,13 +91,18 @@ Nothing is evaluated on gross profit.
 
 ## 4. Daily trade allowance
 
-The plan allowance covers real money as well as simulated trading. Simulated executions are
-metered in `demo_executions`, real-money contracts in `live_executions`, and both counters are
-compared with the same plan limit on the server. A plan that reaches its allowance is refused by
-the risk engine (`demo_execution_limit` or `live_execution_limit`) before any venue call, and the
-refusal is recorded like any other rejection. Free is capped at five simulated executions a day
-and can never place a real order; VIP has no VELTRANE numeric cap, but the deterministic rules in
-section 2 and the venue's own limits still apply.
+There is **one** allowance per account per UTC day, not one for simulation and one for real money.
+A paper fill, a contract on a venue demo account and a real-money contract all increment
+`executions_today`, and the risk engine compares it with `daily_execution_cap` before any venue
+call (`check_daily_execution_allowance`). The refusal is recorded like any other rejection, with
+the plan and the cap in the message. Switching between simulation and live therefore buys no extra
+capacity, and the number a customer sees on the dashboard is the number the engine enforces.
+
+Free is capped at **0**: a free account can connect, sync, analyse and read, and every execution
+path is refused. That is a risk-engine rejection, not a hidden button — the terminal journey in
+`frontend/e2e/journeys.mjs` asserts that no contract is created. VIP carries `-1`, meaning no
+VELTRANE-imposed ceiling; the deterministic rules in section 2 and the venue's own limits still
+apply.
 
 ## 5. Limits and kill switches
 

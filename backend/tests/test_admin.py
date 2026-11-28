@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from tests.conftest import BASE, place_order
 from tests.test_billing import checkout_event, send_event
 
@@ -72,7 +73,8 @@ def test_admin_overview_reports_real_metrics(client, trader, admin):
 def test_admin_user_management_and_audit(client, trader, admin, db):
     listed = client.get(f"{BASE}/admin/users", headers=admin["headers"], params={"query": trader["email"]}).json()
     assert listed["count"] == 1
-    assert listed["users"][0]["plan_code"] == "free"
+    # The module's trader fixture is a Basic subscriber: Free accounts cannot execute trades.
+    assert listed["users"][0]["plan_code"] == "basic"
 
     suspend = client.patch(
         f"{BASE}/admin/users/{trader['user_id']}",
@@ -284,3 +286,8 @@ def test_venue_demo_trades_are_not_reported_as_live_trades(client, trader, admin
     body = client.get(f"{BASE}/admin/overview", headers=admin["headers"]).json()
     assert body["live_trades"] == 1
     assert body["venue_demo_trades"] == 2
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

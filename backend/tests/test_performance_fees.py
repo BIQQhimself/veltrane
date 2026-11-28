@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from tests.conftest import BASE, place_order
 
 
@@ -196,3 +197,8 @@ def test_compute_blocked_when_disabled(client, elite_trader, admin):
     )
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "performance_fees_disabled"
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

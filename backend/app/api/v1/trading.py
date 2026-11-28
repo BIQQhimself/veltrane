@@ -15,7 +15,7 @@ from app.core.rate_limit import enforce
 from app.db.constants import KillScope
 from app.db.models import Order, PaperSession, Position, RiskDecision, Trade, User
 from app.db.session import get_db
-from app.services import kill_switch, live_authorization, platform_switch
+from app.services import entitlements, kill_switch, live_authorization, platform_switch
 from app.services.usage import get_usage
 from app.trading import engine as trading_engine
 from fastapi import APIRouter, Depends, Request
@@ -198,6 +198,8 @@ def trading_state(user: User = Depends(get_current_user), db: Session = Depends(
         "paper_session": serializers.session_dict(session) if session else None,
         "open_positions": [serializers.position_dict(p) for p in positions],
         "demo_executions_today": int(get_usage(db, user.org_id, "demo_executions")),
+        "executions_today": int(trading_engine.executions_today(db, user.org_id)),
+        "daily_execution_cap": entitlements.daily_execution_cap(db, user.org_id),
         "data_source_mode": settings.market_data_source,
     }
 

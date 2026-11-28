@@ -1157,7 +1157,7 @@ export default function TerminalPage() {
         <p className="mt-3 flex items-start gap-1.5 text-3xs leading-relaxed text-paper-faint">
           <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-gain" aria-hidden />
           Checks include kill switches, data freshness, position size, exposure, daily loss, drawdown
-          and your demo execution allowance.
+          and your daily execution allowance.
         </p>
       </Dialog>
 

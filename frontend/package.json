@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "audit:visual": "node e2e/visual-audit.mjs"
+    "audit:visual": "node e2e/visual-audit.mjs",
+    "test:e2e": "node e2e/journeys.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

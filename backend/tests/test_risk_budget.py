@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
 from app.db.models import PaperSession, Trade
 
 BASE = "/api/v1"
@@ -26,7 +27,7 @@ def test_risk_budget_is_read_only_and_reports_every_control(client, trader):
         "Account exposure",
         "Open positions",
         "Consecutive losses",
-        "Demo executions today",
+        "Executions today",
     } <= labels
     assert body["state"] == "ok"
     assert body["blocked"] == []
@@ -103,3 +104,8 @@ def test_risk_budget_is_tenant_scoped(client, db, trader, trader2):
 
     assert mine_body["equity"] == 1000
     assert theirs_body["equity"] != 1000
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

@@ -48,13 +48,17 @@ def mode(db: Session, org_id: str) -> str:
 
 
 def daily_cap(db: Session, org_id: str) -> int | None:
-    """``None`` means uncapped (Elite). A missing or zero value is treated as uncapped."""
+    """Automated entries allowed today. ``None`` is uncapped (VIP, stored as -1).
+
+    ``0`` is a plan that may not automate at all, not an uncapped one: the previous
+    ``<= 0 -> None`` reading turned "no allowance" into "unlimited".
+    """
     raw = entitlements.limit_for(db, org_id, Entitlement.MAX_AUTOMATED_TRADES_PER_DAY, 0)
     try:
         value = int(raw)
     except (TypeError, ValueError):
-        return None
-    return None if value <= 0 else value
+        return 0
+    return None if value < 0 else max(0, value)
 
 
 def executions_today(db: Session, org_id: str) -> int:

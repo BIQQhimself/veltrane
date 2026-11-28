@@ -227,6 +227,33 @@ still judges them wherever the background is a flat colour. And a route that ren
 shift by a few pixels between measurement and capture, so a marginal result there is worth confirming
 by eye against the stored screenshot.
 
+## User journeys in a real browser
+
+Unit tests and API tests cannot show that a customer who clicks the button gets the answer the
+product promises. `frontend/e2e/journeys.mjs` drives Chromium against a running stack and asserts
+both the screen and the API, so a plan gate that is only cosmetic fails the run:
+
+```bash
+cd frontend
+E2E_WEB=http://localhost:3000 E2E_API=http://localhost:8000 npm run test:e2e
+```
+
+The API must be the development configuration (mock billing, demo market data) and the browser
+needs `npx playwright install chromium` once. The journeys:
+
+| Journey | What it proves |
+| --- | --- |
+| Register in the UI | The form creates an account, the page moves to verification, and an unverified address is refused at sign-in (403) |
+| Free customer | The dashboard reports the execution allowance, and the terminal surfaces the plan refusal — the API confirms **no** contract was opened |
+| Basic customer | A simulated contract opens, is labelled paper/demo, and appears in the book |
+| Phone viewport (390 px) | Both directions are reachable and the terminal does not scroll sideways |
+| Subscriber on `/admin` | The admin command centre is not reachable by a paying customer |
+
+Registration is rate limited to five per hour per IP on purpose, so the harness stores the accounts
+it creates in `frontend/e2e/.accounts.json` (git-ignored) and signs in on later runs. Delete that
+file to force fresh accounts, and clear the bucket with `redis-cli --scan --pattern 'rl:register:*'`
+if you are iterating on the journey itself.
+
 ## Test hygiene rules for contributors
 
 - Never call a real exchange. Use the demo feed, the fake venue (`tests/support/fake_venue.py`,

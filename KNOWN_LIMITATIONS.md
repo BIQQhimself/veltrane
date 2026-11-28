@@ -32,9 +32,11 @@ competent reviewer would find, so it is cheaper to state it here.
    and the automation runner. If the product ever offers shorter contracts, `TradingRule`
    (`app/db/constants.py`) is the single constant to change, and `tests/test_duration_floor.py`
    lists every place that must keep agreeing with it.
-5b. **The real-money daily allowance is enforced but has never been exercised against a venue.**
-   `live_executions` is incremented after a real fill and checked by the risk engine before one.
-   Only the demo counter has been driven end to end, because no funded account has been used.
+5b. **The combined daily allowance is enforced, but only its simulated side has run end to end.**
+   `executions_today` is one counter shared by paper fills, venue demo contracts and real-money
+   contracts, checked by `check_daily_execution_allowance` before any venue call. The paper path is
+   covered by the backend suite and by the browser journeys; the real-money path has never been
+   exercised because no funded account has been connected.
 
 6. **No live exchange connectivity has been verified.** Binance, Bybit, OKX and Deriv adapters are
    implemented but unverified against real accounts. They are marked `implemented_unverified` in

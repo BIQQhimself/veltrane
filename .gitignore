@@ -37,3 +37,4 @@ backups/
 
 # --- local run logs ---
 .logs/
+frontend/e2e/.accounts.json

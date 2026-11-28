@@ -363,6 +363,8 @@ export type TradingState = {
   paper_session: PaperSession | null;
   open_positions: Position[];
   demo_executions_today: number;
+  executions_today?: number;
+  daily_execution_cap?: number | null;
   data_source_mode: string;
 };
 

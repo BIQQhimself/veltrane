@@ -82,7 +82,7 @@ def _reset_state():
 
     db = SessionLocal()
     try:
-        entitlements.seed_plans(db)
+        entitlements.sync_plans(db)
         strategy_service.seed_system_strategies(db)
         db.add(RiskPolicy(org_id=None, name="global", version=1, rules=dict(DEFAULT_RISK_RULES), is_active=True))
         db.add(SystemSetting(key=analytics.COST_SETTING_KEY, value=dict(analytics.DEFAULT_COSTS)))
@@ -213,6 +213,30 @@ def trader(make_user):
 @pytest.fixture
 def trader2(make_user):
     return make_user("trader2")
+
+
+@pytest.fixture
+def basic_trader(client, make_user):
+    """Basic subscriber: may execute paper/demo and live, 600 combined executions a day.
+
+    Free accounts cannot execute at all, so a test that places an order needs a plan that
+    includes execution. Tests about the Free plan keep using ``trader``.
+    """
+    account = make_user("basic")
+    checkout = client.post(
+        f"{BASE}/billing/checkout",
+        json={"plan_code": "basic"},
+        headers=account["headers"],
+    )
+    assert checkout.status_code == 200, checkout.text
+    done = client.post(
+        f"{BASE}/billing/mock/complete",
+        json={"checkout_token": checkout.json()["checkout_token"]},
+        headers=account["headers"],
+    )
+    assert done.status_code == 200, done.text
+    refreshed = login(client, account["email"])
+    return {**account, **refreshed}
 
 
 @pytest.fixture

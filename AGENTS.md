@@ -38,10 +38,18 @@ npm run build
 - **Plan codes come from `PlanCode`** (`free`, `basic`, `pro`, `elite`, `vip`). Do not write a
   `Literal[...]` list of plans in a schema or a component: `api/schemas.py` validates against
   `PlanCode.ALL`, and the frontend reads `TIERS`/`TIER_ORDER` from `src/lib/membership.ts`.
-- **The daily allowance covers real money too.** `demo_executions` and `live_executions` are
-  separate counters compared with the same plan limit by `demo_execution_limit` and
-  `live_execution_limit` in `app/risk/rules.py`. A new execution path must increment the right
-  counter after a confirmed fill.
+- **There is one daily execution allowance, not two.** Paper fills, venue demo contracts and
+  real-money contracts all draw on `executions_today`, compared with `daily_execution_cap` by
+  `check_daily_execution_allowance` in `app/risk/rules.py`. A new execution path must call
+  `app/trading/engine.py::record_execution` (or the gate that wraps it) after a confirmed fill —
+  never invent a second counter, and never let a plan check live only in the frontend. Free is
+  capped at 0; VIP uses `-1` for "no VELTRANE cap".
+- **The plan catalog is code, the database is the deployment.** `PLAN_CATALOG` in
+  `app/services/entitlements.py` is the source of truth, but startup only *creates* missing plans
+  (`ensure_plans`) so an admin's price edit survives a restart. After changing a limit, run
+  `cd backend && .venv/bin/python -m app.scripts.sync_plans` to see the diff and
+  `--apply` to write it. A stale catalog row looks exactly like a code bug: the API keeps serving
+  the old numbers.
 - **Brand versus hostname.** The brand is VELTRANE; `corvex.fun` is the legacy deployment hostname
   and still appears in `render.yaml`, CI and the deployment notes because that is what resolves.
   Do not "fix" those hostnames to a domain that has not been cleared.
@@ -133,10 +141,11 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
 - **Plans are Free (sandbox) / Basic $19 / Pro $49 / Elite $149.** All three paid tiers are
   live-*eligible*; authorisation, the platform switch, the checklist and the risk engine still
   gate every live order. `SUBSCRIPTIONS.md` is the source of truth.
-- **Free tier still exists** as a read-only sandbox (5 demo executions/day) — it is what
-  `seed_testers.py` and the acceptance tests use.
-- Backend `355 passed`; frontend `63 passed`; `VELTRANE_STATIC_EXPORT=1 npm run build` exports
-  cleanly. Rebuild `out/` after touching `page.tsx` or the deployed palette goes stale.
+- **Free tier still exists** as a read-only sandbox (0 executions/day) — it is what
+  `seed_testers.py` and the acceptance tests use, and the journeys assert it cannot execute.
+- Backend suite green; frontend unit tests green; `npm run test:e2e` (Playwright journeys against
+  a running stack) green; `VELTRANE_STATIC_EXPORT=1 npm run build` exports cleanly. Rebuild `out/`
+  after touching `page.tsx` or the deployed palette goes stale.
 
 ## Cold start after the sandbox is recycled
 
@@ -195,6 +204,12 @@ cd ../frontend && rm -rf .next && npx next dev -p 12000 &
   Deleting `.next` under a live server leaves it serving `500` on every route with
   `ENOENT ... routes-manifest.json`.
 - After `npm run build`, the dev server must be restarted the same way; the two share `.next`.
+  Running the export build while `npm run dev` is serving leaves the dev server returning `500`
+  on every route until it is restarted — that is a build artefact, not a code fault.
+- **Browser journeys**: `cd frontend && E2E_WEB=http://127.0.0.1:3000 E2E_API=http://127.0.0.1:3000
+  npm run test:e2e`. Point both at the same origin: dev serves the API through the Next rewrite
+  (`VELTRANE_API_PROXY`), so the harness needs no CORS. Accounts it registers are cached in
+  `frontend/e2e/.accounts.json` (git-ignored) because `/auth/register` allows five per hour per IP.
 
 ## Deriv wiring on the review instance
 

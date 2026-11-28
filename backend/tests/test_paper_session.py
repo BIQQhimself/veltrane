@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 BASE = "/api/v1"
 
 
@@ -28,3 +30,8 @@ def test_paper_session_is_tenant_scoped(client, trader, trader2):
     mine = client.post(f"{BASE}/trading/paper-session", headers=trader["headers"]).json()
     theirs = client.post(f"{BASE}/trading/paper-session", headers=trader2["headers"]).json()
     assert mine["id"] != theirs["id"]
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

@@ -26,6 +26,7 @@ from app.db.session import get_db
 from app.services import auth as auth_service
 from app.services import automation_limits, entitlements, identity, platform_switch, referrals
 from app.services.live_authorization import live_state
+from app.trading import engine as trading_engine
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
@@ -281,7 +282,10 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
             "pending_plan_code": sub.pending_plan_code if sub else None,
         },
         "usage": {
+            "executions_today": int(trading_engine.executions_today(db, user.org_id)),
             "demo_executions_today": int(get_usage(db, user.org_id, "demo_executions")),
+            "live_executions_today": int(get_usage(db, user.org_id, "live_executions")),
+            "daily_execution_cap": entitlements.daily_execution_cap(db, user.org_id),
             "backtests_today": int(get_usage(db, user.org_id, "backtests")),
         },
         "live": live_state(db, user.org_id),

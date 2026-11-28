@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from tests.conftest import BASE, mark_connection_connected, place_order
 
 
@@ -34,18 +35,24 @@ def test_order_rejected_when_risk_rule_fails(client, trader):
     assert body["fill"] is None
 
 
-def test_demo_execution_limit_five_per_day(client, trader):
-    for i in range(5):
-        result = place_order(client, trader["headers"], quantity=0.001)
-        assert result["body"]["order"]["status"] == "filled", (i, result["body"])
+def test_combined_daily_allowance_blocks_at_the_cap(client, trader, db):
+    """Basic carries 600 executions a day, shared by paper, venue demo and live.
 
-    sixth = place_order(client, trader["headers"], quantity=0.001)
-    assert sixth["body"]["order"]["status"] == "rejected"
-    codes = [r["code"] for r in sixth["body"]["order"]["risk_decision"]["failed_rules"]]
-    assert "demo_execution_limit" in codes
+    Filling the counter directly keeps the test fast; the shared counter itself is covered in
+    tests/test_plan_execution_permissions.py.
+    """
+    from app.services import usage
 
     me = client.get(f"{BASE}/auth/me", headers=trader["headers"]).json()
-    assert me["usage"]["demo_executions_today"] == 5
+    assert me["usage"]["daily_execution_cap"] == 600
+
+    usage.increment_usage(db, trader["org_id"], "executions", 600)
+    db.commit()
+
+    blocked = place_order(client, trader["headers"], quantity=0.001)
+    assert blocked["body"]["order"]["status"] == "rejected"
+    codes = [r["code"] for r in blocked["body"]["order"]["risk_decision"]["failed_rules"]]
+    assert "daily_execution_limit" in codes
 
 
 def test_idempotency_prevents_duplicate_fill(client, trader):
@@ -180,7 +187,8 @@ def test_live_order_without_connection_is_refused(client, trader):
     assert response.json()["detail"]["code"] == "connection_required"
 
 
-def test_free_user_cannot_start_live_authorization(client, trader):
+def test_free_user_cannot_start_live_authorization(client, make_user):
+    trader = make_user("freelive")
     response = client.post(
         f"{BASE}/trading/live-authorization/start",
         json={"acknowledged": True, "checklist": {}, "jurisdiction": "GB"},
@@ -323,3 +331,8 @@ def test_authorised_live_still_blocked_by_platform_flag(client, pro_trader, db, 
         "platform_live_trading_flag" in (r.get("detail", {}).get("missing") or [])
         for r in result["body"]["order"]["risk_decision"]["failed_rules"]
     )
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

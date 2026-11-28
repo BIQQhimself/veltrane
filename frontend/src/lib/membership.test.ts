@@ -22,6 +22,20 @@ describe("membership tiers", () => {
     expect(tierFor("elite").dailyCap).toBe(2400);
     expect(tierFor("vip").dailyCap).toBeNull();
   });
+
+  it("mirrors the owner-approved execution matrix", () => {
+    // Free may connect and observe but not execute; the cap is the same number as the
+    // automation cap so a customer sees one allowance, not two competing ones.
+    expect(tierFor("free").executionCap).toBe(0);
+    expect(tierFor("free").promise).toBe("Connect and observe");
+    expect(tierFor("basic").executionCap).toBe(600);
+    expect(tierFor("pro").executionCap).toBe(1200);
+    expect(tierFor("elite").executionCap).toBe(2400);
+    expect(tierFor("vip").executionCap).toBeNull();
+    for (const code of ["basic", "pro", "elite", "vip"]) {
+      expect(tierFor(code).executionCap).toBe(tierFor(code).dailyCap);
+    }
+  });
 });
 
 describe("automationSummary", () => {

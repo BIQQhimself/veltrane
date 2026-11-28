@@ -29,7 +29,14 @@ type MeResponse = {
     cancel_at_period_end: boolean;
     pending_plan_code?: string | null;
   };
-  usage: { demo_executions_today: number; backtests_today: number };
+  usage: {
+    demo_executions_today: number;
+    live_executions_today?: number;
+    executions_today?: number;
+    /** `null` = no VELTRANE cap (VIP); `0` = this plan cannot execute at all (Free). */
+    daily_execution_cap?: number | null;
+    backtests_today: number;
+  };
   live: LiveState;
   platform: Platform;
 };

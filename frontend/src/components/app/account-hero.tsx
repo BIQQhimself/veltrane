@@ -15,8 +15,9 @@ type HeroProps = {
   netPnl: number | null;
   curve: number[];
   openTrades: number;
-  demoUsed: number;
-  demoLimit: number;
+  executionsUsed: number;
+  /** `null` = uncapped, `0` = the plan cannot execute. */
+  executionCap: number | null;
   riskLabel: string;
   riskTone: "gain" | "loss" | "warn" | "neutral" | "info";
   simulated: boolean;
@@ -36,8 +37,8 @@ export function AccountHero({
   netPnl,
   curve,
   openTrades,
-  demoUsed,
-  demoLimit,
+  executionsUsed,
+  executionCap,
   riskLabel,
   riskTone,
   simulated,
@@ -81,7 +82,9 @@ export function AccountHero({
               <Zap className="h-3 w-3" aria-hidden /> {openTrades} open
             </span>
             <span className="chip">
-              {demoUsed} / {demoLimit} demo executions today
+              {executionCap === null
+                ? `${executionsUsed} executions today`
+                : `${executionsUsed} / ${executionCap} executions today`}
             </span>
             <span
               className={cn(

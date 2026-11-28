@@ -29,7 +29,8 @@ export default function PromotionsPage() {
   const plan = entitlements?.plan_code ?? subscription?.plan_code ?? "free";
   const tier = tierFor(plan);
   const trialPlans = (plans.data?.plans ?? []).filter((item) => item.trial_days > 0 && item.price_monthly > 0);
-  const usedDemoToday = usage?.demo_executions_today ?? 0;
+  const executionsUsed = usage?.executions_today ?? 0;
+  const executionCap = usage?.daily_execution_cap ?? tier.executionCap;
 
   return (
     <div className="space-y-6">
@@ -131,8 +132,13 @@ export default function PromotionsPage() {
         <div className="mt-4 grid gap-3 text-2xs text-paper-faint md:grid-cols-3">
           <p className="rounded-lg border border-line-soft bg-obsidian-900/60 p-3">
             <span className="block text-paper-muted">Demo allowance</span>
-            Demo executions are free and never touch real money — {usedDemoToday} used today
-            {tier.dailyCap === null ? " with no VELTRANE cap." : ` of ${tier.dailyCap}.`}
+            Every execution — simulated or live — draws on one daily allowance. {executionsUsed} used
+            today
+            {executionCap === null
+              ? " with no VELTRANE cap."
+              : executionCap === 0
+                ? ", and your plan does not include execution."
+                : ` of ${executionCap}.`}
           </p>
           <p className="rounded-lg border border-line-soft bg-obsidian-900/60 p-3">
             <span className="block text-paper-muted">No hidden pricing</span>

@@ -161,26 +161,25 @@ def test_duplicate_contract_is_blocked(client, trader, deriv_env):
     assert second.json()["detail"]["code"] == "duplicate_order"
 
 
-def test_free_account_demo_contracts_count_against_the_daily_cap(client, trader, deriv_env):
-    """A venue demo account is simulated money: five contracts a day on Free, then a refusal."""
-    connection_id = _connect(client, trader).json()["id"]
-    stakes = [10, 11, 12, 13, 14]
-    for stake in stakes:
-        body = {"symbol": "R_100", "side": "buy", "stake": stake, "duration": 60}
-        ok = client.post(f"{BASE}/deriv/connections/{connection_id}/contracts", json=body, headers=trader["headers"])
-        assert ok.status_code == 201, ok.text
-        assert ok.json()["approved"] is True, ok.json().get("risk")
+def test_free_account_cannot_open_a_venue_demo_contract(client, make_user, deriv_env):
+    """Free may connect Deriv, but a venue demo contract is still an execution: refused.
 
-    sixth = client.post(
+    Venue demo money is simulated, and simulated money is what Free is not allowed to spend
+    through VELTRANE. The gate refuses before a proposal is requested.
+    """
+    free = make_user("freederiv")
+    connection_id = _connect(client, free).json()["id"]
+
+    response = client.post(
         f"{BASE}/deriv/connections/{connection_id}/contracts",
-        json={"symbol": "R_100", "side": "buy", "stake": 15, "duration": 60},
-        headers=trader["headers"],
+        json={"symbol": "R_100", "side": "buy", "stake": 10, "duration": 60},
+        headers=free["headers"],
     )
-    assert sixth.status_code == 201, sixth.text
-    assert sixth.json()["approved"] is False
-    codes = [f["code"] for f in sixth.json()["risk"]["failed_rules"]]
-    assert "demo_execution_limit" in codes
-    assert deriv_env.state.contracts  # the five demo contracts really were placed
+    assert response.status_code == 400, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "execution_blocked"
+    assert "plan does not include trade execution" in detail["message"]
+    assert not deriv_env.state.contracts
 
 
 def test_distinct_contract_terms_are_not_treated_as_duplicates(client, trader, deriv_env):
@@ -527,3 +526,8 @@ def test_automation_config_refuses_a_sub_minute_duration(client, trader, deriv_e
         headers=trader["headers"],
     )
     assert response.status_code == 422, response.text
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

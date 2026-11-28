@@ -75,6 +75,14 @@ def evaluate(db: Session, *, user: User, connection: Connection) -> GateResult:
         bool(connection.permissions.get("trade")),
         "This connection is read-only; enable trading on it first.",
     )
+    execution_cap = entitlements.daily_execution_cap(db, user.org_id)
+    record(
+        "plan_execution",
+        execution_cap is None or execution_cap > 0,
+        "Your plan does not include trade execution."
+        if execution_cap is not None and execution_cap <= 0
+        else "",
+    )
     record(
         "credentials_present",
         connection.environment != "paper",

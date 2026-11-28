@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from tests.conftest import BASE, place_order
 
 
@@ -87,3 +88,8 @@ def test_portfolio_is_tenant_isolated(client, trader, trader2):
 def test_unauthenticated_requests_are_rejected(client):
     for path in ("/orders", "/positions", "/portfolio/overview", "/strategies", "/notifications", "/admin/overview"):
         assert client.get(f"{BASE}{path}").status_code == 401
+
+@pytest.fixture
+def trader(basic_trader):
+    """Execution tests need a plan that may execute: Free accounts cannot trade."""
+    return basic_trader

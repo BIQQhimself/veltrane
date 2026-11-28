@@ -18,6 +18,8 @@ export type Tier = {
   automationMode: AutomationMode;
   /** `null` means no VELTRANE trade cap. */
   dailyCap: number | null;
+  /** Combined paper/demo + live executions per day. `0` = cannot execute, `null` = uncapped. */
+  executionCap: number | null;
   accent: "neutral" | "info" | "gold";
 };
 
@@ -26,9 +28,10 @@ export const TIERS = {
     code: "free",
     label: "Free",
     badge: "◇",
-    promise: "Read-only + demo",
+    promise: "Connect and observe",
     automationMode: "none",
     dailyCap: 0,
+    executionCap: 0,
     accent: "neutral",
   },
   basic: {
@@ -38,6 +41,7 @@ export const TIERS = {
     promise: "Session automation",
     automationMode: "session",
     dailyCap: 600,
+    executionCap: 600,
     accent: "info",
   },
   pro: {
@@ -47,6 +51,7 @@ export const TIERS = {
     promise: "Background automation",
     automationMode: "background",
     dailyCap: 1200,
+    executionCap: 1200,
     accent: "info",
   },
   elite: {
@@ -56,6 +61,7 @@ export const TIERS = {
     promise: "Background automation",
     automationMode: "background",
     dailyCap: 2400,
+    executionCap: 2400,
     accent: "gold",
   },
   vip: {
@@ -65,6 +71,7 @@ export const TIERS = {
     promise: "Uncapped automation",
     automationMode: "background",
     dailyCap: null,
+    executionCap: null,
     accent: "gold",
   },
 } satisfies Record<string, Tier>;

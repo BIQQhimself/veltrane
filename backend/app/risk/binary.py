@@ -21,8 +21,8 @@ from dataclasses import dataclass
 from app.risk.rules import (
     check_binary_terms,
     check_consecutive_losses,
+    check_daily_execution_allowance,
     check_daily_loss,
-    check_demo_execution_limit,
     check_drawdown,
     check_duplicate,
     check_exposure,
@@ -76,7 +76,7 @@ BINARY_RULES = (
     check_drawdown,
     check_consecutive_losses,
     check_trading_session,
-    check_demo_execution_limit,
+    check_daily_execution_allowance,
     check_binary_terms,
 )
 

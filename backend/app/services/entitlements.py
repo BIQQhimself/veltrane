@@ -15,7 +15,7 @@ PLAN_CATALOG: list[dict] = [
     {
         "code": PlanCode.FREE,
         "name": "Free",
-        "tagline": "Explore the platform with read-only data and simulated execution.",
+        "tagline": "Connect, observe and analyse. No trade execution.",
         "price_monthly": 0,
         "sort_order": 0,
         "trial_days": 0,
@@ -23,15 +23,13 @@ PLAN_CATALOG: list[dict] = [
             "Read-only exchange & broker connections",
             "Portfolio analytics",
             "Market monitoring",
-            "Simulated AI trading",
-            "5 demo executions per day",
-            "No real-money execution — read-only and simulation only",
+            "No trade execution — connect and observe only",
             "No automated trading",
         ],
         "limits": {
             Entitlement.MAX_CONNECTIONS: 2,
             Entitlement.MAX_OPEN_POSITIONS: 3,
-            Entitlement.MAX_DAILY_DEMO_EXECUTIONS: 5,
+            Entitlement.MAX_DAILY_EXECUTIONS: 0,
             Entitlement.MAX_BACKTESTS_PER_DAY: 0,
             Entitlement.STRATEGY_LIBRARY: ["trend_following_v1"],
             Entitlement.BACKTESTING: False,
@@ -64,7 +62,7 @@ PLAN_CATALOG: list[dict] = [
         "limits": {
             Entitlement.MAX_CONNECTIONS: 3,
             Entitlement.MAX_OPEN_POSITIONS: 5,
-            Entitlement.MAX_DAILY_DEMO_EXECUTIONS: 600,
+            Entitlement.MAX_DAILY_EXECUTIONS: 600,
             Entitlement.MAX_BACKTESTS_PER_DAY: 0,
             Entitlement.STRATEGY_LIBRARY: ["trend_following_v1", "mean_reversion_v1"],
             Entitlement.BACKTESTING: False,
@@ -99,7 +97,7 @@ PLAN_CATALOG: list[dict] = [
         "limits": {
             Entitlement.MAX_CONNECTIONS: 8,
             Entitlement.MAX_OPEN_POSITIONS: 15,
-            Entitlement.MAX_DAILY_DEMO_EXECUTIONS: 1200,
+            Entitlement.MAX_DAILY_EXECUTIONS: 1200,
             Entitlement.MAX_BACKTESTS_PER_DAY: 25,
             Entitlement.STRATEGY_LIBRARY: ["trend_following_v1", "mean_reversion_v1", "breakout_v1"],
             Entitlement.BACKTESTING: True,
@@ -134,7 +132,7 @@ PLAN_CATALOG: list[dict] = [
         "limits": {
             Entitlement.MAX_CONNECTIONS: 25,
             Entitlement.MAX_OPEN_POSITIONS: 50,
-            Entitlement.MAX_DAILY_DEMO_EXECUTIONS: 2400,
+            Entitlement.MAX_DAILY_EXECUTIONS: 2400,
             Entitlement.MAX_BACKTESTS_PER_DAY: 200,
             Entitlement.STRATEGY_LIBRARY: [
                 "trend_following_v1",
@@ -172,8 +170,8 @@ PLAN_CATALOG: list[dict] = [
         "limits": {
             Entitlement.MAX_CONNECTIONS: 50,
             Entitlement.MAX_OPEN_POSITIONS: 100,
-            # 0 means "no numeric cap". Every deterministic risk rule still applies.
-            Entitlement.MAX_DAILY_DEMO_EXECUTIONS: 0,
+            # -1 means "no VELTRANE numeric cap". Every deterministic risk rule still applies.
+            Entitlement.MAX_DAILY_EXECUTIONS: -1,
             Entitlement.MAX_BACKTESTS_PER_DAY: 500,
             Entitlement.STRATEGY_LIBRARY: [
                 "trend_following_v1",
@@ -186,7 +184,7 @@ PLAN_CATALOG: list[dict] = [
             Entitlement.ADVANCED_ANALYTICS: True,
             Entitlement.AUTOMATION: True,
             Entitlement.AUTOMATION_MODE: "background",
-            Entitlement.MAX_AUTOMATED_TRADES_PER_DAY: 0,
+            Entitlement.MAX_AUTOMATED_TRADES_PER_DAY: -1,
             Entitlement.PORTFOLIO_OPTIMIZATION: True,
             Entitlement.PRIORITY_SUPPORT: True,
             Entitlement.PERFORMANCE_FEES: True,
@@ -199,20 +197,36 @@ PLAN_CATALOG: list[dict] = [
 PAST_DUE_GRACE_DAYS = 3
 
 
-def seed_plans(db: Session) -> None:
+def _plan_payload(spec: dict) -> dict:
+    return {
+        "name": spec["name"],
+        "tagline": spec["tagline"],
+        "price_monthly": spec["price_monthly"],
+        "currency": "USD",
+        "features": spec["features"],
+        "limits": spec["limits"],
+        "sort_order": spec["sort_order"],
+        "trial_days": spec["trial_days"],
+    }
+
+
+def ensure_plans(db: Session) -> None:
+    """Create any plan that is missing. Existing rows are left alone.
+
+    Startup uses this so an administrator's price or limit edits survive a restart. Pushing
+    catalog changes to existing rows is an explicit operator action: ``sync_plans``.
+    """
+    for spec in PLAN_CATALOG:
+        if db.get(Plan, spec["code"]) is None:
+            db.add(Plan(code=spec["code"], **{**_plan_payload(spec), "is_active": True}))
+    db.flush()
+
+
+def sync_plans(db: Session) -> None:
+    """Overwrite every plan with the catalog in this module. Operator action, not startup."""
     for spec in PLAN_CATALOG:
         plan = db.get(Plan, spec["code"])
-        payload = {
-            "name": spec["name"],
-            "tagline": spec["tagline"],
-            "price_monthly": spec["price_monthly"],
-            "currency": "USD",
-            "features": spec["features"],
-            "limits": spec["limits"],
-            "sort_order": spec["sort_order"],
-            "is_active": True,
-            "trial_days": spec["trial_days"],
-        }
+        payload = {**_plan_payload(spec), "is_active": True}
         if plan is None:
             db.add(Plan(code=spec["code"], **payload))
         else:
@@ -306,6 +320,26 @@ def numeric_limit(db: Session, org_id: str, key: str) -> int | None:
     except (TypeError, ValueError):
         return None
     return None if value <= 0 else value
+
+
+def daily_execution_cap(db: Session, org_id: str) -> int | None:
+    """Combined paper/demo + live executions allowed today.
+
+    Three distinct states, deliberately not collapsed into one:
+
+    ``None``  the plan carries no VELTRANE cap (VIP)
+    ``0``     the plan cannot execute at all (Free)
+    ``n > 0`` at most ``n`` executions today, whichever environment they are placed in
+
+    A naive ``<= 0 means unlimited`` reading would silently hand Free accounts an uncapped
+    allowance, which is exactly the bug this helper exists to prevent.
+    """
+    raw = limit_for(db, org_id, Entitlement.MAX_DAILY_EXECUTIONS, 0)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 0
+    return None if value < 0 else max(0, value)
 
 
 def notify_limit_reached(db: Session, org_id: str, title: str, body: str, data: dict | None = None) -> None:

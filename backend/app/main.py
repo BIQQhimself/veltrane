@@ -24,6 +24,19 @@ log = logging.getLogger("veltrane")
 
 
 @asynccontextmanager
+def _ensure_plan_catalog() -> None:
+    """Create any plan missing from the database. Never overwrites an administrator's edits."""
+    from app.db.session import SessionLocal
+    from app.services import entitlements
+
+    try:
+        with SessionLocal() as db:
+            entitlements.ensure_plans(db)
+            db.commit()
+    except Exception:  # pragma: no cover - startup must not die on a transient DB error
+        log.exception("plan_catalog_ensure_failed")
+
+
 async def lifespan(app: FastAPI):
     log.info(
         "startup",
@@ -46,6 +59,7 @@ async def lifespan(app: FastAPI):
                 }
             },
         )
+    _ensure_plan_catalog()
     scheduler = None
     if settings.scheduler_enabled and settings.env != "test":
         scheduler = SessionScheduler()
