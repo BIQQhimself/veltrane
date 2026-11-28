@@ -206,6 +206,11 @@ cd ../frontend && rm -rf .next && npx next dev -p 12000 &
 - After `npm run build`, the dev server must be restarted the same way; the two share `.next`.
   Running the export build while `npm run dev` is serving leaves the dev server returning `500`
   on every route until it is restarted — that is a build artefact, not a code fault.
+- **The preview host forwards to container port 12000, not 3000.** `work-1` is a proxy to
+  `127.0.0.1:12000`; starting `next dev` on the default 3000 leaves every public URL answering
+  `502` while `curl http://127.0.0.1:3000` is fine, which reads like a broken deployment. Start it
+  with `npx next dev -p 12000`; the Next rewrite (`VELTRANE_API_PROXY=http://127.0.0.1:8000`)
+  serves `/api/*` from the uvicorn process, so one public origin covers both.
 - **Browser journeys**: `cd frontend && E2E_WEB=http://127.0.0.1:3000 E2E_API=http://127.0.0.1:3000
   npm run test:e2e`. Point both at the same origin: dev serves the API through the Next rewrite
   (`VELTRANE_API_PROXY`), so the harness needs no CORS. Accounts it registers are cached in
