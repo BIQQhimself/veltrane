@@ -236,3 +236,17 @@ between the two is the list above.
   path (`record_settlement` from reconciliation) is exercised only by unit tests.
 - Seeded history is capped at three contracts so that the consecutive-loss breaker (four losses)
   stays disengaged and a reviewer can still place a trade.
+
+## Market-wide scanning (new)
+
+- The score is a heuristic ranking, not a calibrated probability. It has **no** out-of-sample
+  validation, no walk-forward study and no recorded live results. Treat it as a way to order
+  candidates, nothing more.
+- The scan is single-venue: it ranks the symbols of the connected Deriv account's venue. Crypto
+  venues (CCXT) are not part of the same ranking yet.
+- Weights were tuned by inspection on synthetic series, not fitted to historical data. Re-tuning is
+  a research task, and any change must be recorded with the evidence that justified it.
+- `MIN_SCORE = 55` means the runner will often idle. That is intended; a quiet dashboard is not a
+  bug, and lowering the floor to "make it trade" is prohibited.
+- No per-symbol performance feedback yet: the scanner does not learn from its own realised results,
+  and it does not know a symbol's payout or spread, so expected value per trade is not modelled.

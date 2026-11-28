@@ -63,6 +63,55 @@ def deriv_env(mock_deriv, monkeypatch):
     deriv_sessions.close_all()
 
 
+def trend_candles(step: float = 0.25, length: int = 80) -> list[dict]:
+    """A monotonic advance, newest first, in the mock's candle format.
+
+    The scanner needs a real directional edge, not the crossing the single-symbol trigger
+    wants, so the two paths are exercised with different series.
+    """
+    now = int(time.time())
+    closes = [round(100 + step * i + 0.02 * math.sin(i), 3) for i in range(length)]
+    rows = []
+    previous = closes[0]
+    for index, close in enumerate(closes):
+        rows.append(
+            {
+                "epoch": now - 60 * (length - index),
+                "open": previous,
+                "high": max(previous, close) + 0.05,
+                "low": min(previous, close) - 0.05,
+                "close": close,
+            }
+        )
+        previous = close
+    rows.reverse()
+    return rows
+
+
+def _universe_config(db, trader, connection_id, *, slots: int) -> AutoTradeConfig:
+    config = AutoTradeConfig(
+        org_id=trader["org_id"],
+        connection_id=connection_id,
+        enabled=True,
+        mode="autonomous",
+        symbol="R_100",
+        universe=["R_100", "frxEURUSD"],
+        sector_cap=2,
+        stake=10,
+        duration=60,
+        duration_unit="s",
+        max_open_contracts=slots,
+        max_stake_per_trade=25,
+        daily_loss_limit=100,
+        daily_stake_limit=250,
+        cooldown_seconds=0,
+        created_by=trader["user_id"],
+    )
+    db.add(config)
+    db.commit()
+    return config
+
+
 def _connect(client, trader, *, account_id="VRTC900001", environment="live"):
     response = client.post(
         f"{BASE}/connections",
@@ -234,4 +283,85 @@ def test_autonomous_signal_rejected_by_the_risk_engine_is_not_reported_as_execut
     assert "below the" in signal.error and "minimum" in signal.error
     order = db.get(Order, signal.order_id)
     assert order.status == "rejected"
+    assert deriv_env.state.contracts == {}
+
+
+def test_universe_mode_fills_capacity_across_sectors(client, trader, deriv_env, db):
+    """Two qualifying markets, two free slots, two contracts — through the normal gate."""
+    deriv_env.state.candle_override = trend_candles()
+    connection_id = _connect(client, trader)
+    _universe_config(db, trader, connection_id, slots=2)
+
+    summary = autotrade.run_once(db)
+    db.commit()
+
+    signals = db.query(AutoTradeSignal).filter(AutoTradeSignal.connection_id == connection_id).all()
+    executed = [signal for signal in signals if signal.status == "executed"]
+    assert len(executed) == 2, (summary, [(s.symbol, s.status, s.error) for s in signals])
+    assert {signal.symbol for signal in executed} == {"R_100", "frxEURUSD"}
+    orders = db.query(Order).filter(Order.connection_id == connection_id).all()
+    assert len(orders) == 2
+    assert {order.instrument_symbol for order in orders} == {"R_100", "frxEURUSD"}
+    # Ranked, not arbitrary: each signal carries the score it was chosen on.
+    assert all(signal.risk_snapshot["score"] >= 55 for signal in executed)
+
+
+def test_universe_mode_never_exceeds_its_capacity(client, trader, deriv_env, db):
+    deriv_env.state.candle_override = trend_candles()
+    connection_id = _connect(client, trader)
+    _universe_config(db, trader, connection_id, slots=1)
+
+    autotrade.run_once(db)
+    db.commit()
+
+    orders = db.query(Order).filter(Order.connection_id == connection_id).all()
+    assert len(orders) == 1
+
+
+def test_universe_mode_does_not_re_enter_a_symbol_it_already_signalled(client, trader, deriv_env, db):
+    deriv_env.state.candle_override = trend_candles()
+    connection_id = _connect(client, trader)
+    _universe_config(db, trader, connection_id, slots=2)
+
+    autotrade.run_once(db)
+    db.commit()
+    first = db.query(AutoTradeSignal).filter(AutoTradeSignal.connection_id == connection_id).count()
+    assert first == 2
+
+    # A second pass with the same series must not stack a second position on either symbol.
+    autotrade.run_once(db)
+    db.commit()
+    second = db.query(AutoTradeSignal).filter(AutoTradeSignal.connection_id == connection_id).count()
+    assert second == first
+
+
+def test_universe_mode_idles_when_nothing_qualifies(client, trader, deriv_env, db):
+    """A choppy series has no edge; the runner must not invent a trade to stay busy."""
+    deriv_env.state.candle_override = cross_candles()
+    connection_id = _connect(client, trader)
+    _universe_config(db, trader, connection_id, slots=2)
+
+    summary = autotrade.run_once(db)
+    db.commit()
+
+    assert summary["configs"] == 1
+    assert db.query(AutoTradeSignal).filter(AutoTradeSignal.connection_id == connection_id).count() == 0
+    assert db.query(Order).filter(Order.connection_id == connection_id).count() == 0
+
+
+def test_opportunities_endpoint_ranks_the_venue_universe(client, trader, deriv_env):
+    deriv_env.state.candle_override = trend_candles()
+    connection_id = _connect(client, trader)
+
+    response = client.get(
+        f"{BASE}/deriv/connections/{connection_id}/opportunities", headers=trader["headers"]
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["scanned"] >= 1
+    assert payload["opportunities"]
+    top = payload["opportunities"][0]
+    assert top["contract_type"] in ("CALL", "PUT")
+    assert top["score"] >= 55
+    # Read-only: nothing reached the venue.
     assert deriv_env.state.contracts == {}

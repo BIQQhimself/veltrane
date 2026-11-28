@@ -139,6 +139,34 @@ accessibility: it shows the measured body and button contrast and warns below 4.
 terminal can show it before a trader commits. It is read-only and cannot approve anything: the risk
 engine remains the only gate.
 
+## 7b. Market-wide autonomous selection
+
+The runner no longer trades one hand-picked symbol. `app/services/opportunity_scan.py` scores every
+symbol the venue reports as open, per direction, and ranks the result:
+
+| Component | Weight | What it measures |
+|---|---|---|
+| trend | 0.40 | EMA(9)/EMA(21) separation in ATR units, signed for the chosen direction |
+| momentum | 0.25 | RSI strength toward the direction, decaying as it becomes exhausted |
+| persistence | 0.15 | share of the last 20 closes on the correct side of the EMA(21) as it stood 20 bars ago |
+| volatility | 0.10 | ATR as a share of price, peaking near 0.15% per bar and falling off at both extremes |
+| freshness | 0.10 | bars since the last EMA cross, full credit inside six bars |
+
+A symbol only qualifies when its best direction clears `MIN_SCORE = 55`; below that the runner
+idles, which is the correct behaviour and never a reason to lower the threshold.
+
+The score is a **ranking heuristic**. It is not a win probability, an expected return or a profit
+forecast, and nothing in the product presents it as one.
+
+Capacity and correlation are handled by `select()`: a config with `universe` set fills
+`max_open_contracts` slots, at most `sector_cap` per venue sector, skipping symbols already held or
+already signalled inside the cooldown. Each selected entry becomes an `AutoTradeSignal` and goes
+through `execute_signal` → execution gate → risk engine exactly like a hand-approved one, so the
+ranking can propose but never approve.
+
+`GET /deriv/connections/{id}/opportunities` exposes the same ranking read-only; the dashboard's
+Opportunity radar panel renders it.
+
 ## 8. Live trading posture (deliberate)
 
 Live execution is **off** in three independent layers:

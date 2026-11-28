@@ -28,6 +28,11 @@ class AutoTradeConfig(Base, IdTimestampMixin):
     enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     mode: Mapped[str] = mapped_column(String(16), default="approval", nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), default="R_100", nullable=False)
+    # When set, the runner scans these symbols every pass, ranks what qualifies and opens the
+    # strongest setups up to ``max_open_contracts``. ``None`` keeps the single-symbol behaviour.
+    universe: Mapped[list | None] = mapped_column(JSONType, nullable=True)
+    # Concurrent positions allowed per sector, so four correlated indices do not become one bet.
+    sector_cap: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
     contract_type: Mapped[str] = mapped_column(String(24), default="CALL", nullable=False)
     stake: Mapped[float] = mapped_column(MoneyType, default=10.0, nullable=False)
     duration: Mapped[int] = mapped_column(Integer, default=5, nullable=False)

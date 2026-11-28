@@ -163,6 +163,17 @@ all, so forex series come back empty rather than fabricated.
 If Deriv proves unreliable in production, OANDA v20 (REST, well documented) is the fallback —
 not implemented.
 
+### Opportunity scan endpoint
+
+`GET /api/v1/deriv/connections/{connection_id}/opportunities?limit=10` returns the ranked setups the
+autonomous runner would consider: symbol, sector, direction, score, and the indicator components that
+produced it. It reads `active_symbols` and one-minute candles from the venue's public gateway, uses
+no account credentials, executes nothing, and is safe to poll from the dashboard.
+
+Verified locally against the configured Deriv gateway: the endpoint returns a ranked list and the
+dashboard panel renders it. The universe is whatever the gateway reports as open, so a mock or a
+partial gateway yields a two-symbol universe rather than a full market list.
+
 ## Simulation venue — `paper`
 
 `app/providers/paper.py`, status `simulated`, `trade=False` in the provider capability table

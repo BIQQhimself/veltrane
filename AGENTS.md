@@ -290,3 +290,27 @@ cd ../frontend && rm -rf .next && npx next dev -p 12000 &
   Tailwind key aliases `--vt-secondary-*`, so `<Button variant="primary">` and every `champagne-*`
   utility follow whatever is stored under `ui.theme`. Republish from `/admin/appearance` on a
   deployment whose stored palette predates a change to `services/theme.py`.
+
+## Market-wide autonomous trading (implemented)
+
+- `backend/app/services/opportunity_scan.py` — scores every open venue symbol per direction
+  (trend 0.40, momentum 0.25, persistence 0.15, volatility 0.10, freshness 0.10), qualifies at
+  `MIN_SCORE = 55`, and selects with `slots` / `sector_cap` / `exclude_symbols`.
+- `AutoTradeConfig.universe` (JSONB, migration `a1c4f7b93e52`) turns on scanning; `sector_cap`
+  limits correlated exposure. `None` keeps the old single-symbol runner untouched.
+- `autotrade._run_universe` fills free capacity, then calls the normal `execute_signal` path, so the
+  gate and risk engine still decide. Duplicate guard: `_open_symbols` + `_recently_signalled`.
+- `GET /api/v1/deriv/connections/{id}/opportunities` is the read-only ranking; the dashboard
+  `OpportunityRadar` panel renders it.
+
+Run `cd backend && .venv/bin/python -m pytest tests/test_opportunity_scan.py tests/test_deriv_autotrade.py`
+for the scanner and runner, or the whole suite for regressions (406 tests, 2 skipped).
+
+## Still outstanding from the "final product completion" mandate
+
+1. Olymp Trade-style visual redesign across every surface (only the dashboard radar and copy trims
+   landed so far).
+2. Playwright end-to-end suite (the mandate asks for E2E; only unit/integration tests exist).
+3. Render deploy verification: needs `RENDER_API_KEY` or a deploy hook; the sandbox has neither, so
+   deployment is verified only by the app running locally.
+4. Crypto (CCXT) venues are not part of the ranked universe yet.

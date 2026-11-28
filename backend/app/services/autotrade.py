@@ -21,7 +21,14 @@ from datetime import UTC, datetime, timedelta
 from app.core.errors import bad_request, forbidden
 from app.db.constants import AuditAction, TradingRule
 from app.db.models import AutoTradeConfig, AutoTradeSignal, Connection, Order, User
-from app.services import audit, automation_limits, deriv_sessions, execution_gate, kill_switch
+from app.services import (
+    audit,
+    automation_limits,
+    deriv_sessions,
+    execution_gate,
+    kill_switch,
+    opportunity_scan,
+)
 from app.trading import deriv_execution
 from app.trading.deriv_strategy import evaluate_entry
 from sqlalchemy import func
@@ -69,7 +76,37 @@ def daily_realized(db: Session, connection: Connection) -> float:
     return round(sum(float((row.meta or {}).get("realized") or 0) for row in rows), 2)
 
 
-def _halt_reason(db: Session, config: AutoTradeConfig, connection: Connection, gate) -> str:
+def _open_symbols(db: Session, connection: Connection) -> set[str]:
+    rows = (
+        db.query(Order.instrument_symbol)
+        .filter(Order.connection_id == connection.id, Order.status.in_(("submitted", "filled")))
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def _recently_signalled(db: Session, config: AutoTradeConfig, connection: Connection) -> set[str]:
+    """Symbols that already produced a signal inside the cooldown window.
+
+    The same setup seen twice is one position, not two; re-entering it is how a bot doubles
+    a loser. This is the per-symbol guard; the cooldown below covers the whole config.
+    """
+    cutoff = _utcnow() - timedelta(seconds=max(int(config.cooldown_seconds), 60))
+    rows = (
+        db.query(AutoTradeSignal.symbol)
+        .filter(
+            AutoTradeSignal.connection_id == connection.id,
+            AutoTradeSignal.created_at >= cutoff,
+            AutoTradeSignal.status.in_(("pending", "approved", "executed")),
+        )
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def _halt_reason(
+    db: Session, config: AutoTradeConfig, connection: Connection, gate, *, check_capacity: bool = True
+) -> str:
     if TradingRule.below_floor(config.duration, config.duration_unit):
         # A stored config may predate the floor. Halt loudly rather than submitting a
         # contract the execution layer would reject on every tick.
@@ -91,7 +128,7 @@ def _halt_reason(db: Session, config: AutoTradeConfig, connection: Connection, g
         )
         .count()
     )
-    if open_orders >= config.max_open_contracts:
+    if check_capacity and open_orders >= config.max_open_contracts:
         return f"Open contract limit reached ({config.max_open_contracts})."
     if daily_stake_used(db, connection) + float(config.stake) > float(config.daily_stake_limit):
         return "Daily stake limit reached."
@@ -117,11 +154,14 @@ def run_config(db: Session, config: AutoTradeConfig, *, actor: User | None = Non
         config.halt_reason = plan_halt
         db.flush()
         return {"skipped": plan_halt}
-    reason = _halt_reason(db, config, connection, gate)
+    reason = _halt_reason(db, config, connection, gate, check_capacity=not config.universe)
     if reason:
         config.halt_reason = reason
         db.flush()
         return {"skipped": reason}
+
+    if config.universe:
+        return _run_universe(db, config, connection, owner, gate, actor)
 
     adapter = deriv_sessions.adapter()
     try:
@@ -191,6 +231,124 @@ def run_config(db: Session, config: AutoTradeConfig, *, actor: User | None = Non
         signal.decided_at = _utcnow()
         db.flush()
         return {"signal": signal.id, "status": "failed", "error": signal.error}
+
+
+def _run_universe(
+    db: Session,
+    config: AutoTradeConfig,
+    connection: Connection,
+    owner: User,
+    gate,
+    actor: User | None,
+) -> dict:
+    """Scan every eligible symbol, rank what qualifies and fill the free capacity.
+
+    Capacity, correlation and duplicate guards are decided here; each selected entry then
+    goes through ``execute_signal`` exactly like a hand-approved one, so the execution gate
+    and the risk engine keep the final word. Nothing here can approve an order on its own.
+    """
+    held = _open_symbols(db, connection)
+    slots = int(config.max_open_contracts) - len(held)
+    if slots <= 0:
+        config.halt_reason = f"Open contract limit reached ({config.max_open_contracts})."
+        db.flush()
+        return {"skipped": config.halt_reason}
+
+    adapter = deriv_sessions.adapter()
+    found, stats = opportunity_scan.scan(adapter, symbols=config.universe)
+    if stats.get("error"):
+        config.halt_reason = str(stats["error"])[:300]
+        db.flush()
+        return {"skipped": config.halt_reason}
+
+    exclude = held | _recently_signalled(db, config, connection)
+    chosen = opportunity_scan.select(
+        found,
+        slots=slots,
+        sector_cap=max(1, int(config.sector_cap)),
+        exclude_symbols=exclude,
+    )
+    config.last_run_at = _utcnow()
+    if not chosen:
+        # No setup clears the floor. Idling is the correct behaviour, not a reason to
+        # lower the threshold.
+        config.halt_reason = ""
+        db.flush()
+        return {
+            "signal": None,
+            "reason": "no qualifying setup",
+            "scanned": stats.get("scanned", 0),
+            "qualifying": len(found),
+        }
+
+    results = []
+    for opportunity in chosen:
+        signal = AutoTradeSignal(
+            org_id=config.org_id,
+            connection_id=connection.id,
+            config_id=config.id,
+            status="pending",
+            mode=config.mode,
+            symbol=opportunity.symbol,
+            side=opportunity.side,
+            contract_type=opportunity.contract_type,
+            stake=float(config.stake),
+            duration=config.duration,
+            duration_unit=config.duration_unit,
+            reason=opportunity.reason,
+            risk_snapshot={
+                "strategy": opportunity.strategy,
+                "score": opportunity.score,
+                "indicators": opportunity.indicators,
+                "gate_checks": gate.checks,
+                "generated_at": _utcnow().isoformat(),
+                "ranked_of": len(found),
+            },
+            expires_at=_utcnow() + timedelta(seconds=config.signal_ttl_seconds),
+        )
+        db.add(signal)
+        db.flush()
+        config.last_signal_at = _utcnow()
+        audit.record(
+            db,
+            action=AuditAction.ORDER_INTENT,
+            org_id=config.org_id,
+            actor_user_id=actor.id if actor else None,
+            target_type="auto_trade_signal",
+            target_id=signal.id,
+            meta={
+                "symbol": signal.symbol,
+                "contract_type": signal.contract_type,
+                "stake": float(signal.stake),
+                "mode": config.mode,
+                "strategy": opportunity.strategy,
+                "score": opportunity.score,
+            },
+        )
+        if config.mode != "autonomous":
+            results.append({"signal": signal.id, "symbol": signal.symbol, "status": "pending"})
+            continue
+        try:
+            execute_signal(db, signal=signal, actor=owner, approved_by=None)
+            results.append({"signal": signal.id, "symbol": signal.symbol, "status": signal.status})
+        except Exception as exc:  # noqa: BLE001 - one refused entry must not stop the others
+            if signal.status == "pending":
+                signal.status = "failed"
+                signal.error = str(exc)[:1000]
+                signal.decided_at = _utcnow()
+                db.flush()
+            results.append(
+                {"signal": signal.id, "symbol": signal.symbol, "status": signal.status, "error": signal.error}
+            )
+
+    config.halt_reason = ""
+    db.flush()
+    return {
+        "signals": results,
+        "opened": sum(1 for row in results if row["status"] == "executed"),
+        "scanned": stats.get("scanned", 0),
+        "qualifying": len(found),
+    }
 
 
 def execute_signal(db: Session, *, signal: AutoTradeSignal, actor: User, approved_by: User | None) -> dict:

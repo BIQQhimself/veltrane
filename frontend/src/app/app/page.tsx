@@ -28,6 +28,7 @@ import { useToast } from "@/components/ui/toast";
 import { RiskBudgetRows } from "@/components/app/risk-budget";
 import { AccountHero } from "@/components/app/account-hero";
 import { AutomationStrip } from "@/components/app/automation-strip";
+import { OpportunityRadar } from "@/components/app/opportunity-radar";
 import { TierBadge } from "@/components/app/tier-badge";
 import { PageHeader } from "@/components/ui/panel";
 import { contractReturn, contractStake } from "@/lib/contracts";
@@ -317,17 +318,14 @@ export default function OverviewPage() {
           </div>
           <div className="flex-1 space-y-4 p-4">
             <RiskBudgetRows budget={riskBudget.data} />
-            <p className="text-3xs text-paper-faint">
-              Read from the same rules the risk engine applies to the next order. Headroom is paper-only.
-            </p>
+            <p className="text-3xs text-paper-faint">Same rules the risk engine applies to the next order.</p>
             <div className="rounded-lg border border-line-soft bg-obsidian-900/50 p-3">
               <p className="flex items-center gap-1.5 text-2xs text-paper-muted">
                 <ShieldCheck className="h-3.5 w-3.5 text-gain" aria-hidden />
                 Independent risk engine
               </p>
               <p className="mt-1 text-3xs leading-relaxed text-paper-faint">
-                Every order and contract is evaluated by the deterministic engine before execution.
-                Strategies cannot bypass it, and the kill switch works without this app open.
+                Deterministic checks before every order. Strategies cannot bypass them.
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {["size", "exposure", "leverage", "daily loss", "drawdown", "stale data", "duplicates"].map((rule) => (
@@ -458,11 +456,13 @@ export default function OverviewPage() {
             ))}
           </ul>
           <p className="border-t border-line-soft px-4 py-2 text-3xs text-paper-faint">
-            Reads are computed from the candles shown in the terminal. They can be wrong and are never
-            a guarantee.
+            Computed from terminal candles. Not advice.
           </p>
         </section>
       </div>
+
+      {/* Market scan */}
+      <OpportunityRadar />
 
       {/* Open contracts */}
       {openContracts.length ? (

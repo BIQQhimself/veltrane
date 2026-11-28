@@ -494,6 +494,9 @@ class AutomationRequest(BaseModel):
     daily_stake_limit: float = Field(default=250.0, gt=0, le=1_000_000)
     cooldown_seconds: int = Field(default=300, ge=0, le=86_400)
     signal_ttl_seconds: int = Field(default=600, ge=30, le=86_400)
+    # Empty/None keeps the single-symbol behaviour; a list turns on market-wide scanning.
+    universe: list[str] | None = Field(default=None, max_length=40)
+    sector_cap: int = Field(default=2, ge=1, le=5)
 
     @model_validator(mode="after")
     def _duration_floor(self):
@@ -523,6 +526,8 @@ def _config_dict(config) -> dict:
         "daily_stake_limit": float(config.daily_stake_limit),
         "cooldown_seconds": config.cooldown_seconds,
         "signal_ttl_seconds": config.signal_ttl_seconds,
+        "universe": list(config.universe or []),
+        "sector_cap": config.sector_cap,
         "last_run_at": config.last_run_at.isoformat() if config.last_run_at else None,
         "last_signal_at": config.last_signal_at.isoformat() if config.last_signal_at else None,
         "halt_reason": config.halt_reason,
@@ -576,6 +581,21 @@ def put_automation(
     )
     db.commit()
     return {"automation": _config_dict(config)}
+
+
+@router.get("/connections/{connection_id}/opportunities")
+def list_opportunities(
+    connection_id: str,
+    limit: int = Query(default=10, ge=1, le=25),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Ranked setups across the venue's open symbols. Read-only: nothing is executed."""
+    from app.services import opportunity_scan
+
+    _deriv_connection(db, user.org_id, connection_id)
+    adapter = deriv_sessions.adapter()
+    return opportunity_scan.preview(adapter, limit=limit)
 
 
 @router.get("/connections/{connection_id}/signals")
