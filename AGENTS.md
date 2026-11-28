@@ -138,17 +138,59 @@ frontend (eslint, tsc, vitest, next build). Reproduce a job locally before pushi
 - Backend `355 passed`; frontend `63 passed`; `VELTRANE_STATIC_EXPORT=1 npm run build` exports
   cleanly. Rebuild `out/` after touching `page.tsx` or the deployed palette goes stale.
 
+## Cold start after the sandbox is recycled
+
+A restart wipes the container, not the repo: Postgres, Redis and every seeded account are
+gone, and both public hosts answer `502` because nothing is listening. Bring the stack back
+in this order.
+
+```bash
+# 1. Data stores (Debian trixie; no systemd, no docker daemon here)
+sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql redis-server
+sudo pg_ctlcluster 17 main start && redis-server --daemonize yes
+sudo -u postgres psql -c "CREATE ROLE veltrane LOGIN PASSWORD '<password>';"
+sudo -u postgres psql -c "CREATE DATABASE veltrane OWNER veltrane;" -c "CREATE DATABASE veltrane_test OWNER veltrane;"
+
+# 2. Config: root .env is the single source (settings loads .env then ../.env, later wins).
+#    Point VELTRANE_DATABASE_URL at the password above and keep the Deriv sandbox block.
+
+# 3. Schema and reference data, then accounts
+cd backend && .venv/bin/alembic upgrade head
+.venv/bin/python -m scripts.seed            # plans, strategies, flags, risk policy, staff owner
+.venv/bin/python -m scripts.seed_testers
+.venv/bin/python -m scripts.seed_reviewers
+
+# 4. Services: Deriv mock :12003, API :8000, web :12000 (proxies /api to :8000)
+.venv/bin/python -m scripts.deriv_sandbox &
+.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers &
+.venv/bin/python -m scripts.seed_reviewer_demo --base-url http://127.0.0.1:8000
+cd ../frontend && rm -rf .next && npx next dev -p 12000 &
+```
+
+- `seed_reviewer_demo` defaults to `--base-url http://127.0.0.1:12001`, which is not where the
+  API listens here; pass `--base-url http://127.0.0.1:8000` or it dies with `Connection refused`.
+- `scripts.seed` must run before `seed_testers`: the tester script inserts subscriptions that
+  carry a foreign key into `plans`, so an empty `plans` table fails the seed.
+- Exported `VELTRANE_*` variables in an inherited shell beat both env files. If a stale
+  `VELTRANE_DATABASE_URL` survives a restart, every migration fails with
+  `password authentication failed`. Clear them: `for v in $(env | grep -o '^VELTRANE_[A-Z_]*'); do unset "$v"; done`.
+- `localhost` resolves to `::1` here and uvicorn binds IPv4 only, so probe scripts must use
+  `127.0.0.1`, not `localhost`.
+
 ## Runtime topology in this sandbox (learned the hard way)
 
-- **The API must listen on `0.0.0.0:12001`.** Port 12001 is the only port the platform's reverse
-  proxy forwards to `work-2-<id>.prod-runtime.all-hands.dev`. A uvicorn bound to `127.0.0.1:8000`
-  looks healthy inside the container but the public host answers `502 Bad Gateway`.
+- **The API listens on `0.0.0.0:8000`; the web app on `0.0.0.0:12000`.** The platform proxy
+  forwards `work-1-<id>` to 12000 and `work-2-<id>` to 12001, so work-1 is the only host that
+  serves the app. `frontend/.env.local` proxies `/api/*` to `127.0.0.1:8000`, which keeps every
+  browser call same-origin. Bind the API to 12001 only if you want work-2 to answer the API
+  directly — it does not render the app.
 - **Run exactly one API process.** The paper scheduler is an in-process thread, so two uvicorn
   workers would tick the same sessions twice and double the simulated trades.
-- **Frontend (port 12000 → `work-1-...`) uses the same-origin proxy.** `frontend/.env.local` keeps
-  `NEXT_PUBLIC_API_URL=` empty and sets `VELTRANE_API_PROXY=http://127.0.0.1:12001`, so browser
-  calls go to `/api/*` on the page's own host. Reviewers then only need one URL, and
-  `https://work-1-.../api/v1/health` returns JSON.
+- **The web app (port 12000 → `work-1-...`) uses the same-origin proxy.** `frontend/.env.local`
+  keeps `NEXT_PUBLIC_API_URL=` empty and sets `VELTRANE_API_PROXY=http://127.0.0.1:8000`, so
+  browser calls go to `/api/*` on the page's own host. Reviewers then need one URL only, and
+  `https://work-1-.../api/v1/health` returns JSON. If the API port changes, this line must
+  change with it — a mismatch shows up as `502` on every `/api` call while the app itself loads.
 - **Restarting the dev server:** stop `next-server` first, then `rm -rf .next`, then `npx next dev`.
   Deleting `.next` under a live server leaves it serving `500` on every route with
   `ENOENT ... routes-manifest.json`.
